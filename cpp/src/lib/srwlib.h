@@ -786,7 +786,7 @@ EXP int CALL srwlResizeElecFieldMesh(SRWLWfr* pWfr, SRWLRadMesh* pMesh, double* 
  */
 EXP int CALL srwlProcElecField(SRWLWfr* pWfr, double* par, SRWLWfr* pWfr2);
 
-/** 
+/**
  * Changes Representation of Electric Field: coordinates<->angles, frequency<->time
  * @param [in, out] pWfr pointer to pre-calculated Wavefront structure
  * @param [in] repr character specifying desired representation ('c' for coordinate, 'a' for angle, 'f' for frequency, 't' for time)
@@ -819,7 +819,7 @@ EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt, int nInt=0, char
  */
 EXP int CALL srwlPropagRadMultiE(SRWLStokes* pStokes, SRWLWfr* pWfr0, SRWLOptC* pOpt, double* precPar, int (*pExtFunc)(int action, SRWLStokes* pStokesInst));
 
-/**
+/** 
  * Sets Up Transmittance for an Optical Element defined from a list of 3D (nano-) objects, e.g. for simulating samples for coherent scattering experiments
  * @param [in, out] pOpTr pointer to Optical Transmission object to populate
  * @param [in] pDelta array of (spectral) Refractive Index Decrement data
@@ -833,7 +833,7 @@ EXP int CALL srwlPropagRadMultiE(SRWLStokes* pStokes, SRWLWfr* pWfr0, SRWLOptC* 
 EXP int CALL srwlCalcTransm(SRWLOptT* pOpTr, const double* pDelta, const double* pAttenLen, double** arObjShapeDefs, int nObj3D, const double* arPar=0); //25082021
 //EXP int CALL srwlCalcTransm(SRWLOptT* pOpTr, const double* pAttenLen, const double* pDelta, double** arObjShapeDefs, int nObj3D, const double* arPar=0);
 
-/** 
+/**
  * Performs FFT (1D or 2D, depending on arguments)
  * @param [in, out] pcData (char) pointer to data to be FFT-ed
  * @param [in] typeData character specifying data type ('f' for float, 'd' for double)
@@ -850,6 +850,10 @@ EXP int CALL srwlCalcTransm(SRWLOptT* pOpTr, const double* pDelta, const double*
  * @see ...
  */
 EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, int dir);
+
+#ifdef _OFFLOAD_GPU // RL02182021
+//EXP int CALL srwlUtiFFTGPU(char* pcData, char typeData, double* arMesh, int nMesh, int dir);
+#endif
 
 /** 
  * Convolves real data with 1D or 2D Gaussian (depending on arguments)
@@ -963,6 +967,29 @@ EXP int CALL srwlUtiUndFromMagFldTab(SRWLMagFldC* pUndCnt, SRWLMagFldC* pMagCnt,
  * @see ...
  */
 EXP int CALL srwlUtiUndFindMagFldInterpInds(int* arResInds, int* pnResInds, double* arGaps, double* arPhases, int nVals, double arPrecPar[5]);
+
+/**
+ * Checks if GPU offloading is available
+ * @return	true if available
+ * @see ...
+ */
+
+EXP bool CALL srwlUtiGPUAvailable();
+
+/**
+ * Checks if GPU offloading is enabled
+ * @return	true if enabled
+ * @see ...
+ */
+
+EXP bool CALL srwlUtiGPUEnabled();
+
+/**
+ * Enable/Disable GPU offloading
+ * @see ...
+ */
+
+EXP void CALL srwlUtiGPUSetStatus(bool enable);
 
 /**
  * These functions were added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP

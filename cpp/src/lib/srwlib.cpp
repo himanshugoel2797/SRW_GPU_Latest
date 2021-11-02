@@ -28,6 +28,7 @@
 #include "srpowden.h"
 #include "srisosrc.h"
 #include "srmatsta.h"
+#include "utigpu.h"
 
 //#include <time.h> //Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP
 
@@ -38,17 +39,30 @@
 #ifdef __IGOR_PRO__
 extern vector<int> gVectWarnNos;
 #else
-vector<int> gVectWarnNos;
-srTYield srYield;
+//#ifdef _OFFLOAD_GPU // RL02172021
+//extern int gCallSpinProcess;
+//extern int SpinProcess();
+//extern vector<int> gVectWarnNos;
+//extern srTYield srYield;
+//extern int (*pgWfrExtModifFunc)(int Action, srTSRWRadInData* pWfrIn, char PolComp); 
+//extern int (*pgOptElemGetInfByNameFunc)(const char* sNameOptElem, char** pDescrStr, int* LenDescr, void*); 
+//#else
 int gCallSpinProcess = 1;
 int SpinProcess() { return 0;}
+vector<int> gVectWarnNos;
+srTYield srYield;
 int (*pgWfrExtModifFunc)(int Action, srTSRWRadInData* pWfrIn, char PolComp); //to be replaced by gpWfrModifFunc
 int (*pgOptElemGetInfByNameFunc)(const char* sNameOptElem, char** pDescrStr, int* LenDescr, void*); //to be replaced or removed
-#endif
+//#endif
 
+//vector<int> gVectWarnNos;
+
+#endif
 //-------------------------------------------------------------------------
 // Global Function Pointers
 //-------------------------------------------------------------------------
+
+//#ifndef _OFFLOAD_GPU
 
 int (*gpWfrModifFunc)(int action, SRWLWfr* pWfrIn, char pol) = 0;
 char* (*gpAllocArrayFunc)(char type, long long len) = 0; //OC15082018
@@ -749,8 +763,12 @@ EXP int CALL srwlCalcPowDenSR(SRWLStokes* pStokes, SRWLPartBeam* pElBeam, SRWLPr
 	return locErNo;
 }
 
-//-------------------------------------------------------------------------
+//#else
+//extern SRWLPrtTrj* SetupTrjFromMagFld(SRWLParticle* pPartInitCond, SRWLMagFldC* pMagFld, double* precPar);
+//extern void UtiWarnCheck();
+//#endif
 
+//-------------------------------------------------------------------------
 EXP int CALL srwlCalcIntFromElecField(char* pInt, SRWLWfr* pWfr, char polar, char intType, char depType, double e, double x, double y, double* pMeth, void* pFldTrj) //OC23022020
 //EXP int CALL srwlCalcIntFromElecField(char* pInt, SRWLWfr* pWfr, char polar, char intType, char depType, double e, double x, double y, double *pMeth) //OC16122019
 //EXP int CALL srwlCalcIntFromElecField(char* pInt, SRWLWfr* pWfr, char polar, char intType, char depType, double e, double x, double y, int *pMeth) //OC13122019
@@ -829,6 +847,8 @@ EXP int CALL srwlCalcIntFromElecField(char* pInt, SRWLWfr* pWfr, char polar, cha
 	return 0;
 }
 
+//#ifndef _OFFLOAD_GPU
+
 //-------------------------------------------------------------------------
 
 EXP int CALL srwlResizeElecField(SRWLWfr* pWfr, char type, double* par)
@@ -897,7 +917,7 @@ EXP int CALL srwlResizeElecFieldMesh(SRWLWfr* pWfr, SRWLRadMesh* pMesh, double* 
 		wfr.OutSRWRadPtrs(*pWfr);
 		UtiWarnCheck();
 	}
-	catch(int erNo) 
+	catch(int erNo)
 	{
 		return erNo;
 	}
@@ -1047,7 +1067,17 @@ EXP int CALL srwlCalcTransm(SRWLOptT* pOpTr, const double* pDelta, const double*
 
 //-------------------------------------------------------------------------
 
+
+//#else
+//extern void UtiWarnCheck();
+//#endif // end ifndef _OFFLOAD_GPU
+
+//-------------------------------------------------------------------------
+//#ifdef _OFFLOAD_GPU
+//EXP int CALL srwlUtiFFTGPU(char* pcData, char typeData, double* arMesh, int nMesh, int dir)
+//#else
 EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, int dir)
+//#endif
 {
 	if((pcData == 0) || (arMesh == 0) || ((typeData != 'f') && (typeData != 'd')) || (nMesh < 3) || (dir == 0)) return SRWL_INCORRECT_PARAM_FOR_FFT; //OC31012019
 
@@ -1058,6 +1088,7 @@ EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, 
 	int locErNo = 0;
 	try 
 	{
+		printf("trying...\n");
 		long nx = (long)arMesh[2];
 		if(nx <= 1) return SRWL_INCORRECT_PARAM_FOR_FFT;
 		long ny = 1;
@@ -1092,6 +1123,7 @@ EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, 
 			FFT1DInfo.UseGivenStartTrValue = 0;
 
 			CGenMathFFT1D FFT1D;
+			printf("calling Make1DFFT\n");
 			if(locErNo = FFT1D.Make1DFFT(FFT1DInfo)) return locErNo;
 
 			arMesh[0] = FFT1DInfo.xStartTr;
@@ -1122,6 +1154,7 @@ EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, 
 			FFT2DInfo.UseGivenStartTrValues = 0;
 
 			CGenMathFFT2D FFT2D;
+			printf("calling FFT2D.Make2DFFT\n");
 			if(locErNo = FFT2D.Make2DFFT(FFT2DInfo)) return locErNo;
 
 			arMesh[0] = FFT2DInfo.xStartTr;
@@ -1129,17 +1162,20 @@ EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, 
 			arMesh[3] = FFT2DInfo.yStartTr;
 			arMesh[4] = FFT2DInfo.yStepTr;
 		}
-
+		printf("calling UtiWarnCheck\n");
 		UtiWarnCheck();
 	}
 	catch(int erNo)
 	{
+		printf("exception: %d", erNo);
 		return erNo;
 	}
 	return 0;
 }
 
 //-------------------------------------------------------------------------
+
+//#ifndef _OFFLOAD_GPU
 
 EXP int CALL srwlUtiConvWithGaussian(char* pcData, char typeData, double* arMesh, int nMesh, double* arSig)
 {
@@ -1439,13 +1475,13 @@ EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* 
 //EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* pcI2, char typeI2, SRWLRadMesh* pMesh2, double* arPar)
 {//OC13112018
 	if((pcI1 == 0) || ((typeI1 != 'f') && (typeI1 != 'd')) || (pMesh1 == 0) || 
-	   ((pcI2 != 0) && (((typeI2 != 'f') && (typeI2 != 'd')) || (pMesh2 == 0))) || //OC05022021
+		((pcI2 != 0) && (((typeI2 != 'f') && (typeI2 != 'd')) || (pMesh2 == 0))) || //OC05022021
 		(arPar == 0) || (nPar <= 0)) return SRWL_INCORRECT_PARAM_FOR_INT_PROC; //OC09032019
 	   //(pcI2 == 0) || ((typeI2 != 'f') && (typeI2 != 'd')) || (pMesh2 == 0) || (arPar == 0) || (nPar <= 0)) return SRWL_INCORRECT_PARAM_FOR_INT_PROC; //OC09032019
 	   //(pcI2 == 0) || ((typeI2 != 'f') && (typeI2 != 'd')) || (pMesh2 == 0) || (arPar == 0)) return SRWL_INCORRECT_PARAM_FOR_INT_PROC;
 
 	try 
-	{
+	{		
 		//if(nPar > 1) //DEBUG
 		//{
 		//	std::cout << "In srwlUtiIntProc: arPar[0]=" << arPar[0] << " arPar[1]=" << arPar[1] << "\n"; //DEBUG
@@ -1538,6 +1574,22 @@ EXP int CALL srwlPropagRadMultiE(SRWLStokes* pStokes, SRWLWfr* pWfr0, SRWLOptC* 
 	return 0;
 }
 
+EXP bool CALL srwlUtiGPUAvailable() 
+{
+	return UtiGPU::GPUAvailable();
+}
+
+EXP bool CALL srwlUtiGPUEnabled()
+{
+	return UtiGPU::GPUEnabled();
+}
+
+EXP void CALL srwlUtiGPUSetStatus(bool enable)
+{
+	UtiGPU::SetGPUStatus(enable);
+}
+
+//#endif
 //-------------------------------------------------------------------------
 //Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 /*
