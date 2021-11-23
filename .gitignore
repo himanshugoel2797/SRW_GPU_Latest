@@ -387,3 +387,6 @@ FodyWeavers.xsd
 # JetBrains Rider
 .idea/
 *.sln.iml
+env/work/srw_python/data_example_18/ex18_samp_opt_path_dif_1.dat
+env/work/srw_python/data_example_17/ex17_samp_opt_path_dif.dat
+env/work/srw_python/data_example_18/ex18_samp_opt_path_dif_0.dat

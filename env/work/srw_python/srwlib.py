@@ -2227,7 +2227,7 @@ class SRWLWfr(object):
             #print('          done')           
             if len(self.arMomX) != nMom:
                 #del self.arMomX
-                self.arMomX = cp.array(array('d', [0]*nMom))
+                self.arMomX = array('d', [0]*nMom)
         if _EYNeeded:
             #print('          trying to (re-)allocate Ey ... ', end='')
             #del self.arEy
@@ -2241,7 +2241,7 @@ class SRWLWfr(object):
             #print('          done')
             if len(self.arMomY) != nMom:
                 #del self.arMomY
-                self.arMomY = cp.array(array('d', [0]*nMom))
+                self.arMomY = array('d', [0]*nMom)
         self.numTypeElFld = _typeE
         self.mesh.ne = _ne
         self.mesh.nx = _nx
