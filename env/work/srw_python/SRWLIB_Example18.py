@@ -208,9 +208,9 @@ det = SRWLDet(_xStart = -0.5*xrDet, _xFin = 0.5*xrDet, _nx = nxDet, _yStart = -0
 stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" Intensity on Detector (by interpolation)
 mesh1 = stkDet.mesh; arI1 = stkDet.arS
 
-srwl_uti_save_intens_ascii( #Saving "Projected" Intensity to a file
-    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName), 0,
-    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'J/eV/mm^2'])
+#srwl_uti_save_intens_ascii( #Saving "Projected" Intensity to a file
+#    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName), 0,
+#    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'J/eV/mm^2'])
 print('done in', round(time.time() - t), 's')
 
 #**********************Plotting Results (requires 3rd party graphics package)

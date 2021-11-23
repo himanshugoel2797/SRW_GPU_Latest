@@ -18,7 +18,7 @@
 #include "cufft.h"
 #include "cuda_runtime.h"
 #endif 
-#include "utigpu.h"
+#include "utidev.h"
 
 #if _FFTW3
 #include "fftw3.h"

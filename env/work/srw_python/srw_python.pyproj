@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{9a08cea0-3ae7-4a0c-a34b-6b461ac728d8}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>test_fftw3_port.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>Global|PythonCore|3.8</InterpreterId>
+    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="lib\srwlpy2_7_win32.pyd" />
+    <Content Include="lib\srwlpy2_7_x64.pyd" />
+    <Content Include="lib\srwlpy2_7_x64_omp.pyd" />
+    <Content Include="lib\srwlpy3_3_win32.pyd" />
+    <Content Include="lib\srwlpy3_3_x64.pyd" />
+    <Content Include="lib\srwlpy3_5_x64.pyd" />
+    <Content Include="lib\srwlpy3_6_win32.pyd" />
+    <Content Include="lib\srwlpy3_6_x64.pyd" />
+    <Content Include="lib\srwlpy3_6_x64_omp.pyd" />
+    <Content Include="lib\srwlpy3_7_x64.pyd" />
+    <Content Include="lib\srwlpy3_7_x64_omp.pyd" />
+    <Content Include="lib\srwlpy3_8_x64.pyd" />
+    <Content Include="lib\srwlpy3_8_x64_omp.pyd" />
+    <Content Include="srwlpy.pyd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="srwlib.py" />
+    <Compile Include="SRWLIB_Example01.py" />
+    <Compile Include="SRWLIB_Example01_kick_matr.py" />
+    <Compile Include="SRWLIB_Example02.py" />
+    <Compile Include="SRWLIB_Example03.py" />
+    <Compile Include="SRWLIB_Example04.py" />
+    <Compile Include="SRWLIB_Example05.py" />
+    <Compile Include="SRWLIB_Example06.py" />
+    <Compile Include="SRWLIB_Example06_PETRA.py" />
+    <Compile Include="SRWLIB_Example07.py" />
+    <Compile Include="SRWLIB_Example08.py" />
+    <Compile Include="SRWLIB_Example09.py" />
+    <Compile Include="SRWLIB_Example10.py" />
+    <Compile Include="SRWLIB_Example11.py" />
+    <Compile Include="SRWLIB_Example12.py" />
+    <Compile Include="SRWLIB_Example13.py" />
+    <Compile Include="SRWLIB_Example14.py" />
+    <Compile Include="SRWLIB_Example15.py" />
+    <Compile Include="SRWLIB_Example16.py" />
+    <Compile Include="SRWLIB_Example17.py" />
+    <Compile Include="SRWLIB_Example18.py" />
+    <Compile Include="SRWLIB_Example19.py" />
+    <Compile Include="SRWLIB_Example20.py" />
+    <Compile Include="SRWLIB_ExamplesRunAll.py" />
+    <Compile Include="SRWLIB_ExampleViewDataFile.py" />
+    <Compile Include="srwl_bl.py" />
+    <Compile Include="srwl_uti_brightness.py" />
+    <Compile Include="srwl_uti_cryst.py" />
+    <Compile Include="srwl_uti_mag.py" />
+    <Compile Include="srwl_uti_smp.py" />
+    <Compile Include="srwl_uti_smp_rnd_obj2d.py" />
+    <Compile Include="srwl_uti_smp_rnd_obj3d.py" />
+    <Compile Include="srwl_uti_src.py" />
+    <Compile Include="srwl_uti_und.py" />
+    <Compile Include="test_fftw3_port.py" />
+    <Compile Include="uti_io.py" />
+    <Compile Include="uti_io_genesis.py" />
+    <Compile Include="uti_mag.py" />
+    <Compile Include="uti_math.py" />
+    <Compile Include="uti_math_eigen.py" />
+    <Compile Include="uti_parse.py" />
+    <Compile Include="uti_plot.py" />
+    <Compile Include="uti_plot_com.py" />
+    <Compile Include="uti_plot_matplotlib.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="Global|PythonCore|3.8" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

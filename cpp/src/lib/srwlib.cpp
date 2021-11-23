@@ -28,7 +28,7 @@
 #include "srpowden.h"
 #include "srisosrc.h"
 #include "srmatsta.h"
-#include "utigpu.h"
+#include "utidev.h"
 
 //#include <time.h> //Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP
 
@@ -1576,17 +1576,27 @@ EXP int CALL srwlPropagRadMultiE(SRWLStokes* pStokes, SRWLWfr* pWfr0, SRWLOptC* 
 
 EXP bool CALL srwlUtiGPUAvailable() 
 {
-	return UtiGPU::GPUAvailable();
+	return UtiDev::GPUAvailable();
 }
 
 EXP bool CALL srwlUtiGPUEnabled()
 {
-	return UtiGPU::GPUEnabled();
+	return UtiDev::GPUEnabled();
 }
 
 EXP void CALL srwlUtiGPUSetStatus(bool enable)
 {
-	UtiGPU::SetGPUStatus(enable);
+	UtiDev::SetGPUStatus(enable);
+}
+
+EXP void CALL srwlUtiDevInit()
+{
+	UtiDev::Init();
+}
+
+EXP void CALL srwlUtiDevFini()
+{
+	UtiDev::Fini();
 }
 
 //#endif

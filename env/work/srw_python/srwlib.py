@@ -2204,6 +2204,14 @@ class SRWLWfr(object):
         #print('                           new point numbers: ne=',_ne,' nx=',_nx,' ny=',_ny) #,' type:',typeE)
         #print('                           backupNeeded',_backupNeeded)
         
+
+        try:
+            import cupy as cp
+            import cupy.cuda.memory
+            cp.cuda.set_allocator(cupy.cuda.memory.malloc_managed)
+        except:
+            pass
+
         nTot = 2*_ne*_nx*_ny #array length to store one component of complex electric field
         nMom = 11*_ne
         if _EXNeeded:
@@ -2218,8 +2226,8 @@ class SRWLWfr(object):
             self.arEx = srwl_uti_array_alloc(_typeE, nTot)
             #print('          done')           
             if len(self.arMomX) != nMom:
-                del self.arMomX
-                self.arMomX = array('d', [0]*nMom)
+                #del self.arMomX
+                self.arMomX = cp.array(array('d', [0]*nMom))
         if _EYNeeded:
             #print('          trying to (re-)allocate Ey ... ', end='')
             #del self.arEy
@@ -2232,8 +2240,8 @@ class SRWLWfr(object):
             self.arEy = srwl_uti_array_alloc(_typeE, nTot)
             #print('          done')
             if len(self.arMomY) != nMom:
-                del self.arMomY
-                self.arMomY = array('d', [0]*nMom)
+                #del self.arMomY
+                self.arMomY = cp.array(array('d', [0]*nMom))
         self.numTypeElFld = _typeE
         self.mesh.ne = _ne
         self.mesh.nx = _nx
@@ -2959,15 +2967,22 @@ class SRWLOptT(SRWLOpt):
         """
         nTot = self.mesh.ne*self.mesh.nx*self.mesh.ny
         arAux = array('d', [0]*nTot)
-        for i in range(nTot): #put all data into one column using "C-alignment" as a "flat" 1D array
-            tr = 0
-            if((_typ == 1) or (_typ == 2)): #amplitude or intensity transmission
-                tr = self.arTr[i*2]
-                if(_typ == 2): #intensity transmission
-                    tr *= tr
-            else: #optical path difference
-                tr = self.arTr[i*2 + 1]
-            arAux[i] = tr
+        if (_typ == 1) or (_typ == 2):
+            arAux = deepcopy(self.arTr[0:nTot*2:2])
+            if _typ == 2:
+                arAux = arAux ** 2
+        else:
+            arAux = deepcopy(self.arTr[1:nTot*2+1:2])
+
+        #for i in range(nTot): #put all data into one column using "C-alignment" as a "flat" 1D array
+        #    tr = 0
+        #    if((_typ == 1) or (_typ == 2)): #amplitude or intensity transmission
+        #        tr = self.arTr[i*2]
+        #        if(_typ == 2): #intensity transmission
+        #            tr *= tr
+        #    else: #optical path difference
+        #        tr = self.arTr[i*2 + 1]
+        #    arAux[i] = tr
         if (_dep == 3) and (self.mesh.ne == 1): return arAux
         #print('total extract passed')
         
@@ -7307,12 +7322,22 @@ def srwl_uti_read_mag_fld_3d(_fpath, _scom='#'):
 #(to walk-around the problem that simple allocation "array(type, [0]*n)" at large n is usually very time-consuming)
 def srwl_uti_array_alloc(_type, _n, _list_base=[0]): #OC14042019
 #def srwl_uti_array_alloc(_type, _n):
+
+    try:
+        import cupy as cp
+        import cupy.cuda.memory
+        cp.cuda.set_allocator(cupy.cuda.memory.malloc_managed)
+    except:
+        pass
+
     nPartMax = 10000000 #to tune
     #print('srwl_uti_array_alloc: array requested:', _n)
     lenBase = len(_list_base) #OC14042019
     nTrue = _n*lenBase #OC14042019
     
-    if(nTrue <= nPartMax): return array(_type, _list_base*_n)
+    if(nTrue <= nPartMax): 
+        retObj = cp.array(array(_type, _list_base*_n))
+        return retObj
     #if(_n <= nPartMax): return array(_type, [0]*_n)
         #resAr = array(_type, [0]*_n)
         #print('Array requested:', _n, 'Allocated:', len(resAr))
@@ -7338,7 +7363,7 @@ def srwl_uti_array_alloc(_type, _n, _list_base=[0]): #OC14042019
         resAr.extend(auxAr)
 
     #print('Array requested:', _n, 'Allocated:', len(resAr))
-    return resAr
+    return cp.array(resAr)
 
 #**********************Auxiliary function to generate Halton sequence (to replace pseudo-random numbers)
 #Contribution from R. Lindberg, X. Shi (APS)
@@ -7885,7 +7910,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                                #_rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _com_mpi=None, _n_mpi=1): #OC01032021
                                #_rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _n_mpi=1): #OC02032021
                                #_rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _n_mpi=1, _del_aux_files=False): #OC02032021
-                               _rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _n_mpi=1, _n_cm=1000, _del_aux_files=False): #OC27062021
+                               _rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _n_mpi=1, _n_cm=1000, _del_aux_files=False, _exec_gpu_id=0): #OC27062021 #HG10102021
     """
     Calculate Stokes Parameters of Emitted (and Propagated, if beamline is defined) Partially-Coherent SR.
     :param _e_beam: Finite-Emittance e-beam (SRWLPartBeam type)
@@ -7933,6 +7958,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
     :param _n_mpi: number of independent "groups" of MPI processes (for 4D CSD calculation)
     :param _n_cm: number of coherent modes to calculate (is taken into account if _char==61 or _char==7)
     :param _del_aux_files: delete (or not) auxiliary files (applies to different types of calculations)
+    :param _exec_gpu_id: GPU device ID to execute calculations on
    """
 
     doMutual = 0 #OC30052017

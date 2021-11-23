@@ -641,7 +641,7 @@
       <Culture>0x0809</Culture>
     </ResourceCompile>
     <Lib>
-      <AdditionalDependencies>cudart_static.lib;cufft.lib;..\..\ext_lib\fftw3_64.lib;..\..\ext_lib\fftw3f_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart_static.lib;cufft.lib;cudadevrt.lib;..\..\ext_lib\fftw3_64.lib;..\..\ext_lib\fftw3f_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>srw_x64.lib</OutputFile>
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\x64</AdditionalLibraryDirectories>
     </Lib>
@@ -1265,7 +1265,7 @@
     <ClCompile Include="..\src\ext\genesis\genesis_july08\track.c" />
     <ClCompile Include="..\src\lib\srerror.cpp" />
     <ClCompile Include="..\src\lib\srwlib.cpp" />
-    <ClCompile Include="..\src\lib\utigpu.cpp" />
+    <ClCompile Include="..\src\lib\utidev.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\core\srradmnpgpu.cuh" />
@@ -1343,7 +1343,7 @@
     <ClInclude Include="..\src\lib\srerror.h" />
     <ClInclude Include="..\src\lib\srigorre.h" />
     <ClInclude Include="..\src\lib\srwlib.h" />
-    <ClInclude Include="..\src\lib\utigpu.h" />
+    <ClInclude Include="..\src\lib\utidev.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\src\core\srradmnpgpu.cu" />

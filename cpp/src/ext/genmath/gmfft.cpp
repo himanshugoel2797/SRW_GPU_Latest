@@ -208,6 +208,7 @@ int CGenMathFFT1D::Make1DFFT_InPlace(CGenMathFFT1DInfo& FFT1DInfo)
 {
 	//long TotAmOfPo = (FFT1DInfo.Nx << 1)*FFT1DInfo.HowMany;
 	long long TotAmOfPo = ((long long)(FFT1DInfo.Nx << 1)) * ((long long)FFT1DInfo.HowMany);
+
 	float* AuxDataCont = new float[TotAmOfPo];
 	if (AuxDataCont == 0) return MEMORY_ALLOCATION_FAILURE;
 	FFT1DInfo.pOutData = AuxDataCont;
@@ -334,7 +335,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	fftw_complex* dDataToFFT = 0;
 #endif
 
-	if (UtiGPU::GPUEnabled()) {
+	if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 		if (FFT2DInfo.pData != 0) {
 			DataToFFT_cu = (cufftComplex*)(FFT2DInfo.pData);
@@ -371,7 +372,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	}
 	if (NeedsShiftBeforeX || NeedsShiftBeforeY)
 	{
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (DataToFFT_cu != 0) {
 				TreatShifts((fftwf_complex*)DataToFFT_cu);
@@ -392,7 +393,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 	if (FFT2DInfo.Dir > 0)
 	{
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (DataToFFT_cu != 0)
 			{
@@ -409,7 +410,9 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 				else Plan2DFFT_cu = *(cufftHandle*)pPrecreatedPlan2DFFT;
 				if (Plan2DFFT_cu == 0) return ERROR_IN_FFT;
 
-				cufftExecC2C(Plan2DFFT_cu, DataToFFT_cu, DataToFFT_cu, CUFFT_FORWARD);
+				auto res = cufftExecC2C(Plan2DFFT_cu, DataToFFT_cu, DataToFFT_cu, CUFFT_FORWARD);
+				if (res != CUFFT_SUCCESS)
+					printf("CUFFT Error: %d\r\n", res);
 			}
 			else if (dDataToFFT_cu != 0)
 			{
@@ -461,7 +464,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 #endif
 		}
 
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (DataToFFT_cu != 0)
 			{
@@ -493,7 +496,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	}
 	else
 	{
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (DataToFFT_cu != 0)
 			{
@@ -572,12 +575,17 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 	//double Mult = FFT2DInfo.xStep*FFT2DInfo.yStep;
 	double Mult = FFT2DInfo.xStep * FFT2DInfo.yStep * FFT2DInfo.ExtraMult; //OC20112017
-	if (UtiGPU::GPUEnabled()) {
+	if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 		if (DataToFFT_cu != 0)
 			NormalizeDataAfter2DFFT_CUDA((float*)DataToFFT_cu, Nx, Ny, Mult);
 		else if (dDataToFFT_cu != 0)
 			NormalizeDataAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny, Mult);
+
+#ifdef _WIN32
+		if (NeedsShiftAfterX | NeedsShiftAfterY)
+			cudaDeviceSynchronize();
+#endif
 #endif
 	}
 	else {
@@ -602,7 +610,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	}
 	if (NeedsShiftAfterX || NeedsShiftAfterY)
 	{
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (DataToFFT_cu != 0) {
 				TreatShifts((fftwf_complex*)DataToFFT_cu);
@@ -681,7 +689,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	m_dArrayShiftX = 0;
 	if (NeedsShiftBeforeX || NeedsShiftAfterX)
 	{
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (FFT1DInfo.pInData != 0)
 			{
@@ -721,7 +729,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	fftw_complex* dDataToFFT = 0, * dOutDataFFT = 0; //, *pdOutDataFFT=0;
 #endif
 
-	if (UtiGPU::GPUEnabled()) {
+	if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 		if ((FFT1DInfo.pInData != 0) && (FFT1DInfo.pOutData != 0))
 		{
@@ -773,7 +781,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	char t0SignMult = (FFT1DInfo.Dir > 0) ? -1 : 1;
 	if (NeedsShiftBeforeX)
 	{
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (m_ArrayShiftX != 0) FillArrayShift_CUDA(t0SignMult * x0_Before, FFT1DInfo.xStep, Nx, m_ArrayShiftX);
 			else if (m_dArrayShiftX != 0) FillArrayShift_CUDA(t0SignMult * x0_Before, FFT1DInfo.xStep, Nx, m_dArrayShiftX);
@@ -802,7 +810,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 
 	if (FFT1DInfo.Dir > 0)
 	{
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			int arN[] = { (int)Nx }; //OC14052020
 			if (DataToFFT_GPU != 0)
@@ -893,15 +901,19 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime("::Make1DFFT : fft  dir>0",&start);
 
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (OutDataFFT_GPU != 0)
 			{
-				RepairAndRotateDataAfter1DFFT_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
+				//RepairAndRotateDataAfter1DFFT_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
+				RepairSignAfter1DFFT_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
+				RotateDataAfter1DFFT_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
 			}
 			else if (dOutDataFFT_GPU != 0)
 			{
-				RepairAndRotateDataAfter1DFFT_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
+				//RepairAndRotateDataAfter1DFFT_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
+				RepairSignAfter1DFFT_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
+				RotateDataAfter1DFFT_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
 			}
 #endif
 		}
@@ -925,7 +937,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	{
 		//int flags = FFTW_ESTIMATE; //OC30012019 (commented-out)
 
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			int arN[] = { (int)Nx }; //OC14052020
 			//int arN[] = {Nx};
@@ -1036,7 +1048,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	//double Mult = FFT1DInfo.xStep;
 	double Mult = FFT1DInfo.xStep * FFT1DInfo.MultExtra;
 
-	if (UtiGPU::GPUEnabled()) {
+	if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 		if (OutDataFFT_GPU != 0) {
 			NormalizeDataAfter1DFFT_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx, Mult);
@@ -1058,7 +1070,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 
 	if (NeedsShiftAfterX)
 	{
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (m_ArrayShiftX != 0) FillArrayShift_CUDA(t0SignMult * x0_After, FFT1DInfo.xStepTr, Nx, m_ArrayShiftX); //OC02022019
 			else if (m_dArrayShiftX != 0) FillArrayShift_CUDA(t0SignMult * x0_After, FFT1DInfo.xStepTr, Nx, m_dArrayShiftX);
@@ -1079,7 +1091,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 		}
 	}
 
-	if (!UtiGPU::GPUEnabled())
+	if (!UtiDev::GPUEnabled())
 	{
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime("::Make1DFFT : ProcessSharpEdges",&start);
@@ -1103,7 +1115,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 #endif
 	}
 
-	if (UtiGPU::GPUEnabled()) {
+	if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 		if (m_ArrayShiftX != 0)
 		{
@@ -1125,6 +1137,12 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 			delete[] m_dArrayShiftX; m_dArrayShiftX = 0;
 		}
 	}
+
+#if defined(_OFFLOAD_GPU) && defined(_WIN32)
+	if (UtiDev::GPUEnabled()) {
+		cudaDeviceSynchronize();
+	}
+#endif
 
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 	//srwlPrintTime("::Make1DFFT : after fft ",&start);

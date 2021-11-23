@@ -115,6 +115,11 @@ void RepairSignAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx) {
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     RepairSignAfter1DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx * 2);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void RotateDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx) {
@@ -122,13 +127,31 @@ void RotateDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx) {
     dim3 blocks(Nx / (2 * bs) + ((Nx / 2 & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     RotateDataAfter1DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, HowMany, Nx * 2, Nx);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void RepairAndRotateDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx) {
+
+#ifdef _DEBUG
+    {
+        auto err = cudaGetLastError();
+        printf("%s\r\n", cudaGetErrorString(err));
+    }
+#endif
+
     const int bs = 256;
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     RepairAndRotateAfter1DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, HowMany, Nx * 2, Nx);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void NormalizeDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx, double Mult) {
@@ -136,6 +159,11 @@ void NormalizeDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx, doubl
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     NormalizeDataAfter1DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, HowMany, Nx * 2, Mult);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void FillArrayShift_CUDA(double t0, double tStep, long Nx, float* tShiftX) {
@@ -143,6 +171,11 @@ void FillArrayShift_CUDA(double t0, double tStep, long Nx, float* tShiftX) {
     dim3 blocks(Nx / (2 * bs) + ((Nx / 2 & (bs - 1)) != 0), 1);
     dim3 threads(bs, 1);
     FillArrayShift_Kernel<float> << <blocks, threads >> > (t0, tStep, Nx, tShiftX);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void TreatShift_CUDA(float* pData, long HowMany, long Nx, float* tShiftX) {
@@ -150,6 +183,11 @@ void TreatShift_CUDA(float* pData, long HowMany, long Nx, float* tShiftX) {
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     TreatShift_Kernel<float> << <blocks, threads >> > (pData, Nx * 2, tShiftX);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void RepairSignAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx) {
@@ -157,6 +195,11 @@ void RepairSignAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx) {
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     RepairSignAfter1DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx * 2);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void RotateDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx) {
@@ -164,6 +207,11 @@ void RotateDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx) {
     dim3 blocks(Nx / (2 * bs) + ((Nx & (2 * bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     RotateDataAfter1DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, HowMany, Nx * 2, Nx);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void RepairAndRotateDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx) {
@@ -171,6 +219,11 @@ void RepairAndRotateDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     RepairAndRotateAfter1DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, HowMany, Nx * 2, Nx);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void NormalizeDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx, double Mult) {
@@ -178,6 +231,11 @@ void NormalizeDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx, doub
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     NormalizeDataAfter1DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, HowMany, Nx * 2, Mult);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void FillArrayShift_CUDA(double t0, double tStep, long Nx, double* tShiftX) {
@@ -185,6 +243,11 @@ void FillArrayShift_CUDA(double t0, double tStep, long Nx, double* tShiftX) {
     dim3 blocks(Nx / (2 * bs) + ((Nx & (2 * bs - 1)) != 0), 1);
     dim3 threads(bs, 1);
     FillArrayShift_Kernel<double> << <blocks, threads >> > (t0, tStep, Nx, tShiftX);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 void TreatShift_CUDA(double* pData, long HowMany, long Nx, double* tShiftX) {
@@ -192,6 +255,11 @@ void TreatShift_CUDA(double* pData, long HowMany, long Nx, double* tShiftX) {
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
     dim3 threads(bs, 1);
     TreatShift_Kernel<double> << <blocks, threads >> > (pData, Nx * 2, tShiftX);
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    printf("%s\r\n", cudaGetErrorString(err));
+#endif
 }
 
 

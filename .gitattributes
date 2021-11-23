@@ -1,0 +1,54 @@
+* text eol=crlf
+*.lib binary
+*.obj binary
+*.exe binary
+*.dll binary
+*.pdb binary
+*.idb binary
+*.pch binary
+*.a binary
+*.a.old binary
+*.so binary
+*.so.old binary
+*.pyd binary
+*.pyd.old binary
+*.xop binary
+*.zip binary
+*.exp binary
+*.pdf binary
+*.tar.gz binary
+*.xcuserstate binary
+*.ibw binary
+*.ibw.old binary
+*.ihf binary
+*.ihf.old binary
+*.ifn binary
+*.ifn.old binary
+SRW_MAC64 binary
+*.aps binary
+*.ncb binary
+*.opt binary
+*.bsc binary
+*.ilk binary
+*.exe.* binary
+*.sbr binary
+*.co binary
+*.tif binary
+*.manifest text eol=crlf
+
+#*.cpp text eol=crlf
+#*.h text eol=crlf
+#*.cu text eol=crlf
+#*.h text eol=crlf
+#*.txt text eol=crlf
+#*.py text eol=crlf
+
+#*.vcxproj text eol=crlf
+#*.vcxproj.* text eol=crlf
+#*.sln text eol=crlf
+#*.ipf text eol=crlf
+#*.dat text eol=crlf
+#*.json text eol=crlf
+#*.bat text eol=crlf
+
+#**/Makefile text eol=crlf

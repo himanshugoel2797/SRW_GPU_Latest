@@ -992,6 +992,20 @@ EXP bool CALL srwlUtiGPUEnabled();
 EXP void CALL srwlUtiGPUSetStatus(bool enable);
 
 /**
+ * Initialize device offloading
+ * @see ...
+ */
+
+EXP void CALL srwlUtiDevInit();
+
+/**
+ * Finalize device offloading
+ * @see ...
+ */
+
+EXP void CALL srwlUtiDevFini();
+
+/**
  * These functions were added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP
 EXP void CALL srwlPrintTime(const char* str, double* start);
 EXP void CALL get_walltime(double* wcTime);

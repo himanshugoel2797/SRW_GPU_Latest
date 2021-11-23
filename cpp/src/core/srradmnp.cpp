@@ -10,7 +10,7 @@
 
  //#include "srradmnp.h"
 #include "srradmnpgpu.h"
-#include "utigpu.h"
+#include "utidev.h"
 #include "gmfft.h"
 #include "gmmeth.h"
 //#include "gminterp.h"
@@ -1614,7 +1614,7 @@ int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtra
 		printf("tot_iter = %d\n", tot_iter);
 
 		Rx = pMeth[2], Rz = pMeth[3], xc = pMeth[4], zc = pMeth[5];
-		if (UtiGPU::GPUEnabled()) {
+		if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 			if (pMeth[6] == 0) { ddata_enter = true; ddata_exit = true; printf("ddata_enter & ddata_enter\n"); }
 			else ncomp = pMeth[6];
@@ -1670,7 +1670,7 @@ int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtra
 		RadAccessData.pBaseRadZ = pEz0;
 	}
 
-	if (UtiGPU::GPUEnabled()) {
+	if (UtiDev::GPUEnabled()) {
 #ifdef _OFFLOAD_GPU
 		printf("CUDA configuration: CUDA_BLOCK_SIZE_MAX= %d CUDA_GRID_SIZE_MAX= %d\n", CUDA_BLOCK_SIZE_MAX, CUDA_GRID_SIZE_MAX);
 		MutualIntensityComponentCUDA(dpMI, pEx0, pEz0, nxnz, iter0, tot_iter, PolCom);

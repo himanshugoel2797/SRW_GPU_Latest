@@ -171,6 +171,16 @@ char* GetPyArrayBuf(PyObject* obj, vector<Py_buffer>* pvBuf, Py_ssize_t* pSizeBu
 		if(pvBuf != 0) pvBuf->push_back(pb_tmp);
 		return (char*)pb_tmp.buf;
 	}
+	else if (PyObject_HasAttrString(obj, "data")) {
+		PyObject* obj_data = PyObject_GetAttrString(obj, "data");
+		PyObject* obj_data_ptr = PyObject_GetAttrString(obj_data, "ptr");
+		PyObject* obj_len = PyObject_GetAttrString(obj, "size");
+		PyObject* obj_strides = PyObject_GetAttrString(obj, "strides");
+		PyObject* obj_itemsz = PyTuple_GetItem(obj_strides, 0);
+
+		if(pSizeBuf != 0) *pSizeBuf = PyLong_AsLong(obj_len) * PyLong_AsLong(obj_itemsz);
+		return (char*)PyLong_AsLongLong(obj_data_ptr);
+	}
 #if PY_MAJOR_VERSION < 3
 	//else if(PyBuffer_Check(obj))
 	else
@@ -3311,6 +3321,33 @@ void ParseSructSmpObj3D(double**& arObjShapeDefs, int& nObj3D, PyObject* oListSh
 }
 
 /************************************************************************//**
+ * Configures device selection parameters.
+ ***************************************************************************/
+void SetupDeviceParam(PyObject* oDev) //HG10202021
+{
+	if (oDev != 0) {
+		if (PyLong_Check(oDev)) {
+			switch (PyLong_AsLong(oDev)) {
+			case 1:
+				srwlUtiGPUSetStatus(true);
+				return;
+
+			default:
+				return;
+			}
+		}
+	}
+}
+
+/************************************************************************//**
+ * Cleans up device selection parameters.
+ ***************************************************************************/
+void CleanDeviceParam() //HG10202021
+{
+	srwlUtiGPUSetStatus(false);
+}
+
+/************************************************************************//**
  * Updates Py List by numbers
  ***************************************************************************/
 template<class T> void UpdatePyListNum(PyObject* oList, const T* ar, int n) //OC03092016
@@ -4019,6 +4056,7 @@ int ModifySRWLWfr(int action, SRWLWfr* pWfr, char pol)
 	//srwlPrintTime("::ModifySRWLWfr : PyObject_CallObject",&start);
 
 	Py_DECREF(oFunc);
+	if (PyErr_Occurred()) PyErr_PrintEx(0);
 	if(res == 0) return -1;
 	Py_DECREF(res);
 
@@ -4914,7 +4952,7 @@ static PyObject* srwlpy_SetRepresElecField(PyObject *self, PyObject *args)
 static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 {
 	//PyObject *oWfr=0, *oOptCnt=0;
-	PyObject *oWfr=0, *oOptCnt=0, *oInt=0; //OC14082018
+	PyObject *oWfr=0, *oOptCnt=0, *oInt=0, *oDev=0; //OC14082018
 
 	vector<Py_buffer> vBuf;
 	SRWLWfr wfr;
@@ -4930,7 +4968,7 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 	try
 	{
 		//if(!PyArg_ParseTuple(args, "OO:PropagElecField", &oWfr, &oOptCnt)) throw strEr_BadArg_PropagElecField;
-		if(!PyArg_ParseTuple(args, "OO|O:PropagElecField", &oWfr, &oOptCnt, &oInt)) throw strEr_BadArg_PropagElecField; //OC14082018
+		if(!PyArg_ParseTuple(args, "OO|OO:PropagElecField", &oWfr, &oOptCnt, &oInt, &oDev)) throw strEr_BadArg_PropagElecField; //OC14082018
 		if((oWfr == 0) || (oOptCnt == 0)) throw strEr_BadArg_PropagElecField;
 
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
@@ -4962,8 +5000,14 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 			}
 		}
 
+		srwlUtiDevInit();
+		SetupDeviceParam(oDev); //Parse and setup device options
+
 		//ProcRes(srwlPropagElecField(&wfr, &optCnt));
 		ProcRes(srwlPropagElecField(&wfr, &optCnt, nInt, arIntDescr, arIntMesh, arInts)); //OC15082018
+
+		CleanDeviceParam(); //Reset device options to defaults
+		srwlUtiDevFini();
 
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime(":srwlpy_PropagElecField :srwlPropagElecField", &start);
@@ -5084,12 +5128,12 @@ static PyObject* srwlpy_CalcTransm(PyObject* self, PyObject* args) //HG27012021
  ***************************************************************************/
 static PyObject* srwlpy_UtiFFT(PyObject *self, PyObject *args)
 {
-	PyObject *oData=0, *oMesh=0, *oDir=0;
+	PyObject *oData=0, *oMesh=0, *oDir=0, *oDev=0;
 	vector<Py_buffer> vBuf;
 
 	try
 	{
-		if(!PyArg_ParseTuple(args, "OOO:UtiFFT", &oData, &oMesh, &oDir)) throw strEr_BadArg_UtiFFT;
+		if(!PyArg_ParseTuple(args, "OOO|O:UtiFFT", &oData, &oMesh, &oDir, &oDev)) throw strEr_BadArg_UtiFFT;
 		if((oData == 0) || (oMesh == 0) || (oDir == 0)) throw strEr_BadArg_UtiFFT;
 
 		//int sizeVectBuf = (int)vBuf.size();
@@ -5125,7 +5169,11 @@ static PyObject* srwlpy_UtiFFT(PyObject *self, PyObject *args)
 		if(!PyNumber_Check(oDir)) throw strEr_BadArg_UtiFFT;
 		int dir = (int)PyLong_AsLong(oDir);
 
+
+		srwlUtiDevInit();
+		SetupDeviceParam(oDev); //Parse and setup device options
 		ProcRes(srwlUtiFFT(pcData, typeData, arMesh, nMesh, dir));
+		srwlUtiDevFini();
 
 		if(meshArType == 'l') UpdatePyListNum(oMesh, arMesh, nMesh); //04092016
 	}
@@ -5559,6 +5607,132 @@ static PyMethodDef srwlpy_methods[] = {
 	{NULL, NULL}
 };
 
+
+/* This is where we define the PyMyArray object structure */
+typedef struct {
+	PyObject_HEAD
+	/* Type-specific fields go below. */
+	void* data;
+	Py_ssize_t len;
+} PyMyArray;
+
+
+/* This is the __init__ function, implemented in C */
+static int
+PyMyArray_init(PyMyArray* self, PyObject* args, PyObject* kwds)
+{
+	// init may have already been called
+	if (self->data != NULL)
+		delete[] self->data;
+
+	int length = 0;
+	static char* kwlist[] = { "length", NULL };
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "|i", kwlist, &length))
+		return -1;
+
+	if (length < 0)
+		length = 0;
+
+	self->data = new float[length];
+	self->len = length;
+
+	return 0;
+}
+
+
+/* this function is called when the object is deallocated */
+static void
+PyMyArray_dealloc(PyMyArray* self)
+{
+	delete[] self->data;
+	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+
+/* This function returns the string representation of our object */
+static PyObject*
+PyMyArray_str(PyMyArray* self)
+{
+	char* s = "CustomBuffer";
+	PyObject* ret = PyUnicode_FromString(s);
+	//free(s);
+	return ret;
+}
+
+/* Here is the buffer interface function */
+static int
+PyMyArray_getbuffer(PyObject* obj, Py_buffer* view, int flags)
+{
+	if (view == NULL) {
+		PyErr_SetString(PyExc_ValueError, "NULL view in getbuffer");
+		return -1;
+	}
+
+	PyMyArray* self = (PyMyArray*)obj;
+	view->obj = (PyObject*)self;
+	view->buf = (void*)self->data;
+	view->len = self->len * sizeof(float);
+	view->readonly = 0;
+	view->itemsize = sizeof(float);
+	view->format = "f";  // integer
+	view->ndim = 1;
+	view->shape = &self->len;  // length-1 sequence of dimensions
+	view->strides = &view->itemsize;  // for the simple case we can do this
+	view->suboffsets = NULL;
+	view->internal = NULL;
+
+	Py_INCREF(self);  // need to increase the reference count
+	return 0;
+}
+
+static PyBufferProcs PyMyArray_as_buffer = {
+	// this definition is only compatible with Python 3.3 and above
+	(getbufferproc)PyMyArray_getbuffer,
+	(releasebufferproc)0,  // we do not require any special release function
+};
+
+
+/* Here is the type structure: we put the above functions in the appropriate place
+   in order to actually define the Python object type */
+static PyTypeObject PyMyArrayType = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+	"srwlpy.managedbuffer",        /* tp_name */
+	sizeof(PyMyArray),            /* tp_basicsize */
+	0,                            /* tp_itemsize */
+	(destructor)PyMyArray_dealloc,/* tp_dealloc */
+	0,                            /* tp_print */
+	0,                            /* tp_getattr */
+	0,                            /* tp_setattr */
+	0,                            /* tp_reserved */
+	(reprfunc)PyMyArray_str,      /* tp_repr */
+	0,                            /* tp_as_number */
+	0,                            /* tp_as_sequence */
+	0,                            /* tp_as_mapping */
+	0,                            /* tp_hash  */
+	0,                            /* tp_call */
+	(reprfunc)PyMyArray_str,      /* tp_str */
+	0,                            /* tp_getattro */
+	0,                            /* tp_setattro */
+	&PyMyArray_as_buffer,         /* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT,           /* tp_flags */
+	"managedbuffer object",           /* tp_doc */
+	0,                            /* tp_traverse */
+	0,                            /* tp_clear */
+	0,                            /* tp_richcompare */
+	0,                            /* tp_weaklistoffset */
+	0,                            /* tp_iter */
+	0,                            /* tp_iternext */
+	0,                            /* tp_methods */
+	0,                            /* tp_members */
+	0,                            /* tp_getset */
+	0,                            /* tp_base */
+	0,                            /* tp_dict */
+	0,                            /* tp_descr_get */
+	0,                            /* tp_descr_set */
+	0,                            /* tp_dictoffset */
+	(initproc)PyMyArray_init,     /* tp_init */
+};
+
 #if PY_MAJOR_VERSION >= 3
 
 static struct PyModuleDef srwlpymodule = {
@@ -5579,7 +5753,17 @@ PyMODINIT_FUNC PyInit_srwlpy(void)
 	srwlUtiSetWfrModifFunc(&ModifySRWLWfr);
 	srwlUtiSetAllocArrayFunc(&AllocPyArrayGetBuf); //OC15082018
 
-    return PyModule_Create(&srwlpymodule);
+	PyMyArrayType.tp_new = PyType_GenericNew;
+	if (PyType_Ready(&PyMyArrayType) < 0)
+		return NULL;
+
+    auto m = PyModule_Create(&srwlpymodule);
+	if (m == NULL)
+		return NULL;
+
+	Py_INCREF(&PyMyArrayType);
+	PyModule_AddObject(m, "managedbuffer", (PyObject*)&PyMyArrayType);
+	return m;
 }
 
 #else
