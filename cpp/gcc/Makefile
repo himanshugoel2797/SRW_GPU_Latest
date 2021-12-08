@@ -23,7 +23,7 @@ CFLAGS += -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3
 NVCC = nvcc
 NVCXX = nvc++
 LDFLAGS += -L$(NVCOMPILERS)/$(NVARCH)/21.9/cuda/lib64 -lcudart_static -lcudadevrt -lcufft
-NVCFLAGS = -O3 -g -I$(SRW_SRC_GEN_DIR) -I$(SRW_SRC_LIB_DIR) -I$(SH_SRC_PARSE_DIR) -I$(SH_SRC_GEN_MATH_DIR) $(SRW_SRC_DEF) -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3 -arch=sm_80 -rdc=true -Xcompiler '-fPIC'
+NVCFLAGS = -O3 -g -I$(SRW_SRC_GEN_DIR) -I$(SRW_SRC_LIB_DIR) -I$(SH_SRC_PARSE_DIR) -I$(SH_SRC_GEN_MATH_DIR) $(SRW_SRC_DEF) -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3 -arch=sm_70,sm_72,sm_75,sm_80 -rdc=true -Xcompiler '-fPIC'
 CUDA_OBJ= gmfftgpu0.o srradmnpgpu.o
 else
 ifeq ($(MODE), omp)
