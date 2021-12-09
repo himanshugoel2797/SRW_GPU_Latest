@@ -35,6 +35,7 @@ SRW_MAC64 binary
 *.co binary
 *.tif binary
 *.manifest text eol=crlf
+*.sh text eol=lf
 
 #*.cpp text eol=crlf
 #*.h text eol=crlf
