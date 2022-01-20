@@ -1014,7 +1014,7 @@ EXP int CALL srwlSetRepresElecField(SRWLWfr* pWfr, char repr)
 
 //-------------------------------------------------------------------------
 
-EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt, int nInt, char** arID, SRWLRadMesh* arIM, char** arI) //OC15082018
+EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt, int nInt, char** arID, SRWLRadMesh* arIM, char** arI, gpuUsageArg_t *pGpuUsage) //OC15082018
 //EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt)
 {
 	if((pWfr == 0) || (pOpt == 0)) return SRWL_INCORRECT_PARAM_FOR_WFR_PROP;
@@ -1034,7 +1034,7 @@ EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt, int nInt, char**
 		//srwlPrintTime("srwlPropagElecField: CheckRadStructForPropagation",&start);
 
 		//if(locErNo = optCont.PropagateRadiationGuided(wfr)) return locErNo;
-		if(locErNo = optCont.PropagateRadiationGuided(wfr, nInt, arID, arIM, arI)) return locErNo; //OC15082018
+		if(locErNo = optCont.PropagateRadiationGuided(wfr, nInt, arID, arIM, arI, pGpuUsage)) return locErNo; //OC15082018
 
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime("srwlPropagElecField: PropagateRadiationGuided",&start);
@@ -1076,7 +1076,7 @@ EXP int CALL srwlCalcTransm(SRWLOptT* pOpTr, const double* pDelta, const double*
 //#ifdef _OFFLOAD_GPU
 //EXP int CALL srwlUtiFFTGPU(char* pcData, char typeData, double* arMesh, int nMesh, int dir)
 //#else
-EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, int dir)
+EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, int dir, gpuUsageArg_t *pGpuUsage) //HG01032022
 //#endif
 {
 	if((pcData == 0) || (arMesh == 0) || ((typeData != 'f') && (typeData != 'd')) || (nMesh < 3) || (dir == 0)) return SRWL_INCORRECT_PARAM_FOR_FFT; //OC31012019
@@ -1124,7 +1124,7 @@ EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, 
 
 			CGenMathFFT1D FFT1D;
 			printf("calling Make1DFFT\n");
-			if(locErNo = FFT1D.Make1DFFT(FFT1DInfo)) return locErNo;
+			if(locErNo = FFT1D.Make1DFFT(FFT1DInfo, pGpuUsage)) return locErNo;
 
 			arMesh[0] = FFT1DInfo.xStartTr;
 			arMesh[1] = FFT1DInfo.xStepTr;
@@ -1155,7 +1155,7 @@ EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, 
 
 			CGenMathFFT2D FFT2D;
 			printf("calling FFT2D.Make2DFFT\n");
-			if(locErNo = FFT2D.Make2DFFT(FFT2DInfo)) return locErNo;
+			if(locErNo = FFT2D.Make2DFFT(FFT2DInfo, 0, 0, pGpuUsage)) return locErNo;
 
 			arMesh[0] = FFT2DInfo.xStartTr;
 			arMesh[1] = FFT2DInfo.xStepTr;
@@ -1499,6 +1499,127 @@ EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* 
 	return 0;
 }
 
+#ifdef _OFFLOAD_GPU
+void StokesAvgUpdateInterp(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr);
+#endif
+
+EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMoreStokes, int nIters, int nOrder, int nStokesComp, double mult) {
+	auto eNpMeshRes = pStokes->mesh.ne;
+	auto xNpMeshRes = pStokes->mesh.nx;
+	auto xStartMeshRes = pStokes->mesh.xStart;
+	double xStepMeshRes = 0;
+	if (xNpMeshRes > 1)
+		xStepMeshRes = (pStokes->mesh.xFin - xStartMeshRes) / (xNpMeshRes - 1);
+	auto yNpMeshRes = pStokes->mesh.ny;
+	auto yStartMeshRes = pStokes->mesh.yStart;
+	double yStepMeshRes = 0;
+	if (yNpMeshRes > 1)
+		yStepMeshRes = (pStokes->mesh.yFin - yStartMeshRes) / (yNpMeshRes - 1);
+
+	auto eNpWfr = pMoreStokes->mesh.ne;
+	auto xStartWfr = pMoreStokes->mesh.xStart;
+	auto xNpWfr = pMoreStokes->mesh.nx;
+	double xStepWfr = 0;
+	if (xNpWfr > 1)
+		xStepWfr = (pMoreStokes->mesh.xFin - xStartWfr) / (xNpWfr - 1);
+	auto yStartWfr = pMoreStokes->mesh.yStart;
+	auto yNpWfr = pMoreStokes->mesh.ny;
+	double yStepWfr = 0;
+	if (yNpWfr > 1)
+		yStepWfr = (pMoreStokes->mesh.yFin - yStartWfr) / (yNpWfr - 1);
+
+	auto nRawWfr = eNpWfr * xNpWfr * yNpWfr;
+	int iOfstSt = 0;
+	long ir = 0;
+
+	float *pStokesArS = (float*)pStokes->arS0, *pMoreStokesArS = (float*)pMoreStokes->arS0;
+
+	GPU_COND(nullptr, {
+		cudaMallocManaged((void**)&pStokesArS, sizeof(float) * xNpMeshRes * yNpMeshRes * eNpMeshRes * nStokesComp);
+		cudaMallocManaged((void**)&pMoreStokesArS, sizeof(float) * xNpWfr * yNpWfr * eNpWfr * nStokesComp);
+		if (nIters > 0)
+			cudaMemcpy(pStokesArS, pStokes->arS0, sizeof(float) * xNpMeshRes * yNpMeshRes * eNpMeshRes * nStokesComp, cudaMemcpyHostToDevice);
+		cudaMemcpy(pMoreStokesArS, pMoreStokes->arS0, sizeof(float) * xNpWfr * yNpWfr * eNpWfr * nStokesComp, cudaMemcpyHostToDevice);
+	})
+
+	for (int iSt = 0; iSt < nStokesComp; iSt++) {
+
+		GPU_COND(nullptr, {
+			StokesAvgUpdateInterp(pStokesArS, pMoreStokesArS, nIters, nOrder, nStokesComp, mult, iSt, xNpMeshRes, yNpMeshRes, eNpMeshRes, yStartMeshRes, yStepMeshRes, yStartWfr, yStepWfr, xStartMeshRes, xStepMeshRes, xStartWfr, xStepWfr, iOfstSt, xNpWfr, yNpWfr, eNpWfr);
+		})
+		else{
+			for (long iy = 0; iy < yNpMeshRes; iy++) {
+				auto yMeshRes = yStartMeshRes + iy * yStepMeshRes;
+				for (long ix = 0; ix < xNpMeshRes; ix++) {
+					auto xMeshRes = xStartMeshRes + ix * xStepMeshRes;
+					for (long ie = 0; ie < eNpMeshRes; ie++) {
+						double fInterp = 0;
+						int loc_ix_ofst = iOfstSt + ie;
+						auto nx_ix_per = xNpWfr * eNpWfr;
+
+						switch (nOrder) {
+						case 1:
+						{
+							int ix0 = (int)trunc((xMeshRes - xStartWfr) / xStepWfr + 1e-09);
+							if ((ix0 < 0) | (ix0 >= xNpWfr - 1)) {
+								((float*)pStokes->arS0)[ir] = ((float*)pStokes->arS0)[ir] * nIters / (nIters + 1);
+								ir += 1;
+								continue;
+							}
+							int ix1 = ix0 + 1;
+							auto tx = (xMeshRes - (xStartWfr + xStepWfr * ix0)) / xStepWfr;
+							int iy0 = (int)trunc((yMeshRes - yStartWfr) / yStepWfr + 1e-09);
+							if ((iy0 < 0) | (iy0 >= yNpWfr - 1)) {
+								((float*)pStokes->arS0)[ir] = ((float*)pStokes->arS0)[ir] * nIters / (nIters + 1);
+								ir + 1;
+								continue;
+							}
+
+
+							int iy1 = iy0 + 1;
+							auto ty = (yMeshRes - (yStartWfr + yStepWfr * iy0)) / yStepWfr;
+							auto iy0_nx_ix_per = iy0 * nx_ix_per;
+							auto iy1_nx_ix_per = iy1 * nx_ix_per;
+							auto ix0_ix_per_p_ix_ofst = ix0 * eNpWfr + loc_ix_ofst;
+							auto ix1_ix_per_p_ix_ofst = ix1 * eNpWfr + loc_ix_ofst;
+							auto a00 = ((float*)pMoreStokes->arS0)[iy0_nx_ix_per + ix0_ix_per_p_ix_ofst];
+							auto f10 = ((float*)pMoreStokes->arS0)[iy0_nx_ix_per + ix1_ix_per_p_ix_ofst];
+							auto f01 = ((float*)pMoreStokes->arS0)[iy1_nx_ix_per + ix0_ix_per_p_ix_ofst];
+							auto f11 = ((float*)pMoreStokes->arS0)[iy1_nx_ix_per + ix1_ix_per_p_ix_ofst];
+							auto a10 = f10 - a00;
+							auto a01 = f01 - a00;
+							auto a11 = a00 - f01 - f10 + f11;
+							fInterp = a00 + tx * (a10 + ty * a11) + ty * a01;
+
+						}
+							break;
+						case 2:
+
+							break;
+						case 3:
+
+							break;
+						}
+
+						((float*)pStokes->arS0)[ir] = (((float*)pStokes->arS0)[ir] * nIters + mult * fInterp) / (nIters + 1); 
+						ir += 1;
+					}
+				}
+			}
+		}
+
+		iOfstSt += nRawWfr; 
+	}
+
+	GPU_COND(nullptr, {
+		cudaMemcpy(pStokes->arS0, pStokesArS, sizeof(float) * xNpMeshRes * yNpMeshRes * eNpMeshRes * nStokesComp, cudaMemcpyDeviceToHost);
+		cudaFree(pStokesArS);
+		cudaFree(pMoreStokesArS);
+	})
+
+	return 0;
+}
+
 //-------------------------------------------------------------------------
 
 EXP int CALL srwlUtiUndFromMagFldTab(SRWLMagFldC* pUndCnt, SRWLMagFldC* pMagCnt, double* arPrecPar)
@@ -1581,7 +1702,7 @@ EXP bool CALL srwlUtiGPUAvailable()
 
 EXP bool CALL srwlUtiGPUEnabled()
 {
-	return UtiDev::GPUEnabled();
+	return UtiDev::GPUEnabled(nullptr);
 }
 
 EXP void CALL srwlUtiGPUSetStatus(bool enable)

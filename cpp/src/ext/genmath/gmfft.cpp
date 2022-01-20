@@ -252,7 +252,7 @@ int CGenMathFFT2D::AuxDebug_TestFFT_Plans()
 //Modification by S.Yakubov for parallelizing SRW via OpenMP:
 // SY: creation (and deletion) of FFTW plans is not thread-safe. Therefore added option to use precreated plans
 #ifdef _FFTW3 //OC29012019
-int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwf_plan* pPrecreatedPlan2DFFT, fftw_plan* pdPrecreatedPlan2DFFT)
+int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwf_plan* pPrecreatedPlan2DFFT, fftw_plan* pdPrecreatedPlan2DFFT, gpuUsageArg_t *pGpuUsage)
 //int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwf_plan* pPrecreatedPlan2DFFT)
 #else
 int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecreatedPlan2DFFT) //OC27102018
@@ -264,6 +264,8 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	//AuxDebug_TestFFT_Plans();
 	//end debug
 
+	//int g = 1;
+	//pGpuUsage = &g;
 	SetupLimitsTr(FFT2DInfo);
 
 	double xStepNx = FFT2DInfo.Nx * FFT2DInfo.xStep;
@@ -335,16 +337,14 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	fftw_complex* dDataToFFT = 0;
 #endif
 
-	if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+	GPU_COND(pGpuUsage, {
 		if (FFT2DInfo.pData != 0) {
 			DataToFFT_cu = (cufftComplex*)(FFT2DInfo.pData);
 		}
 		else if (FFT2DInfo.pdData != 0) {
 			dDataToFFT_cu = (cufftDoubleComplex*)(FFT2DInfo.pdData); //OC02022019
 		}
-#endif
-	}
+	})
 	else {
 #if _FFTW3 //OC28012019
 		if (FFT2DInfo.pData != 0) DataToFFT = (fftwf_complex*)(FFT2DInfo.pData);
@@ -372,16 +372,15 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	}
 	if (NeedsShiftBeforeX || NeedsShiftBeforeY)
 	{
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
+			cudaDeviceSynchronize();
 			if (DataToFFT_cu != 0) {
 				TreatShifts((fftwf_complex*)DataToFFT_cu);
 			}
 			else if (dDataToFFT_cu != 0) {
 				TreatShifts((fftw_complex*)dDataToFFT_cu); //OC02022019
 			}
-#endif
-		}
+		})
 		else {
 			if (DataToFFT != 0) TreatShifts(DataToFFT);
 
@@ -393,11 +392,16 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 	if (FFT2DInfo.Dir > 0)
 	{
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			if (DataToFFT_cu != 0)
 			{
-				if (pPrecreatedPlan2DFFT == 0) {
+				if (pPrecreatedPlan2DFFT == 0) Plan2DFFT = fftwf_plan_dft_2d(Ny, Nx, (fftwf_complex*)DataToFFT_cu, (fftwf_complex*)DataToFFT_cu, FFTW_FORWARD, FFTW_ESTIMATE);
+				else Plan2DFFT = *pPrecreatedPlan2DFFT;
+				if (Plan2DFFT == 0) return ERROR_IN_FFT;
+
+				fftwf_execute(Plan2DFFT);
+
+				/*if (pPrecreatedPlan2DFFT == 0) {
 					if (!(PlanNx == Nx && PlanNy == Ny)) {
 						if (Plan2DFFT_cu != NULL)
 							cufftDestroy(Plan2DFFT_cu);
@@ -412,7 +416,8 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 				auto res = cufftExecC2C(Plan2DFFT_cu, DataToFFT_cu, DataToFFT_cu, CUFFT_FORWARD);
 				if (res != CUFFT_SUCCESS)
-					printf("CUFFT Error: %d\r\n", res);
+					printf("CUFFT Error: %d\r\n", res);*/
+				printf ("Forward FFT\r\n");
 			}
 			else if (dDataToFFT_cu != 0)
 			{
@@ -431,8 +436,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 				cufftExecZ2Z(dPlan2DFFT_cu, dDataToFFT_cu, dDataToFFT_cu, CUFFT_FORWARD);
 			}
-#endif
-		}
+		})
 		else {
 			//Plan2DFFT = fftw2d_create_plan(Ny, Nx, FFTW_FORWARD, FFTW_IN_PLACE);
 			//OC27102018
@@ -464,8 +468,23 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 #endif
 		}
 
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
+			printf ("Repair and rotate on CPU\r\n");
+			//cudaDeviceSynchronize();
+			if (DataToFFT != 0)
+			{
+				RepairSignAfter2DFFT((fftwf_complex*)DataToFFT_cu);
+				RotateDataAfter2DFFT((fftwf_complex*)DataToFFT_cu);
+			}
+
+#ifdef _FFTW3 //OC27022019
+			else if (dDataToFFT != 0)
+			{
+				RepairSignAfter2DFFT((fftw_complex*)dDataToFFT_cu);
+				RotateDataAfter2DFFT((fftw_complex*)dDataToFFT_cu);
+			}
+#endif
+/*
 			if (DataToFFT_cu != 0)
 			{
 				RepairSignAfter2DFFT_CUDA((float*)DataToFFT_cu, Nx, Ny);
@@ -475,9 +494,8 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			{
 				RepairSignAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny);
 				RotateDataAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny);
-			}
-#endif
-		}
+			}*/
+		})
 		else {
 			if (DataToFFT != 0)
 			{
@@ -496,8 +514,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	}
 	else
 	{
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			if (DataToFFT_cu != 0)
 			{
 				if (pPrecreatedPlan2DFFT == 0) {
@@ -513,6 +530,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 				else Plan2DFFT_cu = *(cufftHandle*)pPrecreatedPlan2DFFT;
 				if (Plan2DFFT_cu == 0) return ERROR_IN_FFT;
 
+				printf ("Reverse FFT\r\n");
 				RotateDataAfter2DFFT_CUDA((float*)DataToFFT_cu, Nx, Ny);
 				RepairSignAfter2DFFT_CUDA((float*)DataToFFT_cu, Nx, Ny);
 				cufftExecC2C(Plan2DFFT_cu, DataToFFT_cu, DataToFFT_cu, CUFFT_INVERSE);
@@ -536,8 +554,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 				RepairSignAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny);
 				cufftExecZ2Z(dPlan2DFFT_cu, dDataToFFT_cu, dDataToFFT_cu, CUFFT_INVERSE);
 			}
-#endif
-		}
+		})
 		else {
 			//Plan2DFFT = fftw2d_create_plan(Ny, Nx, FFTW_BACKWARD, FFTW_IN_PLACE);
 			//OC27102018
@@ -575,19 +592,24 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 	//double Mult = FFT2DInfo.xStep*FFT2DInfo.yStep;
 	double Mult = FFT2DInfo.xStep * FFT2DInfo.yStep * FFT2DInfo.ExtraMult; //OC20112017
-	if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+	GPU_COND(pGpuUsage, {
+		printf("Normalize on CPU\r\n");
+		//cudaDeviceSynchronize();
+		if (DataToFFT != 0) NormalizeDataAfter2DFFT((fftwf_complex*)DataToFFT_cu, Mult);
+
+#ifdef _FFTW3 //OC27022019
+		else if (dDataToFFT != 0) NormalizeDataAfter2DFFT((fftw_complex*)dDataToFFT_cu, Mult);
+#endif
+
+/*
 		if (DataToFFT_cu != 0)
 			NormalizeDataAfter2DFFT_CUDA((float*)DataToFFT_cu, Nx, Ny, Mult);
 		else if (dDataToFFT_cu != 0)
 			NormalizeDataAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny, Mult);
-
-#ifdef _WIN32
 		if (NeedsShiftAfterX | NeedsShiftAfterY)
 			cudaDeviceSynchronize();
-#endif
-#endif
-	}
+*/
+	})
 	else {
 		if (DataToFFT != 0) NormalizeDataAfter2DFFT(DataToFFT, Mult);
 
@@ -610,16 +632,16 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	}
 	if (NeedsShiftAfterX || NeedsShiftAfterY)
 	{
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
+			printf ("TreatShifts on CPU\r\n");
+			//cudaDeviceSynchronize();
 			if (DataToFFT_cu != 0) {
 				TreatShifts((fftwf_complex*)DataToFFT_cu);
 			}
 			else if (dDataToFFT_cu != 0) {
 				TreatShifts((fftw_complex*)dDataToFFT_cu); //OC02022019
 			}
-#endif
-		}
+		})
 		else {
 			if (DataToFFT != 0) TreatShifts(DataToFFT);
 
@@ -629,6 +651,10 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 		}
 	}
 
+	GPU_COND(pGpuUsage, {
+		cudaDeviceSynchronize();
+	})
+	
 	//OC_NERSC: to comment-out the following line for NERSC (to avoid crash with "python-mpi")
 	//fftwnd_destroy_plan(Plan2DFFT);
 	//OC27102018
@@ -661,13 +687,14 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 //*************************************************************************
 //Forward FFT: Int f(x)*exp(-i*2*Pi*qx*x)dx
 //Backward FFT: Int f(qx)*exp(i*2*Pi*qx*x)dqx
-int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
+int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUsage)
 {// Assumes Nx, Ny even !
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 	//double start;
 	//get_walltime (&start);
 	const double RelShiftTol = 1.E-06;
-
+	//int g = 1;
+	//pGpuUsage = &g;
 	SetupLimitsTr(FFT1DInfo);
 
 	double xStepNx = FFT1DInfo.Nx * FFT1DInfo.xStep;
@@ -685,12 +712,17 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 		NeedsShiftBeforeX = (::fabs(x0_Before) > RelShiftTol * (::fabs(xStartTr)));
 	}
 
+	GPU_COND(pGpuUsage, {
+		printf("Using gpu\r\n");
+	})else{
+		printf("Not using gpu\r\n");
+	}
+
 	m_ArrayShiftX = 0;
 	m_dArrayShiftX = 0;
 	if (NeedsShiftBeforeX || NeedsShiftAfterX)
 	{
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			if (FFT1DInfo.pInData != 0)
 			{
 				cudaMallocManaged((void**)&m_ArrayShiftX, sizeof(float) * Nx * 2);
@@ -701,8 +733,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 				cudaMallocManaged((void**)&m_dArrayShiftX, sizeof(double) * Nx * 2);
 				if (m_dArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
 			}
-#endif
-		}
+		})
 		else {
 			if (FFT1DInfo.pInData != 0)
 			{
@@ -729,8 +760,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	fftw_complex* dDataToFFT = 0, * dOutDataFFT = 0; //, *pdOutDataFFT=0;
 #endif
 
-	if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+	GPU_COND(pGpuUsage, {
 		if ((FFT1DInfo.pInData != 0) && (FFT1DInfo.pOutData != 0))
 		{
 			DataToFFT_GPU = (cufftComplex*)FFT1DInfo.pInData;
@@ -741,8 +771,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 			dDataToFFT_GPU = (cufftDoubleComplex*)FFT1DInfo.pdInData;
 			dOutDataFFT_GPU = (cufftDoubleComplex*)FFT1DInfo.pdOutData;
 		}
-#endif
-	}
+	})
 	else {
 #ifdef _FFTW3 //OC28012019
 		if ((FFT1DInfo.pInData != 0) && (FFT1DInfo.pOutData != 0))
@@ -781,15 +810,13 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	char t0SignMult = (FFT1DInfo.Dir > 0) ? -1 : 1;
 	if (NeedsShiftBeforeX)
 	{
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			if (m_ArrayShiftX != 0) FillArrayShift_CUDA(t0SignMult * x0_Before, FFT1DInfo.xStep, Nx, m_ArrayShiftX);
 			else if (m_dArrayShiftX != 0) FillArrayShift_CUDA(t0SignMult * x0_Before, FFT1DInfo.xStep, Nx, m_dArrayShiftX);
 
 			if (DataToFFT_GPU != 0) TreatShift_CUDA((float*)DataToFFT_GPU, FFT1DInfo.HowMany, Nx, m_ArrayShiftX);
 			else if (dDataToFFT_GPU != 0) TreatShift_CUDA((double*)dDataToFFT_GPU, FFT1DInfo.HowMany, Nx, m_dArrayShiftX);
-#endif
-		}
+		})
 		else {
 			//FillArrayShift(t0SignMult*x0_Before, FFT1DInfo.xStep);
 			if (m_ArrayShiftX != 0) FillArrayShift(t0SignMult * x0_Before, FFT1DInfo.xStep, m_ArrayShiftX);
@@ -810,8 +837,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 
 	if (FFT1DInfo.Dir > 0)
 	{
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			int arN[] = { (int)Nx }; //OC14052020
 			if (DataToFFT_GPU != 0)
 			{
@@ -835,8 +861,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 				if (dPlan1DFFT_cu == 0) return ERROR_IN_FFT;
 				cufftExecZ2Z(dPlan1DFFT_cu, dDataToFFT_GPU, dOutDataFFT_GPU, CUFFT_FORWARD);
 			}
-#endif
-		}
+		})
 		else {
 			//int flags = FFTW_ESTIMATE;
 #ifdef _FFTW3 //OC28012019
@@ -901,8 +926,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime("::Make1DFFT : fft  dir>0",&start);
 
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			if (OutDataFFT_GPU != 0)
 			{
 				//RepairAndRotateDataAfter1DFFT_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
@@ -915,8 +939,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 				RepairSignAfter1DFFT_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
 				RotateDataAfter1DFFT_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
 			}
-#endif
-		}
+		})
 		else {
 			if (OutDataFFT != 0)
 			{
@@ -937,8 +960,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	{
 		//int flags = FFTW_ESTIMATE; //OC30012019 (commented-out)
 
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			int arN[] = { (int)Nx }; //OC14052020
 			//int arN[] = {Nx};
 			if (DataToFFT_GPU != 0)
@@ -969,8 +991,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 				RepairSignAfter1DFFT_CUDA((double*)dDataToFFT_GPU, FFT1DInfo.HowMany, Nx);
 				cufftExecZ2Z(dPlan1DFFT_cu, dDataToFFT_GPU, dOutDataFFT_GPU, CUFFT_INVERSE);
 			}
-#endif
-		}
+		})
 		else {
 #ifdef _FFTW3 //OC28012019
 #ifdef _WITH_OMP
@@ -1048,15 +1069,13 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 	//double Mult = FFT1DInfo.xStep;
 	double Mult = FFT1DInfo.xStep * FFT1DInfo.MultExtra;
 
-	if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+	GPU_COND(pGpuUsage, {
 		if (OutDataFFT_GPU != 0) {
 			NormalizeDataAfter1DFFT_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx, Mult);
 		}
 		else if (dOutDataFFT_GPU != 0)
 			NormalizeDataAfter1DFFT_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx, Mult);
-#endif
-	}
+	})
 	else {
 		if (OutDataFFT != 0) NormalizeDataAfter1DFFT(OutDataFFT, FFT1DInfo.HowMany, Mult);
 #ifdef _FFTW3 //OC27022019
@@ -1070,15 +1089,13 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 
 	if (NeedsShiftAfterX)
 	{
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			if (m_ArrayShiftX != 0) FillArrayShift_CUDA(t0SignMult * x0_After, FFT1DInfo.xStepTr, Nx, m_ArrayShiftX); //OC02022019
 			else if (m_dArrayShiftX != 0) FillArrayShift_CUDA(t0SignMult * x0_After, FFT1DInfo.xStepTr, Nx, m_dArrayShiftX);
 
 			if (OutDataFFT_GPU != 0) TreatShift_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx, m_ArrayShiftX);
 			else if (dOutDataFFT_GPU != 0) TreatShift_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx, m_dArrayShiftX);
-#endif
-		}
+		})
 		else {
 			//FillArrayShift(t0SignMult*x0_After, FFT1DInfo.xStepTr);
 			if (m_ArrayShiftX != 0) FillArrayShift(t0SignMult * x0_After, FFT1DInfo.xStepTr, m_ArrayShiftX); //OC02022019
@@ -1091,7 +1108,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 		}
 	}
 
-	if (!UtiDev::GPUEnabled())
+	if (!GPU_ENABLED(pGpuUsage))
 	{
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime("::Make1DFFT : ProcessSharpEdges",&start);
@@ -1115,8 +1132,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 #endif
 	}
 
-	if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+	GPU_COND(pGpuUsage, {
 		if (m_ArrayShiftX != 0)
 		{
 			cudaFree(m_ArrayShiftX); m_ArrayShiftX = 0;
@@ -1125,8 +1141,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 		{
 			cudaFree(m_dArrayShiftX); m_dArrayShiftX = 0;
 		}
-#endif
-	}
+	})
 	else {
 		if (m_ArrayShiftX != 0)
 		{
@@ -1138,11 +1153,9 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo)
 		}
 	}
 
-#if defined(_OFFLOAD_GPU) && defined(_WIN32)
-	if (UtiDev::GPUEnabled()) {
+	GPU_COND(pGpuUsage, {
 		cudaDeviceSynchronize();
-	}
-#endif
+	})
 
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 	//srwlPrintTime("::Make1DFFT : after fft ",&start);

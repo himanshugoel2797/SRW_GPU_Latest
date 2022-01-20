@@ -18,17 +18,21 @@ cp.cuda.set_allocator(cupy.cuda.memory.malloc_managed)
 #**********************Input Parameters:
 
 sig = 1
-
+gpuEn = True
 xNp = 100
 xRange = 10
 xStart = -0.5*xRange
 xStep = xRange/(xNp)
 
-#ar_b = srwl.managedbuffer(xNp*2)#array('f', [0]*(xNp*2))
-#ar = np.asarray(ar_b, dtype=np.float32)
-ar_cp = cp.array(array('f', [0]*(xNp*2)))
-a_ptr = ctypes.cast(ar_cp.data.ptr, ctypes.POINTER(ctypes.c_float))
-ar = np.ctypeslib.as_array(a_ptr, (2 * xNp,))
+if gpuEn:
+    #ar_b = srwl.managedbuffer(xNp*2)#array('f', [0]*(xNp*2))
+    #ar = np.asarray(ar_b, dtype=np.float32)
+    ar_cp = cp.array(array('f', [0]*(xNp*2)))
+    a_ptr = ctypes.cast(ar_cp.data.ptr, ctypes.POINTER(ctypes.c_float))
+    ar = np.ctypeslib.as_array(a_ptr, (2 * xNp,))
+else:
+    ar_cp = array('f', [0]*(xNp*2))
+    ar = ar_cp
 
 x = xStart
 for i in range(xNp):
@@ -48,9 +52,10 @@ uti_plot1d(ar_Re, [mesh[0], mesh[0] + mesh[1]*xNp, xNp],
            ['Qx', 'Re FT', 'Input'])
 #input('Waiting for enter.')
 
-cp.cuda.Stream.null.synchronize()
-srwl.UtiFFT(ar, mesh, 1, 1)
-cp.cuda.Stream.null.synchronize()
+if gpuEn:
+    srwl.UtiFFT(ar, mesh, 1, 1)
+else:
+    srwl.UtiFFT(ar, mesh, 1, 0)
 
 arFT_Re = array('f', [0]*(xNp))
 arFT_Im = array('f', [0]*(xNp))
@@ -61,8 +66,8 @@ for i in range(xNp):
     print(arFT_Re[i], arFT_Im[i])
 
 uti_plot1d(arFT_Re, [mesh[0], mesh[0] + mesh[1]*xNp, xNp],
-           ['Qx', 'Re FT', 'Test FFT CPU'])
+           ['Qx', 'Re FT', 'Test FFT {}'.format( 'GPU' if gpuEn else 'CPU')])
 uti_plot1d(arFT_Im, [mesh[0], mesh[0] + mesh[1]*xNp, xNp],
-           ['Qx', 'Im FT', 'Test FFT CPU'])
+           ['Qx', 'Im FT', 'Test FFT {}'.format( 'GPU' if gpuEn else 'CPU')])
 
 uti_plot_show()

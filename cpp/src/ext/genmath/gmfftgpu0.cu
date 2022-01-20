@@ -267,8 +267,8 @@ template <class T> __global__ void RepairSignAfter2DFFT_Kernel(T* pAfterFFT, lon
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //Nx range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //Ny range
 
+    float sx0 = 1;// - 2 * (ix % 2);
     float sy0 = 1 - 2 * (iy % 2);
-    float sx0 = 1 - 2 * (ix % 2);
     float s = sx0 * sy0;
 
     if (ix < Nx && iy < Ny) {

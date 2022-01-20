@@ -19,11 +19,11 @@ CFLAGS=	-O3 -fPIC -g -I$(SRW_SRC_GEN_DIR) -I$(SRW_SRC_LIB_DIR) -I$(SH_SRC_PARSE_
 LDFLAGS=-L$(LIB_DIR) -lm 
 
 ifeq ($(MODE),cuda)
-CFLAGS += -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3 -I$(NVCOMPILERS)/$(NVARCH)/20.11/math_libs/11.1/include -I$(NVCOMPILERS)/$(NVARCH)/20.11/cuda/11.1/include -std=c++11
+CFLAGS += -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3 -I$(NVCOMPILERS)/$(NVARCH)/$(NVVERSION)/math_libs/include -I$(NVCOMPILERS)/$(NVARCH)/$(NVVERSION)/cuda/include -std=c++11 -mavx2 -fno-math-errno
 NVCC = nvcc
 NVCXX = nvc++
-LDFLAGS += -L$(NVCOMPILERS)/$(NVARCH)/20.11/cuda/lib64 -lcudart_static -lcudadevrt -lcufft
-NVCFLAGS = -O3 -g -I$(SRW_SRC_GEN_DIR) -I$(SRW_SRC_LIB_DIR) -I$(SH_SRC_PARSE_DIR) -I$(SH_SRC_GEN_MATH_DIR) $(SRW_SRC_DEF) -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3 -arch=sm_70 -rdc=true -Xcompiler '-fPIC'
+LDFLAGS += -L$(NVCOMPILERS)/$(NVARCH)/$(NVVERSION)/cuda/lib64 -lcudart_static -lcudadevrt -lcufft
+NVCFLAGS = -O3 -g -I$(SRW_SRC_GEN_DIR) -I$(SRW_SRC_LIB_DIR) -I$(SH_SRC_PARSE_DIR) -I$(SH_SRC_GEN_MATH_DIR) $(SRW_SRC_DEF) -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3 -arch=sm_86 -dlto -rdc=true -Xcompiler '-fPIC'
 CUDA_OBJ= gmfftgpu0.o srradmnpgpu.o
 else
 ifeq ($(MODE), omp)

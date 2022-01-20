@@ -21,6 +21,16 @@
 #include <cuda_runtime.h>
 #endif
 
+typedef int gpuUsageArg_t;
+
+#ifdef _OFFLOAD_GPU
+#define GPU_ENABLED(arg) UtiDev::GPUEnabled(arg)
+#define GPU_COND(arg, code) if (GPU_ENABLED(arg)) { code }
+#else
+#define GPU_COND(arg, code) if(0) { }
+#define GPU_ENABLED(arg) 0
+#endif
+
  //*************************************************************************
 class UtiDev
 {
@@ -28,7 +38,7 @@ public:
 	static void Init();
 	static void Fini();
 	static bool GPUAvailable(); //CheckGPUAvailable etc
-	static bool GPUEnabled();
+	static bool GPUEnabled(gpuUsageArg_t *arg);
 	static void SetGPUStatus(bool enabled);
 	template<typename T> static inline void malloc(T** ptr, size_t sz) {
 #ifdef _OFFLOAD_GPU

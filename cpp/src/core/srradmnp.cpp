@@ -1551,7 +1551,7 @@ static int addVecOProdGPU(float* v1, float* v2, long nxnz, long long iter0, long
 }
 #endif
 
-int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtract)
+int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtract, gpuUsageArg_t *pGpuUsage)
 {//OC13122019
  //This assumes "normal" data alignment in the complex "matrix" E(x,y)*E*(x',y')
 	int res = 0;
@@ -1614,8 +1614,7 @@ int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtra
 		printf("tot_iter = %d\n", tot_iter);
 
 		Rx = pMeth[2], Rz = pMeth[3], xc = pMeth[4], zc = pMeth[5];
-		if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+		GPU_COND(pGpuUsage, {
 			if (pMeth[6] == 0) { ddata_enter = true; ddata_exit = true; printf("ddata_enter & ddata_enter\n"); }
 			else ncomp = pMeth[6];
 			if (ncomp < 0) ncomp *= -1;
@@ -1640,8 +1639,7 @@ int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtra
 				*/
 #pragma omp target enter data map(to: dpMI[0:nxnz*(nxnz+1)])
 			}
-#endif
-		}
+		})
 	}
 
 	double iter0 = iter; // RL02122021
@@ -1670,8 +1668,7 @@ int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtra
 		RadAccessData.pBaseRadZ = pEz0;
 	}
 
-	if (UtiDev::GPUEnabled()) {
-#ifdef _OFFLOAD_GPU
+	GPU_COND(pGpuUsage, {
 		printf("CUDA configuration: CUDA_BLOCK_SIZE_MAX= %d CUDA_GRID_SIZE_MAX= %d\n", CUDA_BLOCK_SIZE_MAX, CUDA_GRID_SIZE_MAX);
 		MutualIntensityComponentCUDA(dpMI, pEx0, pEz0, nxnz, iter0, tot_iter, PolCom);
 		cudaError_t err = cudaGetLastError();        // Get error code
@@ -1681,8 +1678,7 @@ int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtra
 			printf("CUDA Error: %s\n", cudaGetErrorString(err));
 			exit(-1);
 		}
-#endif
-	} else {
+	}) else {
 		float* pMI01 = pMI0; // RL02122021
 		for (long long it = 0; it < nxnz; it++)
 		{

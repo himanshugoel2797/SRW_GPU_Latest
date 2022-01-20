@@ -174,9 +174,9 @@ srwl.CalcElecFieldGaussian(wfr, GsnBm, arPrecPar)
 mesh0 = deepcopy(wfr.mesh)
 arI0 = array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
 srwl.CalcIntFromElecField(arI0, wfr, 6, 0, 3, mesh0.eStart, 0, 0) #extracts intensity
-srwl_uti_save_intens_ascii(
-    arI0, mesh0, os.path.join(os.getcwd(), strDataFolderName, strIntInitOutFileName01), 0,
-    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Intensity'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
+#srwl_uti_save_intens_ascii(
+#    arI0, mesh0, os.path.join(os.getcwd(), strDataFolderName, strIntInitOutFileName01), 0,
+#    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Intensity'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
 #***********Wavefront Propagation
 print('   Propagating wavefront ... ', end='')
@@ -192,9 +192,9 @@ srwl.CalcIntFromElecField(arI1, wfr, 6, 0, 3, mesh1.eStart, 0, 0) #extracts inte
 
 stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
 mesh1 = stkDet.mesh; arI1 = stkDet.arS
-srwl_uti_save_intens_ascii(
-    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName01), 0,
-    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'J/eV/mm^2'])
+#srwl_uti_save_intens_ascii(
+#    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName01), 0,
+#    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'J/eV/mm^2'])
 print('done in', round(time.time() - t), 's')
 
 #**********************Plotting Results (requires 3rd party graphics package)

@@ -186,14 +186,14 @@ public:
 		NeedsShiftBeforeX = NeedsShiftBeforeY = NeedsShiftAfterX = NeedsShiftAfterY = 0;
 #ifdef _OFFLOAD_GPU
 		PlanNx = PlanNy = dPlanNx = dPlanNy = 0;
-		Plan2DFFT_cu = dPlan2DFFT_cu = NULL;
+		Plan2DFFT_cu = dPlan2DFFT_cu = 0;
 #endif
 	}
 
 	//int Make2DFFT(CGenMathFFT2DInfo&);
 	//Modification by S.Yakubov for parallelizing SRW via OpenMP:
 #if _FFTW3 //28012019
-	int Make2DFFT(CGenMathFFT2DInfo&, fftwf_plan* pPrecreatedPlan2DFFT = 0, fftw_plan* pdPrecreatedPlan2DFFT = 0); //OC02022019
+	int Make2DFFT(CGenMathFFT2DInfo&, fftwf_plan* pPrecreatedPlan2DFFT = 0, fftw_plan* pdPrecreatedPlan2DFFT = 0, gpuUsageArg_t *pGpuUsage = 0); //OC02022019 //HG01032022
 	//int Make2DFFT(CGenMathFFT2DInfo&, fftwf_plan* pPrecreatedPlan2DFFT=0);
 #else
 	int Make2DFFT(CGenMathFFT2DInfo&, fftwnd_plan* pPrecreatedPlan2DFFT = 0); //OC27102018
@@ -585,11 +585,11 @@ public:
 		NeedsShiftBeforeX = NeedsShiftAfterX = 0;
 #ifdef _OFFLOAD_GPU
 		PlanLen = dPlanLen = 0;
-		Plan1DFFT_cu = dPlan1DFFT_cu = NULL;
+		Plan1DFFT_cu = dPlan1DFFT_cu = 0;
 #endif
 	}
 
-	int Make1DFFT(CGenMathFFT1DInfo&);
+	int Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t* pGpuUsage = 0);
 	int Make1DFFT_InPlace(CGenMathFFT1DInfo& FFT1DInfo);
 
 	void SetupLimitsTr(CGenMathFFT1DInfo& FFT1DInfo)

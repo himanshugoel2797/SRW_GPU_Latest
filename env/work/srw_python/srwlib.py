@@ -1084,7 +1084,12 @@ class SRWLStokes(object):
         :param _n_stokes_comp: number of Stokes components to treat (1 to 4)
         :param _mult: optional multiplier of the _more_stokes
         """
-
+        #print (self.arS)
+        srwl.UtiStokesAvgUpdateInterp(
+            self, _more_stokes, _iter, _n_stokes_comp, _mult)
+        #print (self.arS)
+        return
+        
         #DEBUG
         #print('avg_update_interp: iter=', _iter, _mult)
         #print('self.mesh.xStart=', self.mesh.xStart, 'self.mesh.xFin=', self.mesh.xFin, 'self.mesh.yStart=', self.mesh.yStart, 'self.mesh.yFin=', self.mesh.yFin)

@@ -21,9 +21,9 @@ ext_kwargs = {'define_macros': [('MAJOR_VERSION', '1'), ('MINOR_VERSION', '0')],
 if 'MODE' in os.environ: 
     sMode = str(os.environ['MODE'])
     if sMode == 'cuda':
-        ext_kwargs.update({'libraries': ['srw', 'm', 'cudart_static', 'cudadevrt', 'cufft', 'fftw3f', 'fftw3']})
-        ext_kwargs['library_dirs'].append('{0}/{1}/20.11/cuda/11.1/lib64'.format(os.environ['NVCOMPILERS'], os.environ['NVARCH']))
-        ext_kwargs['library_dirs'].append('{0}/{1}/20.11/math_libs/11.1/lib64'.format(os.environ['NVCOMPILERS'], os.environ['NVARCH']))
+        ext_kwargs.update({'libraries': ['srw', 'm', 'cudart_static', 'cudadevrt', 'cufft', 'fftw3f', 'fftw3'],  'extra_compile_args': ['-O3', '-mavx2', '-fno-math-errno']})
+        ext_kwargs['library_dirs'].append('{0}/{1}/{2}/cuda/lib64'.format(os.environ['NVCOMPILERS'], os.environ['NVARCH'], os.environ['NVVERSION']))
+        ext_kwargs['library_dirs'].append('{0}/{1}/{2}/math_libs/lib64'.format(os.environ['NVCOMPILERS'], os.environ['NVARCH'], os.environ['NVVERSION']))
     elif sMode == 'omp': 
         #ext_kwargs.update({'extra_link_args': ['-fopenmp'], 
         ext_kwargs.update({'libraries': ['srw', 'm', 'fftw'], #OC07022019

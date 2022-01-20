@@ -3323,7 +3323,7 @@ void ParseSructSmpObj3D(double**& arObjShapeDefs, int& nObj3D, PyObject* oListSh
 /************************************************************************//**
  * Configures device selection parameters.
  ***************************************************************************/
-void SetupDeviceParam(PyObject* oDev) //HG10202021
+void ParseDeviceParam(PyObject* oDev, gpuUsageArg_t *pGpuUsage) //HG10202021
 {
 	if (oDev != 0) {
 		if (PyLong_Check(oDev)) {
@@ -4964,6 +4964,7 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 	SRWLRadMesh *arIntMesh=0;
 	//float **arInts=0;
 	char **arInts=0;
+	gpuUsageArg_t gpuArgs;
 
 	try
 	{
@@ -5001,10 +5002,10 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 		}
 
 		srwlUtiDevInit();
-		SetupDeviceParam(oDev); //Parse and setup device options
+		ParseDeviceParam(oDev, &gpuArgs); //Parse and setup device options
 
 		//ProcRes(srwlPropagElecField(&wfr, &optCnt));
-		ProcRes(srwlPropagElecField(&wfr, &optCnt, nInt, arIntDescr, arIntMesh, arInts)); //OC15082018
+		ProcRes(srwlPropagElecField(&wfr, &optCnt, nInt, arIntDescr, arIntMesh, arInts, &gpuArgs)); //OC15082018
 
 		CleanDeviceParam(); //Reset device options to defaults
 		srwlUtiDevFini();
@@ -5130,6 +5131,7 @@ static PyObject* srwlpy_UtiFFT(PyObject *self, PyObject *args)
 {
 	PyObject *oData=0, *oMesh=0, *oDir=0, *oDev=0;
 	vector<Py_buffer> vBuf;
+	gpuUsageArg_t gpuArgs;
 
 	try
 	{
@@ -5171,8 +5173,8 @@ static PyObject* srwlpy_UtiFFT(PyObject *self, PyObject *args)
 
 
 		srwlUtiDevInit();
-		SetupDeviceParam(oDev); //Parse and setup device options
-		ProcRes(srwlUtiFFT(pcData, typeData, arMesh, nMesh, dir));
+		ParseDeviceParam(oDev, &gpuArgs); //Parse and setup device options
+		ProcRes(srwlUtiFFT(pcData, typeData, arMesh, nMesh, dir, &gpuArgs));
 		srwlUtiDevFini();
 
 		if(meshArType == 'l') UpdatePyListNum(oMesh, arMesh, nMesh); //04092016
@@ -5421,6 +5423,33 @@ static PyObject* srwlpy_UtiIntProc(PyObject *self, PyObject *args)
 	return oInt2;
 }
 
+static PyObject* srwlpy_UtiStokesAvgUpdateInterp(PyObject* self, PyObject* args)
+{
+	PyObject *oStokes, *oMoreStokes;
+	vector<Py_buffer> vBuf;
+	SRWLStokes pSelf, pMoreStokes;
+	int nIters, nStokesComp;
+	double mult;
+
+	try {
+		if (!PyArg_ParseTuple(args, "OOiid:UtiStokesAvgUpdateInterp", &oStokes, &oMoreStokes, &nIters, &nStokesComp, &mult)) throw strEr_BadArg_UtiIntProc;
+		if ((oStokes == 0) || (oMoreStokes == 0)) throw strEr_BadArg_UtiIntProc;
+		
+		ParseSructSRWLStokes(&pSelf, oStokes, &vBuf);
+		ParseSructSRWLStokes(&pMoreStokes, oMoreStokes, &vBuf);
+
+		ProcRes(srwlUtiStokesAvgUpdateInterp(&pSelf, &pMoreStokes, nIters, 1, nStokesComp, mult));
+	}
+	catch (char* erText) {
+		PyErr_SetString(PyExc_RuntimeError, erText);
+		//PyErr_PrintEx(1);
+	}
+
+	ReleasePyBuffers(vBuf);
+
+	Py_RETURN_NONE;
+}
+
 /************************************************************************//**
  * Attempts to deduce parameters of periodic undulator magnetic field from tabulated field
  ***************************************************************************/
@@ -5601,6 +5630,7 @@ static PyMethodDef srwlpy_methods[] = {
 	{"UtiConvWithGaussian", srwlpy_UtiConvWithGaussian, METH_VARARGS, "UtiConvWithGaussian() Performs convolution of 1D or 2D data wave with 1D or 2D Gaussian (as defined by arguments)"},
 	{"UtiIntInf", srwlpy_UtiIntInf, METH_VARARGS, "UtiIntInf() Calculates basic statistical characteristics of intensity distribution"},
 	{"UtiIntProc", srwlpy_UtiIntProc, METH_VARARGS, "UtiIntProc() Performs misc. operations on one or two intensity distributions"},
+	{"UtiStokesAvgUpdateInterp", srwlpy_UtiStokesAvgUpdateInterp, METH_VARARGS, "UtiStokesAvgUpdateInterp updates the given Stokes data with another set via interpolation TEST"},
 	{"UtiUndFromMagFldTab", srwlpy_UtiUndFromMagFldTab, METH_VARARGS, "UtiUndFromMagFldTab() Attempts to create periodic undulator structure from tabulated magnetic field"},
 	{"UtiUndFindMagFldInterpInds", srwlpy_UtiUndFindMagFldInterpInds, METH_VARARGS, "UtiUndFindMagFldInterpInds() Finds indexes of undulator gap and phase values and associated magnetic fields requiired to be used in field interpolation based on gap and phase"},
 	{"UtiVer", srwlpy_UtiVer, METH_VARARGS, "UtiVerNo() Returns version number / ID of SRW for Python"},

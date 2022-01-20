@@ -18,6 +18,7 @@
 #include "srstraux.h"
 #include "srerror.h"
 #include "gminterp.h"
+#include "utidev.h"
 
 #include <complex>
 
@@ -239,7 +240,7 @@ public:
 
 	int ExtractSingleElecMutualIntensityVsX(srTRadExtract&); //OC06092018
 	int ExtractSingleElecMutualIntensityVsZ(srTRadExtract&);
-	int ExtractSingleElecMutualIntensityVsXZ(srTRadExtract&);
+	int ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtract, gpuUsageArg_t *pGpuUsage = 0);
 
 	//int ComputeMultiElecMutualIntensityVsXZ(srTRadExtract&, srTTrjDat* pTrjDat=0); //23022020
 

@@ -251,7 +251,7 @@ int srTCompositeOptElem::PropagateRadiationTest(srTSRWRadStructAccessData* pInRa
 
 //*************************************************************************
 
-int srTCompositeOptElem::PropagateRadiationGuided(srTSRWRadStructAccessData& wfr, int nInt, char** arID, SRWLRadMesh* arIM, char** arI) //OC15082018
+int srTCompositeOptElem::PropagateRadiationGuided(srTSRWRadStructAccessData& wfr, int nInt, char** arID, SRWLRadMesh* arIM, char** arI,  gpuUsageArg_t *pGpuUsage) //OC15082018
 //int srTCompositeOptElem::PropagateRadiationGuided(srTSRWRadStructAccessData& wfr)
 {
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:

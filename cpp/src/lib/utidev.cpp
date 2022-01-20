@@ -49,8 +49,11 @@ bool UtiDev::GPUAvailable()
 	return isGPUAvailable;
 }
 
-bool UtiDev::GPUEnabled() 
+bool UtiDev::GPUEnabled(gpuUsageArg_t *arg) 
 {
+	if (arg == NULL)
+		return isGPUEnabled;
+	if (*arg == 1) return false;
 	return isGPUEnabled;
 }
 
@@ -61,6 +64,9 @@ void UtiDev::SetGPUStatus(bool enabled)
 
 void UtiDev::Init() {
 	deviceOffloadInitialized = true;
+	#ifdef _OFFLOAD_GPU
+		cudaDeviceSynchronize();
+	#endif
 }
 
 void UtiDev::Fini() {

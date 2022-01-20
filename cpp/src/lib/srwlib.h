@@ -60,11 +60,13 @@
 #define CALL
 #endif
 
+#include "utidev.h"
 /***************************************************************************/
 
 #ifdef __cplusplus  
 extern "C" {
 #endif
+
 
 /************************************************************************//**
  * Auxiliary SRW C API Structures
@@ -802,7 +804,7 @@ EXP int CALL srwlSetRepresElecField(SRWLWfr* pWfr, char repr);
  * @return	integer error (>0) or warnig (<0) code
  * @see ...
  */
-EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt, int nInt=0, char** arID=0, SRWLRadMesh* arIM=0, char** arI=0); //OC15082018
+EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt, int nInt=0, char** arID=0, SRWLRadMesh* arIM=0, char** arI=0, gpuUsageArg_t *pGpuUsage=0); //OC15082018
 //EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt);
 
 /** TEST
@@ -849,7 +851,7 @@ EXP int CALL srwlCalcTransm(SRWLOptT* pOpTr, const double* pDelta, const double*
  * @return	integer error (>0) or warnig (<0) code
  * @see ...
  */
-EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, int dir);
+EXP int CALL srwlUtiFFT(char* pcData, char typeData, double* arMesh, int nMesh, int dir, gpuUsageArg_t *pGpuUsage=0); //HG01032022
 
 #ifdef _OFFLOAD_GPU // RL02182021
 //EXP int CALL srwlUtiFFTGPU(char* pcData, char typeData, double* arMesh, int nMesh, int dir);
@@ -936,6 +938,8 @@ EXP int CALL srwlUtiIntInf(double* arInf, char* pcData, char typeData, SRWLRadMe
  */
 EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* pcI2, char typeI2, SRWLRadMesh* pMesh2, double* arPar, int nPar);
 //EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* pcI2, char typeI2, SRWLRadMesh* pMesh2, double* arPar);
+
+EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMoreStokes, int nIters, int nOrder, int nStokesComp, double mult);
 
 /** 
  * Attempts to deduce parameters of peridic undulator magnetic field from tabulated field and set up Undulator structure

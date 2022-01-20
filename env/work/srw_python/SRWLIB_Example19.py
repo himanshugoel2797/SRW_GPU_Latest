@@ -114,7 +114,7 @@ listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d( #Initial list of 3D objec
     
 #Generate timesteps of Brownian motion of the 3D nano-objects (spheres) simulating particles suspended in water at room temperature
 timeStep = 0.1 #Time step between different Sample "snapshots" / scattering patterns
-timeInterv = 0.5 #Total time interval covered by the "snapshots"
+timeInterv = 0.1 #Total time interval covered by the "snapshots"
 listObjBrownian = srwl_uti_smp_rnd_obj3d.brownian_motion3d(
     _obj_crd = listObjInit, #Initial list of 3D objects
     _viscosity = 1.e-3, #[Pa*s]
@@ -186,9 +186,9 @@ for it in range(len(listObjBrownian)):
 
     print('   Saving Optical Path Difference data from Sample Transmission optical element ... ', end='')
     t = time.time()
-    srwl_uti_save_intens_ascii(
-        opPathDif, opSmp.mesh, os.path.join(os.getcwd(), strDataFolderName, strSampOptPathDifOutFileName%(it)), 0,
-        ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Optical Path Difference'], _arUnits=['eV', 'm', 'm', 'm'])
+    #srwl_uti_save_intens_ascii(
+    #    opPathDif, opSmp.mesh, os.path.join(os.getcwd(), strDataFolderName, strSampOptPathDifOutFileName%(it)), 0,
+    #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Optical Path Difference'], _arUnits=['eV', 'm', 'm', 'm'])
     print('done in', round(time.time() - t, 3), 's')
 
     #Defining "Beamline" to Propagate the Wavefront through
@@ -200,8 +200,8 @@ for it in range(len(listObjBrownian)):
 
     print('   Propagating Wavefront ... ', end='')
     t = time.time()
-    srwl.PropagElecField(wfrP, opBL)
-    print('done in', round(time.time() - t), 's')
+    srwl.PropagElecField(wfrP, opBL, None, 1)
+    print('done in', round(time.time() - t, 3), 's')
 
     print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
     t = time.time()
@@ -212,12 +212,12 @@ for it in range(len(listObjBrownian)):
     stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
     mesh1 = stkDet.mesh
     arI1 = stkDet.arS
-    srwl_uti_save_intens_ascii(
-        arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
-        ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
+    #srwl_uti_save_intens_ascii(
+    #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
+    #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
-    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose()
-    print('done in', round(time.time() - t), 's')
+    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+    print('done in', round(time.time() - t, 3), 's')
 
     #Plotting the Results (requires 3rd party graphics package)
     print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
@@ -233,19 +233,22 @@ for it in range(len(listObjBrownian)):
     plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
     arLogI1 = copy(arI1)
     nTot = mesh1.ne*mesh1.nx*mesh1.ny
-    for i in range(nTot):
-        curI = arI1[i]
-        if(curI <= 0.): arLogI1[i] = 0 #?
-        else: arLogI1[i] = log(curI, 10)
+
+    arLogI1 = np.clip(arI1, 0, None, arLogI1)
+    arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0).get()
+    #for i in range(nTot):
+    #    curI = arI1[i]
+    #    if(curI <= 0.): arLogI1[i] = 0 #?
+    #    else: arLogI1[i] = log(curI, 10)
 
     uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
 
     print('done')
 
-if(arDetFrames is not None): #Saving simulated Detector data file
-    print('   Saving all Detector data to another file (that can be used in subsequent processing) ... ', end='')
-    srwl_uti_save_intens_hdf5_exp(arDetFrames, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileNameDet), 
-        _exp_type = 'XPCS', _dt = timeStep, _dist_smp = distSmp_Det, _bm_size_x = GsnBm.sigX*2.35, _bm_size_y = GsnBm.sigY*2.35)
-    print('done')
+#if(arDetFrames is not None): #Saving simulated Detector data file
+#    print('   Saving all Detector data to another file (that can be used in subsequent processing) ... ', end='')
+#    srwl_uti_save_intens_hdf5_exp(arDetFrames, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileNameDet), 
+#        _exp_type = 'XPCS', _dt = timeStep, _dist_smp = distSmp_Det, _bm_size_x = GsnBm.sigX*2.35, _bm_size_y = GsnBm.sigY*2.35)
+#    print('done')
 
 uti_plot_show() #Show all plots created
