@@ -264,8 +264,6 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	//AuxDebug_TestFFT_Plans();
 	//end debug
 
-	//int g = 1;
-	//pGpuUsage = &g;
 	SetupLimitsTr(FFT2DInfo);
 
 	double xStepNx = FFT2DInfo.Nx * FFT2DInfo.xStep;
@@ -373,7 +371,6 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	if (NeedsShiftBeforeX || NeedsShiftBeforeY)
 	{
 		GPU_COND(pGpuUsage, {
-			cudaDeviceSynchronize();
 			if (DataToFFT_cu != 0) {
 				TreatShifts((fftwf_complex*)DataToFFT_cu);
 			}
@@ -395,13 +392,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 		GPU_COND(pGpuUsage, {
 			if (DataToFFT_cu != 0)
 			{
-				if (pPrecreatedPlan2DFFT == 0) Plan2DFFT = fftwf_plan_dft_2d(Ny, Nx, (fftwf_complex*)DataToFFT_cu, (fftwf_complex*)DataToFFT_cu, FFTW_FORWARD, FFTW_ESTIMATE);
-				else Plan2DFFT = *pPrecreatedPlan2DFFT;
-				if (Plan2DFFT == 0) return ERROR_IN_FFT;
-
-				fftwf_execute(Plan2DFFT);
-
-				/*if (pPrecreatedPlan2DFFT == 0) {
+				if (pPrecreatedPlan2DFFT == 0) {
 					if (!(PlanNx == Nx && PlanNy == Ny)) {
 						if (Plan2DFFT_cu != NULL)
 							cufftDestroy(Plan2DFFT_cu);
@@ -416,8 +407,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 				auto res = cufftExecC2C(Plan2DFFT_cu, DataToFFT_cu, DataToFFT_cu, CUFFT_FORWARD);
 				if (res != CUFFT_SUCCESS)
-					printf("CUFFT Error: %d\r\n", res);*/
-				printf ("Forward FFT\r\n");
+					printf("CUFFT Error: %d\r\n", res);
 			}
 			else if (dDataToFFT_cu != 0)
 			{
@@ -469,22 +459,6 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 		}
 
 		GPU_COND(pGpuUsage, {
-			printf ("Repair and rotate on CPU\r\n");
-			//cudaDeviceSynchronize();
-			if (DataToFFT != 0)
-			{
-				RepairSignAfter2DFFT((fftwf_complex*)DataToFFT_cu);
-				RotateDataAfter2DFFT((fftwf_complex*)DataToFFT_cu);
-			}
-
-#ifdef _FFTW3 //OC27022019
-			else if (dDataToFFT != 0)
-			{
-				RepairSignAfter2DFFT((fftw_complex*)dDataToFFT_cu);
-				RotateDataAfter2DFFT((fftw_complex*)dDataToFFT_cu);
-			}
-#endif
-/*
 			if (DataToFFT_cu != 0)
 			{
 				RepairSignAfter2DFFT_CUDA((float*)DataToFFT_cu, Nx, Ny);
@@ -494,7 +468,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			{
 				RepairSignAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny);
 				RotateDataAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny);
-			}*/
+			}
 		})
 		else {
 			if (DataToFFT != 0)
@@ -593,22 +567,10 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	//double Mult = FFT2DInfo.xStep*FFT2DInfo.yStep;
 	double Mult = FFT2DInfo.xStep * FFT2DInfo.yStep * FFT2DInfo.ExtraMult; //OC20112017
 	GPU_COND(pGpuUsage, {
-		printf("Normalize on CPU\r\n");
-		//cudaDeviceSynchronize();
-		if (DataToFFT != 0) NormalizeDataAfter2DFFT((fftwf_complex*)DataToFFT_cu, Mult);
-
-#ifdef _FFTW3 //OC27022019
-		else if (dDataToFFT != 0) NormalizeDataAfter2DFFT((fftw_complex*)dDataToFFT_cu, Mult);
-#endif
-
-/*
 		if (DataToFFT_cu != 0)
 			NormalizeDataAfter2DFFT_CUDA((float*)DataToFFT_cu, Nx, Ny, Mult);
 		else if (dDataToFFT_cu != 0)
 			NormalizeDataAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny, Mult);
-		if (NeedsShiftAfterX | NeedsShiftAfterY)
-			cudaDeviceSynchronize();
-*/
 	})
 	else {
 		if (DataToFFT != 0) NormalizeDataAfter2DFFT(DataToFFT, Mult);
@@ -633,8 +595,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	if (NeedsShiftAfterX || NeedsShiftAfterY)
 	{
 		GPU_COND(pGpuUsage, {
-			printf ("TreatShifts on CPU\r\n");
-			//cudaDeviceSynchronize();
+			cudaDeviceSynchronize();
 			if (DataToFFT_cu != 0) {
 				TreatShifts((fftwf_complex*)DataToFFT_cu);
 			}

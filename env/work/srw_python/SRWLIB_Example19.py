@@ -114,7 +114,7 @@ listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d( #Initial list of 3D objec
     
 #Generate timesteps of Brownian motion of the 3D nano-objects (spheres) simulating particles suspended in water at room temperature
 timeStep = 0.1 #Time step between different Sample "snapshots" / scattering patterns
-timeInterv = 0.1 #Total time interval covered by the "snapshots"
+timeInterv = 0.5 #Total time interval covered by the "snapshots"
 listObjBrownian = srwl_uti_smp_rnd_obj3d.brownian_motion3d(
     _obj_crd = listObjInit, #Initial list of 3D objects
     _viscosity = 1.e-3, #[Pa*s]
