@@ -181,6 +181,8 @@ public:
 	void CompTotalTrjData_FromTrj(double sSt, double sEn, long long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pIntBtxE2, double* pIntBtzE2, double* pBx, double* pBz);
 	void CompTotalTrjData(double sSt, double sEn, long long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pIntBtxE2, double* pIntBtzE2, double* pBx, double* pBz, double* pdBxds, double* pdBzds);
 	void CompTotalTrjData_FromTrj(double sSt, double sEn, long long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pIntBtxE2, double* pIntBtzE2, double* pBx, double* pBz, double* pdBxds, double* pdBzds);
+	void CompTotalTrjData_FromTrjCUDA(double sSt, double sEn, long long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pIntBtxE2, double* pIntBtzE2, double* pBx, double* pBz);
+
 	void CompTotalTrjDataTrjDisp(double sSt, double sEn, long long Np, double* pBtx, double* pBtz, double* pX, double* pZ, char DistUn);
 	void CompTotalTrjDataTrjDisp_FromTrj(double sSt, double sEn, long long Np, double* pBtx, double* pBtz, double* pX, double* pZ, char DistUn);
 	void CompTotalTrjData(double sSt, double sEn, long long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pBx, double* pBz);

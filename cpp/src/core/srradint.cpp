@@ -22,6 +22,8 @@
 #include "sroptelm.h"
 #include "srerror.h"
 
+#include <chrono>
+
 //*************************************************************************
 
 extern srTYield srYield;
@@ -34,6 +36,15 @@ extern char* srWarningDynamic;
 void srTRadInt::Initialize()
 {
 	DistrInfoDat.Initialize();
+
+	cudaMallocManaged(&BtxArrP, 50 * sizeof(double*));
+	cudaMallocManaged(&XArrP, 50 * sizeof(double*));
+	cudaMallocManaged(&IntBtxE2ArrP, 50 * sizeof(double*));
+	cudaMallocManaged(&BxArrP, 50 * sizeof(double*));
+	cudaMallocManaged(&BtzArrP, 50 * sizeof(double*));
+	cudaMallocManaged(&ZArrP, 50 * sizeof(double*));
+	cudaMallocManaged(&IntBtzE2ArrP, 50 * sizeof(double*));
+	cudaMallocManaged(&BzArrP, 50 * sizeof(double*));
 
 	TrjDatPtr = 0;
 	IntegSubdArray = 0; LenIntegSubdArray = 0;
@@ -285,7 +296,7 @@ int srTRadInt::ComputeTotalRadDistrLoops()
 }
 
 //*************************************************************************
-
+int testPoint = 1;
 int srTRadInt::ComputeTotalRadDistrDirectOut(srTSRWRadStructAccessData& SRWRadStructAccessData, char showProgressInd)
 {
 	int result = 0;
@@ -336,6 +347,11 @@ int srTRadInt::ComputeTotalRadDistrDirectOut(srTSRWRadStructAccessData& SRWRadSt
 	if(!showProgressInd) TotalAmOfOutPointsForInd = 0;
 	srTCompProgressIndicator compProgressInd(TotalAmOfOutPointsForInd, UpdateTimeInt_s);
 
+	cudaMallocManaged(&execData, sizeof(srTRadIntData_t) * (DistrInfoDat.nx * DistrInfoDat.nz * DistrInfoDat.nLamb + 128));
+	baseDataIdx = 0;
+
+	std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
 	//long AbsPtCount = 0;
 	ObsCoor.y = DistrInfoDat.yStart;
 	ObsCoor.z = DistrInfoDat.zStart;
@@ -355,10 +371,14 @@ int srTRadInt::ComputeTotalRadDistrDirectOut(srTSRWRadStructAccessData& SRWRadSt
 			ObsCoor.Lamb = DistrInfoDat.LambStart;
 			for(int iLamb=0; iLamb<DistrInfoDat.nLamb; iLamb++)
 			{
+				long long Offset = izPerZ + ixPerX + (iLamb << 1);
+				testPoint = 0;
+				if (Offset == 48) testPoint = 1;
 				if(result = GenRadIntegration(RadIntegValues, &EwNormDer)) return result;
+				testPoint = 0;
 
 				//long Offset = izPerZ + ixPerX + (iLamb << 1);
-				long long Offset = izPerZ + ixPerX + (iLamb << 1);
+				//long long Offset = izPerZ + ixPerX + (iLamb << 1);
 				float *pEx = pEx0 + Offset, *pEz = pEz0 + Offset;
 
 				*pEx = float(RadIntegValues->real());
@@ -366,12 +386,12 @@ int srTRadInt::ComputeTotalRadDistrDirectOut(srTSRWRadStructAccessData& SRWRadSt
 				*pEz = float(RadIntegValues[1].real());
 				*(pEz+1) = float(RadIntegValues[1].imag());
 
-				if(showProgressInd) 
-				{
-                    //if(result = pCompProgressInd->UpdateIndicator(PointCount++)) return result;
-                    if(result = compProgressInd.UpdateIndicator(PointCount++)) return result;
-				}
-				if(result = srYield.Check()) return result;
+				//if(showProgressInd) 
+				//{
+                //    //if(result = pCompProgressInd->UpdateIndicator(PointCount++)) return result;
+                //    if(result = compProgressInd.UpdateIndicator(PointCount++)) return result;
+				//}
+				//if(result = srYield.Check()) return result;
 
 				ObsCoor.Lamb += StepLambda;
 			}
@@ -379,6 +399,43 @@ int srTRadInt::ComputeTotalRadDistrDirectOut(srTSRWRadStructAccessData& SRWRadSt
 		}
 		ObsCoor.z += StepZ;
 	}
+	
+	std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+	printf("Time Taken: %f milliseconds\r\n", time_span.count());
+	printf("\r\n");
+
+	float* pEx0_l = nullptr;
+	float* pEz0_l = nullptr;
+	cudaMallocManaged(&pEx0_l, sizeof(float) * DistrInfoDat.nx * DistrInfoDat.nz * DistrInfoDat.nLamb * 2);
+	cudaMallocManaged(&pEz0_l, sizeof(float) * DistrInfoDat.nx * DistrInfoDat.nz * DistrInfoDat.nLamb * 2);
+
+	t1 = std::chrono::high_resolution_clock::now();
+	GenRadIntegrationCUDA(&EwNormDer,
+		DistrInfoDat.nx, DistrInfoDat.nz, DistrInfoDat.nLamb,
+		PerX, PerZ,
+		DistrInfoDat.xStart, DistrInfoDat.yStart, DistrInfoDat.zStart, DistrInfoDat.LambStart,
+		StepX, StepZ, StepLambda, pEx0_l, pEz0_l);
+	t2 = std::chrono::high_resolution_clock::now();
+	time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+	printf("Time Taken: %f milliseconds\r\n", time_span.count());
+
+	cudaDeviceSynchronize();
+	double avgErrX = 0, avgErrZ = 0;
+	//for (int i = 0; i < DistrInfoDat.nx * DistrInfoDat.nz * DistrInfoDat.nLamb * 2; i+=2) {
+	//	if (abs(pEx0[i] - pEx0_l[i]) > 100)
+	//		printf("%d\r\n", i);
+	//	avgErrX += abs(pEx0[i] - pEx0_l[i]);
+	//	avgErrZ += abs(pEz0[i] - pEz0_l[i]);
+	//}
+	avgErrX /= DistrInfoDat.nx * DistrInfoDat.nz * DistrInfoDat.nLamb ;
+	avgErrZ /= DistrInfoDat.nx * DistrInfoDat.nz * DistrInfoDat.nLamb ;
+
+	cudaMemcpy(pEx0, pEx0_l, sizeof(float) * DistrInfoDat.nx * DistrInfoDat.nz * DistrInfoDat.nLamb * 2, cudaMemcpyDefault);
+	cudaMemcpy(pEz0, pEz0_l, sizeof(float) * DistrInfoDat.nx * DistrInfoDat.nz * DistrInfoDat.nLamb * 2, cudaMemcpyDefault);
+	cudaDeviceSynchronize();
+	cudaFree(pEx0_l);
+	cudaFree(pEz0_l);
 
 	if(FinalResAreSymOverZ || FinalResAreSymOverX) 
 		FillInSymPartsOfResults(FinalResAreSymOverX, FinalResAreSymOverZ, SRWRadStructAccessData);
@@ -1915,6 +1972,9 @@ int srTRadInt::RadIntegrationAuto1(double& OutIntXRe, double& OutIntXIm, double&
 	double SqNorm = IntXRe*IntXRe + IntXIm*IntXIm + IntZRe*IntZRe + IntZIm*IntZIm;
 
 	//char ExtraPassForAnyCase = 0; 
+		Sum2XRe += Sum1XRe; Sum2XIm += Sum1XIm; Sum2ZRe += Sum1ZRe; Sum2ZIm += Sum1ZIm; 
+		Sum1XRe = Sum1XIm = Sum1ZRe = Sum1ZIm = 0.;
+
 
 	NpOnLevel--;
 	char NotFinishedYet = 1;
@@ -1931,7 +1991,7 @@ int srTRadInt::RadIntegrationAuto1(double& OutIntXRe, double& OutIntXIm, double&
 
 		if(LevelNo <= MaxLevelForMeth_10_11)
 		{
-			if(NumberOfLevelsFilled <= LevelNo) if(result = FillNextLevel(LevelNo, s, sEnd - HalfStep, NpOnLevel)) return result;
+			if(NumberOfLevelsFilled <= LevelNo) if(result = FillNextLevelCUDA(LevelNo, s, sEnd - HalfStep, NpOnLevel)) return result;
 			pBtx = BtxArrP[LevelNo]; pBtz = BtzArrP[LevelNo]; pX = XArrP[LevelNo]; pZ = ZArrP[LevelNo]; pIntBtxE2 = IntBtxE2ArrP[LevelNo]; pIntBtzE2 = IntBtzE2ArrP[LevelNo];
 		}
 
@@ -2029,6 +2089,9 @@ int srTRadInt::RadIntegrationAuto1(double& OutIntXRe, double& OutIntXIm, double&
 				return CAN_NOT_COMPUTE_RADIATION_INTEGRAL;
 			}
 		}
+		
+		Sum2XRe += Sum1XRe; Sum2XIm += Sum1XIm; Sum2ZRe += Sum1ZRe; Sum2ZIm += Sum1ZIm;
+		Sum1XRe = Sum1XIm = Sum1ZRe = Sum1ZIm = 0.;
 
 		IntXRe = LocIntXRe; IntXIm = LocIntXIm; IntZRe = LocIntZRe; IntZIm = LocIntZIm; 
 		SqNorm = LocSqNorm;

@@ -41,6 +41,51 @@ struct srTParPrecElecFld;
 
 //*************************************************************************
 
+typedef struct srTRadIntData {
+	double PhInit;
+	double sStart;
+	double sEnd;
+	double Sum2XRe;
+	double Sum2XIm;
+	double Sum2ZRe;
+	double Sum2ZIm;
+	double wFxRe;
+	double wFxIm;
+	double wFzRe;
+	double wFzIm;
+	double wDifDerXRe;
+	double wDifDerXIm;
+	double wDifDerZRe;
+	double wDifDerZIm;
+
+	double ObsCoorX;
+	double ObsCoorY;
+	double ObsCoorZ;
+	double ObsCoorLamb;
+	long long Offset;
+
+	double* pBtx;
+	double* pBtz;
+	double* pX;
+	double* pZ;
+	double* pIntBtxE2;
+	double* pIntBtzE2;
+
+	double IntXRe;
+	double IntXIm;
+	double IntZRe;
+	double IntZIm;
+	double SqNorm;
+
+	double LocIntXRe;
+	double LocIntXIm;
+	double LocIntZRe;
+	double LocIntZIm;
+	double LocSqNorm;
+
+	char ThisMayBeTheLastLoop;
+} srTRadIntData_t;
+
 class srTRadInt {
 
 	double* IntegSubdArray;
@@ -60,8 +105,8 @@ class srTRadInt {
 	double a2c, a4c, a6c, a8c, a10c, a12c;
 	double a3s, a5s, a7s, a9s, a11s, a13s;
 
-	double *BtxArrP[50], *XArrP[50], *IntBtxE2ArrP[50], *BxArrP[50];
-	double *BtzArrP[50], *ZArrP[50], *IntBtzE2ArrP[50], *BzArrP[50];
+	double **BtxArrP, **XArrP, **IntBtxE2ArrP, **BxArrP;
+	double **BtzArrP, **ZArrP, **IntBtzE2ArrP, **BzArrP;
 	//int AmOfPointsOnLevel[50];
 	//int NumberOfLevelsFilled;
 	long long AmOfPointsOnLevel[50];
@@ -78,6 +123,8 @@ class srTRadInt {
 	double d2Phds2ddPhdsE2ArrAuto[513];
 	
 	srTPartAutoRadIntHndlVect PartAutoRadIntHndlVect;
+	srTRadIntData_t* execData;
+	int baseDataIdx;
 
 	complex<double> SmallContComplex[4];
 	double SmallContDouble[4];
@@ -176,6 +223,10 @@ public:
 	inline void FunForRadIntWithDer(double, complex<double>*, complex<double>*);
 	
 	int RadIntegrationAuto1(double&, double&, double&, double&, srTEFourier*);
+	void RadIntegrationAuto1CUDA(double*, double*, double*, double*, srTEFourier*, int*);
+	
+	void GenRadIntegrationCUDA(srTEFourier* EwNormDer, long long nx, long long nz, long long nlamb, long long perX, long long perZ, double xStart, double yStart, double zStart, double lambStart, double xStep, double zStep, double lambStep, float* oSol0, float* oSol1);
+	
 	//int RadIntegrationAuto1M(double sStart, double sEnd, double* FunArr, double* EdgeDerArr, int AmOfInitPo, int NextLevNo, double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm);
 	int RadIntegrationAuto1M(double sStart, double sEnd, double* FunArr, double* EdgeDerArr, long long AmOfInitPo, int NextLevNo, double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm);
 	int RadIntegrationAuto2(double&, double&, double&, double&, srTEFourier*);
@@ -189,6 +240,7 @@ public:
 
 	//inline int FillNextLevel(int LevelNo, double sStart, double sEnd, long Np);
 	inline int FillNextLevel(int LevelNo, double sStart, double sEnd, long long Np);
+	int FillNextLevelCUDA(int LevelNo, double sStart, double sEnd, long long Np);
 	//int FillNextLevelPart(int LevelNo, double sStart, double sEnd, long Np, double*** TrjPtrs);
 	int FillNextLevelPart(int LevelNo, double sStart, double sEnd, long long Np, double*** TrjPtrs);
 
@@ -356,6 +408,24 @@ inline int srTRadInt::GenRadIntegration(complex<double>* RadIntegValues, srTEFou
 		if(result = RadIntegrationResiduals(ResidVal, &EwNormDer)) return result;
 		IntXRe = (*ResidVal).real(); IntXIm = (*ResidVal).imag();
 		IntZRe = (*(ResidVal+1)).real(); IntZIm = (*(ResidVal+1)).imag();
+		
+		execData[baseDataIdx].IntXRe = IntXRe;
+		execData[baseDataIdx].IntXIm = IntXIm;
+		execData[baseDataIdx].IntZRe = IntZRe;
+		execData[baseDataIdx].IntZIm = IntZIm;
+
+		const double wd = 1. / 15.;
+		complex<double> DifDerX = *InitDerMan - *FinDerMan;
+		double wDifDerXRe = wd * DifDerX.real(), wDifDerXIm = wd * DifDerX.imag();
+		complex<double> DifDerZ = *(InitDerMan + 1) - *(FinDerMan + 1);
+		double wDifDerZRe = wd * DifDerZ.real(), wDifDerZIm = wd * DifDerZ.imag();
+
+		execData[baseDataIdx].wDifDerXRe = wDifDerXRe;
+		execData[baseDataIdx].wDifDerXIm = wDifDerXIm;
+		execData[baseDataIdx].wDifDerZRe = wDifDerZRe;
+		execData[baseDataIdx].wDifDerZIm = wDifDerZIm;
+
+		baseDataIdx++;
 	}
 //TEST!
 //		IntXRe = IntXIm = 0.;
@@ -655,7 +725,8 @@ inline void srTRadInt::DeallocateMemForRadDistr()
 			double*& BtxArrP_i = BtxArrP[i];
 			if(BtxArrP_i != 0) 
 			{ 
-				delete[] BtxArrP_i; 
+				//delete[] BtxArrP_i; 
+				cudaFree(BtxArrP_i);
 				BtxArrP_i = 0;
 			}
 			AmOfPointsOnLevel[i] = 0;
