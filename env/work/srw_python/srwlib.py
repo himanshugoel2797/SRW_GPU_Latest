@@ -6491,6 +6491,11 @@ def srwl_uti_save_intens_hdf5(_ar_intens, _mesh, _file_path, _n_stokes=1,
         #print('NumPy can not be loaded. You may need to install numpy. If you are using pip, you can use the following ' + 
         #      "command to install it: \npip install numpy")
         
+    try:
+        import cupy as cp
+    except:
+        raise Exception('Cupy can not be loaded. You may need to install cupy. If you are using pip, you can use the following command to install it: \npip install cupy')
+
     ### Load package h5py
     try:
         import h5py as h5
@@ -6531,7 +6536,9 @@ def srwl_uti_save_intens_hdf5(_ar_intens, _mesh, _file_path, _n_stokes=1,
     nVal = nRadPt*nComp #_mesh.ne*_mesh.nx*_mesh.ny*nComp
     if(_cmplx != 0): nVal *= 2
 
-    if(not (isinstance(_ar_intens, array) or isinstance(_ar_intens, np.array))):
+    if(isinstance(_ar_intens, cp.ndarray)):
+        intensity_data = _ar_intens.get()
+    elif(not (isinstance(_ar_intens, array) or isinstance(_ar_intens, np.ndarray))):
         intensity_data = np.array([0]*nVal, 'f')
         intensity_data[:] = _ar_intens
         #intensity_data = np.array([_ar_intens[ii] for ii in range(nVal)])
@@ -7966,6 +7973,11 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
     :param _exec_gpu_id: GPU device ID to execute calculations on
    """
 
+    try:
+        import cupy as cp
+    except:
+        print('Cannot import cupy module')
+
     doMutual = 0 #OC30052017
     #if((_char >= 2) and (_char <= 4)): doMutual = 1
     #if((_char >= 2) and (_char <= 5)): doMutual = 1 #OC15072019
@@ -8899,6 +8911,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
 
         iAuxSendCount = 0 #for DEBUG
 
+
         #OC18022021
         arElFldToSend = None #To be used only in the case on nProc > 1 and _char == 6
         lenHalfArToSend = 0; lenArToSend = 0
@@ -8909,7 +8922,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
             #Asumes that meshRes is already defined at this point for workers
             lenHalfArToSend = meshRes.ne*meshRes.nx*meshRes.ny*2 #for arEx and arEy (consider introducing some logic of arEx or arEy is not used)
             lenArToSend = 2*lenHalfArToSend
-            arElFldToSend = array('f', [0]*lenArToSend)
+            arElFldToSend = cp.array(array('f', [0]*lenArToSend))
         
         for i in range(nPartPerProc): #loop over macro-electrons
 
@@ -9981,7 +9994,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
             #Asumes that meshRes is already defined at this point for workers
             lenHalfArToRecv = meshRes.ne*meshRes.nx*meshRes.ny*2 #for arEx and arEy (consider introducing some logic of arEx or arEy is not used)
             lenArToRecv = 2*lenHalfArToRecv
-            arElFldToRecv = array('f', [0]*lenArToRecv)
+            arElFldToRecv = cp.array(array('f', [0]*lenArToRecv))
         
         #if(_char == 4): #OC30052017 #Cuts of Mutual Intensity vs X & Y
         if((_char == 4) or (_char == 5)): #OC15072019 #Cuts of Mutual Intensity and/or Degree of Coherence vs X & Y

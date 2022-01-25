@@ -279,10 +279,10 @@ varParam = srwl_bl.srwl_uti_ext_options([
     ['w_ne', 'i', 1, 'number of points vs photon energy for calculation of intensity distribution'],
     ['w_x', 'f', 0.0, 'central horizontal position [m] for calculation of intensity distribution'],
 
-    ['w_rx', 'f', 0.0025, 'range of horizontal position [m] for calculation of intensity distribution'],
+    ['w_rx', 'f', 0.001, 'range of horizontal position [m] for calculation of intensity distribution'],
     #['w_rx', 'f', 0.003, 'range of horizontal position [m] for calculation of intensity distribution'],
 
-    ['w_nx', 'i', 624, 'number of points vs horizontal position for calculation of intensity distribution'],
+    ['w_nx', 'i', 60, 'number of points vs horizontal position for calculation of intensity distribution'],
     #['w_nx', 'i', 100, 'number of points vs horizontal position for calculation of intensity distribution'],
     
     ['w_y', 'f', 0.0, 'central vertical position [m] for calculation of intensity distribution vs horizontal and vertical position'],
