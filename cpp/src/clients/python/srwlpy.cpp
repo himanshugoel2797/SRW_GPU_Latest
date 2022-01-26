@@ -4049,7 +4049,9 @@ int ModifySRWLWfr(int action, SRWLWfr* pWfr, char pol)
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 	//srwlPrintTime("::ModifySRWLWfr : before PyObject_CallObject",&start);
 
+	srwlUtiDevInit();
 	PyObject *res = PyObject_CallObject(oFunc, argList); //re-allocate in Py
+	srwlUtiDevFini();
 	Py_DECREF(argList);
 
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
@@ -4404,6 +4406,7 @@ static PyObject* srwlpy_CalcElecFieldSR(PyObject *self, PyObject *args)
 	SRWLPrtTrj *pTrj = &trj;
 	SRWLWfr wfr;
 
+	srwlUtiDevInit();
 	try
 	{
 		if(!PyArg_ParseTuple(args, "OOOO:CalcElecFieldSR", &oWfr, &oPartTraj, &oMagFldCnt, &oPrecPar)) throw strEr_BadArg_CalcElecFieldSR;
@@ -4442,6 +4445,7 @@ static PyObject* srwlpy_CalcElecFieldSR(PyObject *self, PyObject *args)
 		//PyErr_PrintEx(1);
 		oWfr = 0;
 	}
+	srwlUtiDevFini();
 
 	if(pMagCnt != 0) DeallocMagCntArrays(pMagCnt);
 	ReleasePyBuffers(vBuf);
@@ -4462,6 +4466,7 @@ static PyObject* srwlpy_CalcElecFieldGaussian(PyObject *self, PyObject *args)
 	SRWLWfr wfr;
 	SRWLGsnBm gsnBm;
 
+	srwlUtiDevInit();
 	try
 	{
 		if(!PyArg_ParseTuple(args, "OOO:CalcElecFieldGaussian", &oWfr, &oGsnBm, &oPrecPar)) throw strEr_BadArg_CalcElecFieldGaussian;
@@ -4483,6 +4488,7 @@ static PyObject* srwlpy_CalcElecFieldGaussian(PyObject *self, PyObject *args)
 		PyErr_SetString(PyExc_RuntimeError, erText);
 		oWfr = 0;
 	}
+	srwlUtiDevFini();
 
 	ReleasePyBuffers(vBuf);
 	EraseElementFromMap(&wfr, gmWfrPyPtr);
@@ -4652,6 +4658,7 @@ static PyObject* srwlpy_CalcIntFromElecField(PyObject *self, PyObject *args)
 	SRWLMagFldC *pMagCnt=0; //OC23022020
 	SRWLPrtTrj *pPrtTrj=0;
 
+	srwlUtiDevInit();
 	try
 	{
 		//if(!PyArg_ParseTuple(args, "OOOOOOOO:CalcIntFromElecField", &oInt, &oWfr, &oPol, &oIntType, &oDepType, &oE, &oX, &oY)) throw strEr_BadArg_CalcIntFromElecField;
@@ -4728,6 +4735,7 @@ static PyObject* srwlpy_CalcIntFromElecField(PyObject *self, PyObject *args)
 		//PyErr_PrintEx(1);
 		oInt = 0;
 	}
+	srwlUtiDevFini();
 
 	if(pMagCnt != 0) DeallocMagCntArrays(pMagCnt);
 	ReleasePyBuffers(vBuf);
@@ -5431,6 +5439,7 @@ static PyObject* srwlpy_UtiStokesAvgUpdateInterp(PyObject* self, PyObject* args)
 	int nIters, nStokesComp;
 	double mult;
 
+	srwlUtiDevInit();
 	try {
 		if (!PyArg_ParseTuple(args, "OOiid:UtiStokesAvgUpdateInterp", &oStokes, &oMoreStokes, &nIters, &nStokesComp, &mult)) throw strEr_BadArg_UtiIntProc;
 		if ((oStokes == 0) || (oMoreStokes == 0)) throw strEr_BadArg_UtiIntProc;
@@ -5444,6 +5453,7 @@ static PyObject* srwlpy_UtiStokesAvgUpdateInterp(PyObject* self, PyObject* args)
 		PyErr_SetString(PyExc_RuntimeError, erText);
 		//PyErr_PrintEx(1);
 	}
+	srwlUtiDevFini();
 
 	ReleasePyBuffers(vBuf);
 

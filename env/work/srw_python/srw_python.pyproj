@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9a08cea0-3ae7-4a0c-a34b-6b461ac728d8}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>test_fftw3_port.py</StartupFile>
+    <StartupFile>SRWLIB_Example20.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -13,6 +13,7 @@
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId>Global|PythonCore|3.8</InterpreterId>
     <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
+    <CommandLineArguments>--wm --wm_nop --wm_ch=6 --wm_nm=10 --wm_nmm=10 --wm_na=100 --wm_ns=100 --wm_ff=h5 --wm_fni=ex20_res</CommandLineArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />

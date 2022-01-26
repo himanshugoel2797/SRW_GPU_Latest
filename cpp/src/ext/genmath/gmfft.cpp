@@ -582,6 +582,10 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 	//if(NeedsShiftAfterX) FillArrayShift('x', t0SignMult*x0_After, FFT2DInfo.xStepTr);
 	//if(NeedsShiftAfterY) FillArrayShift('y', t0SignMult*y0_After, FFT2DInfo.yStepTr);
+
+	GPU_COND(pGpuUsage, {
+		cudaDeviceSynchronize();
+	})
 	if (NeedsShiftAfterX)
 	{//OC02022019
 		if (m_ArrayShiftX != 0) FillArrayShift('x', t0SignMult * x0_After, FFT2DInfo.xStepTr, m_ArrayShiftX);
@@ -595,7 +599,6 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	if (NeedsShiftAfterX || NeedsShiftAfterY)
 	{
 		GPU_COND(pGpuUsage, {
-			cudaDeviceSynchronize();
 			if (DataToFFT_cu != 0) {
 				TreatShifts((fftwf_complex*)DataToFFT_cu);
 			}
@@ -611,10 +614,6 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 #endif
 		}
 	}
-
-	GPU_COND(pGpuUsage, {
-		cudaDeviceSynchronize();
-	})
 	
 	//OC_NERSC: to comment-out the following line for NERSC (to avoid crash with "python-mpi")
 	//fftwnd_destroy_plan(Plan2DFFT);

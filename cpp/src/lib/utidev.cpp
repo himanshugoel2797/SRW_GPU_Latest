@@ -64,13 +64,16 @@ void UtiDev::SetGPUStatus(bool enabled)
 
 void UtiDev::Init() {
 	deviceOffloadInitialized = true;
-	#ifdef _OFFLOAD_GPU
-		cudaDeviceSynchronize();
-	#endif
+#ifdef _OFFLOAD_GPU
+	cudaDeviceSynchronize();
+#endif
 }
 
 void UtiDev::Fini() {
-	deviceOffloadInitialized = false;
+#ifdef _OFFLOAD_GPU
+	cudaDeviceSynchronize();
+#endif
+	//deviceOffloadInitialized = false;
 }
 
 

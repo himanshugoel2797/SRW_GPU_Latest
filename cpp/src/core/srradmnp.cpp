@@ -1637,7 +1637,7 @@ int srTRadGenManip::ExtractSingleElecMutualIntensityVsXZ(srTRadExtract& RadExtra
 				#pragma omp target enter data map(alloc: dpMI[0:ncomp])
 							}
 				*/
-#pragma omp target enter data map(to: dpMI[0:nxnz*(nxnz+1)])
+//#pragma omp target enter data map(to: dpMI[0:nxnz*(nxnz+1)])
 			}
 		})
 	}
