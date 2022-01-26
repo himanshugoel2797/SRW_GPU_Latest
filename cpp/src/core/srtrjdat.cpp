@@ -80,40 +80,31 @@ int srTTrjDat::AllocateMemoryForCfs()
 	//int LenFieldData_m_1 = LenFieldData - 1;
 	long long LenFieldData_m_1 = LenFieldData - 1;
 
-	//BxPlnCf = new double*[LenFieldData_m_1];
-	cudaMallocManaged(&BxPlnCf, LenFieldData_m_1 * sizeof(double*));
+	BxPlnCf = new double*[LenFieldData_m_1];
 	if(BxPlnCf == 0) return MEMORY_ALLOCATION_FAILURE;
 
-	//BzPlnCf = new double*[LenFieldData_m_1];
-	cudaMallocManaged(&BzPlnCf, LenFieldData_m_1 * sizeof(double*));
+	BzPlnCf = new double*[LenFieldData_m_1];
 	if(BzPlnCf == 0) { delete[] BxPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//BtxPlnCf = new double*[LenFieldData_m_1];
-	cudaMallocManaged(&BtxPlnCf, LenFieldData_m_1 * sizeof(double*));
+	BtxPlnCf = new double*[LenFieldData_m_1];
 	if(BtxPlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//BtzPlnCf = new double*[LenFieldData_m_1];
-	cudaMallocManaged(&BtzPlnCf, LenFieldData_m_1 * sizeof(double*));
+	BtzPlnCf = new double*[LenFieldData_m_1];
 	if(BtxPlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//xPlnCf = new double*[LenFieldData_m_1];
-	cudaMallocManaged(&xPlnCf, LenFieldData_m_1 * sizeof(double*));
+	xPlnCf = new double*[LenFieldData_m_1];
 	if(xPlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//zPlnCf = new double*[LenFieldData_m_1];
-	cudaMallocManaged(&zPlnCf, LenFieldData_m_1 * sizeof(double*));
+	zPlnCf = new double*[LenFieldData_m_1];
 	if(zPlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; delete[] xPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//IntBtx2PlnCf = new double*[LenFieldData_m_1];
-	cudaMallocManaged(&IntBtx2PlnCf, LenFieldData_m_1 * sizeof(double*));
+	IntBtx2PlnCf = new double*[LenFieldData_m_1];
 	if(IntBtx2PlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; delete[] xPlnCf; delete[] zPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//IntBtz2PlnCf = new double*[LenFieldData_m_1];
-	cudaMallocManaged(&IntBtz2PlnCf, LenFieldData_m_1 * sizeof(double*));
+	IntBtz2PlnCf = new double*[LenFieldData_m_1];
 	if(IntBtz2PlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; delete[] xPlnCf; delete[] zPlnCf; delete[] IntBtx2PlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//AllCf = new double[LenFieldData_m_1*50];
-	cudaMallocManaged(&AllCf, LenFieldData_m_1 * 50 * sizeof(double));
+	AllCf = new double[LenFieldData_m_1*50];
 	if(AllCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; delete[] xPlnCf; delete[] zPlnCf; delete[] IntBtx2PlnCf; delete[] IntBtz2PlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
 	double* tAllCf = AllCf;
@@ -209,40 +200,31 @@ int srTTrjDat::AllocateMemoryForCfsFromTrj(long long npLoc)
 	long long xLenFieldData_m_1 = npLoc - 1;
 	long long zLenFieldData_m_1 = npLoc - 1;
 
-	//BxPlnCf = new double*[xLenFieldData_m_1];
-	cudaMallocManaged(&BxPlnCf, xLenFieldData_m_1 * sizeof(double*));
+	BxPlnCf = new double*[zLenFieldData_m_1];
 	if(BxPlnCf == 0) return MEMORY_ALLOCATION_FAILURE;
 
-	//BzPlnCf = new double*[zLenFieldData_m_1]; //TODO: Note possible typo
-	cudaMallocManaged(&BzPlnCf, zLenFieldData_m_1 * sizeof(double*));
+	BzPlnCf = new double*[xLenFieldData_m_1];
 	if(BzPlnCf == 0) { delete[] BxPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//BtxPlnCf = new double*[xLenFieldData_m_1];
-	cudaMallocManaged(&BtxPlnCf, xLenFieldData_m_1 * sizeof(double*));
+	BtxPlnCf = new double*[xLenFieldData_m_1];
 	if(BtxPlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//BtzPlnCf = new double*[zLenFieldData_m_1];
-	cudaMallocManaged(&BtzPlnCf, zLenFieldData_m_1 * sizeof(double*));
+	BtzPlnCf = new double*[zLenFieldData_m_1];
 	if(BtxPlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//xPlnCf = new double*[xLenFieldData_m_1];
-	cudaMallocManaged(&xPlnCf, xLenFieldData_m_1 * sizeof(double*));
+	xPlnCf = new double*[xLenFieldData_m_1];
 	if(xPlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//zPlnCf = new double*[zLenFieldData_m_1];
-	cudaMallocManaged(&zPlnCf, zLenFieldData_m_1 * sizeof(double*));
+	zPlnCf = new double*[zLenFieldData_m_1];
 	if(zPlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; delete[] xPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//IntBtx2PlnCf = new double*[xLenFieldData_m_1];
-	cudaMallocManaged(&IntBtx2PlnCf, xLenFieldData_m_1 * sizeof(double*));
+	IntBtx2PlnCf = new double*[xLenFieldData_m_1];
 	if(IntBtx2PlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; delete[] xPlnCf; delete[] zPlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//IntBtz2PlnCf = new double*[zLenFieldData_m_1];
-	cudaMallocManaged(&IntBtz2PlnCf, zLenFieldData_m_1 * sizeof(double*));
+	IntBtz2PlnCf = new double*[zLenFieldData_m_1];
 	if(IntBtz2PlnCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; delete[] xPlnCf; delete[] zPlnCf; delete[] IntBtx2PlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
-	//AllCf = new double[(xLenFieldData_m_1 + zLenFieldData_m_1)*21];
-	cudaMallocManaged(&AllCf, (xLenFieldData_m_1 + zLenFieldData_m_1) * 21 * sizeof(double));
+	AllCf = new double[(xLenFieldData_m_1 + zLenFieldData_m_1)*21];
 	if(AllCf == 0) { delete[] BxPlnCf; delete[] BzPlnCf; delete[] BtxPlnCf; delete[] BtzPlnCf; delete[] xPlnCf; delete[] zPlnCf; delete[] IntBtx2PlnCf; delete[] IntBtz2PlnCf; return MEMORY_ALLOCATION_FAILURE;}
 
 	double* tAllCf = AllCf;
@@ -273,49 +255,40 @@ int srTTrjDat::DeallocateMemoryForCfs()
 	//int LenFieldData_m_1 = LenFieldData-1;
 	if(BxPlnCf != 0)
 	{
-		cudaFree(BxPlnCf);
-		//delete[] BxPlnCf; BxPlnCf = 0;
+		delete[] BxPlnCf; BxPlnCf = 0;
 	}
 	if(BzPlnCf != 0)
 	{
-		cudaFree(BzPlnCf);
-		//delete[] BzPlnCf; BzPlnCf = 0;
+		delete[] BzPlnCf; BzPlnCf = 0;
 	}
 	if(BtxPlnCf != 0)
 	{
-		cudaFree(BtxPlnCf);
-		//delete[] BtxPlnCf; BtxPlnCf = 0;
+		delete[] BtxPlnCf; BtxPlnCf = 0;
 	}
 	if(BtzPlnCf != 0)
 	{
-		cudaFree(BtzPlnCf);
-		//delete[] BtzPlnCf; BtzPlnCf = 0;
+		delete[] BtzPlnCf; BtzPlnCf = 0;
 	}
 	if(xPlnCf != 0)
 	{
-		cudaFree(xPlnCf);
-		//delete[] xPlnCf; xPlnCf = 0;
+		delete[] xPlnCf; xPlnCf = 0;
 	}
 	if(zPlnCf != 0)
 	{
-		cudaFree(zPlnCf);
-		//delete[] zPlnCf; zPlnCf = 0;
+		delete[] zPlnCf; zPlnCf = 0;
 	}
 	if(IntBtx2PlnCf != 0)
 	{
-		cudaFree(IntBtx2PlnCf);
-		//delete[] IntBtx2PlnCf; IntBtx2PlnCf = 0;
+		delete[] IntBtx2PlnCf; IntBtx2PlnCf = 0;
 	}
 	if(IntBtz2PlnCf != 0)
 	{
-		cudaFree(IntBtz2PlnCf);
-		//delete[] IntBtz2PlnCf; IntBtz2PlnCf = 0;
+		delete[] IntBtz2PlnCf; IntBtz2PlnCf = 0;
 	}
 
 	if(AllCf != 0)
 	{
-		cudaFree(AllCf);
-		//delete[] AllCf; AllCf = 0;
+		delete[] AllCf; AllCf = 0;
 	}
 	return 0;
 }
