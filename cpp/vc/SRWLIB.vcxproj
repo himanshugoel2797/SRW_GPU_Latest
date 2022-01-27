@@ -1348,6 +1348,7 @@
   <ItemGroup>
     <CudaCompile Include="..\src\core\srradmnpgpu.cu" />
     <CudaCompile Include="..\src\ext\genmath\gmfftgpu0.cu" />
+    <CudaCompile Include="srradintgpu.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

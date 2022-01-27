@@ -146,7 +146,11 @@ public:
 	inline int ComputeTotalRadDistr();
 	int ComputeTotalRadDistrLoops();
 	int ComputeTotalRadDistrDirectOut(srTSRWRadStructAccessData&, char showProgressInd = 1);
+	int ComputeTotalRadDistrDirectOutCUDA(srTSRWRadStructAccessData&, char showProgressInd = 1);
+
 	inline int GenRadIntegration(complex<double>*, srTEFourier*);
+	int GenRadIntegrationCUDA(complex<double>*, srTEFourier*);
+
 	inline int RadIntegrationAutoByPieces(complex<double>*);
 	inline int RadIntegrationResiduals(complex<double>*, srTEFourier*);
 	int ComputeNormalResidual(double, int, complex<double>*, srTEFourier*);
@@ -176,6 +180,8 @@ public:
 	inline void FunForRadIntWithDer(double, complex<double>*, complex<double>*);
 	
 	int RadIntegrationAuto1(double&, double&, double&, double&, srTEFourier*);
+	int RadIntegrationAuto1CUDA(double&, double&, double&, double&, srTEFourier*);
+
 	//int RadIntegrationAuto1M(double sStart, double sEnd, double* FunArr, double* EdgeDerArr, int AmOfInitPo, int NextLevNo, double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm);
 	int RadIntegrationAuto1M(double sStart, double sEnd, double* FunArr, double* EdgeDerArr, long long AmOfInitPo, int NextLevNo, double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm);
 	int RadIntegrationAuto2(double&, double&, double&, double&, srTEFourier*);
@@ -189,6 +195,7 @@ public:
 
 	//inline int FillNextLevel(int LevelNo, double sStart, double sEnd, long Np);
 	inline int FillNextLevel(int LevelNo, double sStart, double sEnd, long long Np);
+	int FillNextLevelCUDA(int LevelNo, double sStart, double sEnd, long long Np);
 	//int FillNextLevelPart(int LevelNo, double sStart, double sEnd, long Np, double*** TrjPtrs);
 	int FillNextLevelPart(int LevelNo, double sStart, double sEnd, long long Np, double*** TrjPtrs);
 

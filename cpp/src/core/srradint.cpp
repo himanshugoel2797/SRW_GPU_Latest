@@ -288,6 +288,8 @@ int srTRadInt::ComputeTotalRadDistrLoops()
 
 int srTRadInt::ComputeTotalRadDistrDirectOut(srTSRWRadStructAccessData& SRWRadStructAccessData, char showProgressInd)
 {
+	ComputeTotalRadDistrDirectOutCUDA(SRWRadStructAccessData, showProgressInd);
+
 	int result = 0;
 	EstimateAbsoluteTolerance();
 	ProbablyTheSameLoop = 1;

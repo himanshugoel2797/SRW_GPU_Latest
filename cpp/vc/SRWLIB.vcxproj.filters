@@ -634,5 +634,8 @@
     <CudaCompile Include="..\src\core\srradmnpgpu.cu">
       <Filter>core</Filter>
     </CudaCompile>
+    <CudaCompile Include="srradintgpu.cu">
+      <Filter>core</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
