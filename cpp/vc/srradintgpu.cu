@@ -13,29 +13,9 @@
 #include "sroptelm.h"
 #include "srerror.h"
 
-#define PI CUDART_PI
+#include <thrust/complex.h>
 
-/*void* operator new(std::size_t n) throw(std::bad_alloc)
-{
-	void* tmp = nullptr;
-	cudaSetDevice(0);
-	cudaMallocManaged(&tmp, n);
-	return tmp;
-}
-void operator delete(void* p) throw()
-{
-	//cudaFree(p);
-}
-void* operator new[](std::size_t n) throw(std::bad_alloc)
-{
-	void* tmp = nullptr;
-	cudaMallocManaged(&tmp, n);
-	return tmp;
-}
-void operator delete[](void* p) throw()
-{
-	//cudaFree(p);
-}*/
+#define PI CUDART_PI
 
 __global__ void CompTotalTrjData_FromTrj_InnerLoopCUDA(double sSt, double sEn, long long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pIntBtxE2, double* pIntBtzE2, double* pBx, double* pBz,
 	double sStp, bool VerFieldIsNotZero, bool HorFieldIsNotZero, double dxds0, double x0, double dzds0, double z0, double s0,
@@ -53,6 +33,8 @@ __global__ void CompTotalTrjData_FromTrj_InnerLoopCUDA(double sSt, double sEn, l
 	double sr;
 	double* pB_Cf, * pBt_Cf, * pCrd_Cf, * pIntBtE2_Cf;
 	int i = (blockIdx.x * blockDim.x + threadIdx.x);
+	if (i >= Np) return;
+
 	double s = sSt + i * sStp;
 	if (VerFieldIsNotZero)
 	{
@@ -149,14 +131,171 @@ int srTRadInt::FillNextLevelCUDA(int LevelNo, double sStart, double sEnd, long l
 	BasePtr += Np; IntBtzE2ArrP[LevelNo] = BasePtr;
 	BasePtr += Np; BzArrP[LevelNo] = BasePtr;
 
-	TrjDatPtr->CompTotalTrjData_FromTrjCUDA(sStart, sEnd, Np, BtxArrP[LevelNo], BtzArrP[LevelNo], XArrP[LevelNo], ZArrP[LevelNo], IntBtxE2ArrP[LevelNo], IntBtzE2ArrP[LevelNo], BxArrP[LevelNo], BzArrP[LevelNo]);
+	if (Np < 512)
+		TrjDatPtr->CompTotalTrjData_FromTrj(sStart, sEnd, Np, BtxArrP[LevelNo], BtzArrP[LevelNo], XArrP[LevelNo], ZArrP[LevelNo], IntBtxE2ArrP[LevelNo], IntBtzE2ArrP[LevelNo], BxArrP[LevelNo], BzArrP[LevelNo]);
+	else
+		TrjDatPtr->CompTotalTrjData_FromTrjCUDA(sStart, sEnd, Np, BtxArrP[LevelNo], BtzArrP[LevelNo], XArrP[LevelNo], ZArrP[LevelNo], IntBtxE2ArrP[LevelNo], IntBtzE2ArrP[LevelNo], BxArrP[LevelNo], BzArrP[LevelNo]);
 
 	AmOfPointsOnLevel[LevelNo] = Np;
 	NumberOfLevelsFilled++;
 	return 0;
 }
 
-int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm, srTEFourier* pEwNormDer)
+__device__ double srTTrjDat::Pol04CUDA(double s, double* c)
+{
+	return s * (*c + s * (*(c + 1) + s * (*(c + 2) + s * (*(c + 3)))));
+}
+
+//*************************************************************************
+
+__device__ double srTTrjDat::Pol05CUDA(double s, double* c)
+{
+	return s * (*c + s * (*(c + 1) + s * (*(c + 2) + s * (*(c + 3) + s * (*(c + 4))))));
+}
+
+__device__ double srTTrjDat::Pol09CUDA(double s, double* c)
+{
+	return s * (*c + s * (*(c + 1) + s * (*(c + 2) + s * (*(c + 3) + s * (*(c + 4) + s * (*(c + 5) + s * (*(c + 6) + s * (*(c + 7) + s * c[8]))))))));
+}
+
+__device__ void srTTrjDat::CompTrjDataDerivedAtPoint_FromTrjCUDA(double s, double& Btx, double& Crdx, double& IntBtxE2, double& Btz, double& Crdz, double& IntBtzE2)
+{
+	double& dxds0 = EbmDat.dxds0, & x0 = EbmDat.x0, & dzds0 = EbmDat.dzds0, & z0 = EbmDat.z0, & s0 = EbmDat.s0;
+
+	double sr, * pBt_Cf, * pCrd_Cf, * pIntBtE2_Cf;
+	//int Indx;
+	long long Indx;
+
+	if (VerFieldIsNotZero)
+	{
+		//int Indx = int((s - xTrjInData.Start)*xTrjInData.InvStep); 
+		Indx = (long long)((s - xTrjInData.Start) * xTrjInData.InvStep);
+		if (Indx >= xTrjInData.np - 1) Indx = xTrjInData.np - 2;
+		if (Indx < 0) Indx = 0;
+		sr = s - (xTrjInData.Start + xTrjInData.Step * Indx);
+		if (Indx < 2) sr += (Indx - 2) * xTrjInData.Step;
+		else if (Indx < xTrjInData.np - 3);
+		else if (Indx < xTrjInData.np - 2) sr += xTrjInData.Step;
+		else sr += (xTrjInData.Step + xTrjInData.Step);
+
+		pBt_Cf = *(BtxPlnCf + Indx); pCrd_Cf = *(xPlnCf + Indx); pIntBtE2_Cf = *(IntBtx2PlnCf + Indx);
+		IntBtxE2 = *pIntBtE2_Cf + sr * (*(pIntBtE2_Cf + 1) + sr * (*(pIntBtE2_Cf + 2) + sr * (*(pIntBtE2_Cf + 3) + sr * (*(pIntBtE2_Cf + 4) + sr * (*(pIntBtE2_Cf + 5))))));
+		Crdx = *pCrd_Cf + sr * (*(pCrd_Cf + 1) + sr * (*(pCrd_Cf + 2) + sr * (*(pCrd_Cf + 3) + sr * (*(pCrd_Cf + 4) + sr * (*(pCrd_Cf + 5))))));
+		Btx = *pBt_Cf + sr * (*(pBt_Cf + 1) + sr * (*(pBt_Cf + 2) + sr * (*(pBt_Cf + 3) + sr * (*(pBt_Cf + 4)))));
+	}
+	else { double Buf = dxds0 * (s - s0); Btx = dxds0; Crdx = x0 + Buf; IntBtxE2 = dxds0 * Buf; }
+	if (HorFieldIsNotZero)
+	{
+		//Indx = int((s - zTrjInData.Start)*zTrjInData.InvStep); 
+		Indx = (long long)((s - zTrjInData.Start) * zTrjInData.InvStep);
+		if (Indx >= zTrjInData.np - 1) Indx = zTrjInData.np - 2;
+		if (Indx < 0) Indx = 0;
+		sr = s - (zTrjInData.Start + zTrjInData.Step * Indx);
+		if (Indx < 2) sr += (Indx - 2) * zTrjInData.Step;
+		else if (Indx < zTrjInData.np - 3);
+		else if (Indx < zTrjInData.np - 2) sr += zTrjInData.Step;
+		else sr += (zTrjInData.Step + zTrjInData.Step);
+
+		pBt_Cf = *(BtzPlnCf + Indx); pCrd_Cf = *(zPlnCf + Indx); pIntBtE2_Cf = *(IntBtz2PlnCf + Indx);
+		IntBtzE2 = *pIntBtE2_Cf + sr * (*(pIntBtE2_Cf + 1) + sr * (*(pIntBtE2_Cf + 2) + sr * (*(pIntBtE2_Cf + 3) + sr * (*(pIntBtE2_Cf + 4) + sr * (*(pIntBtE2_Cf + 5))))));
+		Crdz = *pCrd_Cf + sr * (*(pCrd_Cf + 1) + sr * (*(pCrd_Cf + 2) + sr * (*(pCrd_Cf + 3) + sr * (*(pCrd_Cf + 4) + sr * (*(pCrd_Cf + 5))))));
+		Btz = *pBt_Cf + sr * (*(pBt_Cf + 1) + sr * (*(pBt_Cf + 2) + sr * (*(pBt_Cf + 3) + sr * (*(pBt_Cf + 4)))));
+	}
+	else { double Buf = dzds0 * (s - s0); Btz = dzds0; Crdz = z0 + Buf; IntBtzE2 = dzds0 * Buf; }
+}
+
+__device__ void srTTrjDat::CompTrjDataDerivedAtPointCUDA(double s, double& Btx, double& Crdx, double& IntBtxE2, double& Btz, double& Crdz, double& IntBtzE2)
+{
+	if (CompFromTrj) { CompTrjDataDerivedAtPoint_FromTrjCUDA(s, Btx, Crdx, IntBtxE2, Btz, Crdz, IntBtzE2); return; }
+
+	double& dxds0 = EbmDat.dxds0, & x0 = EbmDat.x0, & dzds0 = EbmDat.dzds0, & z0 = EbmDat.z0, & s0 = EbmDat.s0;
+
+	//int Indx = int((s - sStart)*Inv_Step); if(Indx >= LenFieldData - 1) Indx = LenFieldData - 2;
+	long long Indx = (long long)((s - sStart) * Inv_Step); if (Indx >= LenFieldData - 1) Indx = LenFieldData - 2;
+	double sb = sStart + Indx * sStep;
+	double smsb = s - sb;
+	double* Bt_CfP, * C_CfP, * IntBt2_CfP;
+	if (VerFieldIsNotZero)
+	{
+		Bt_CfP = BtxPlnCf[Indx]; C_CfP = xPlnCf[Indx]; IntBt2_CfP = IntBtx2PlnCf[Indx];
+		Btx = BtxCorr + BetaNormConst * (Pol04CUDA(smsb, Bt_CfP + 1) + *Bt_CfP);
+		double BufCrd = BetaNormConst * (Pol05CUDA(smsb, C_CfP + 1) + *C_CfP);
+		Crdx = xCorr + BtxCorrForX * s + BufCrd;
+		IntBtxE2 = IntBtxE2Corr + BtxCorrForXe2 * s + 2. * BtxCorrForX * BufCrd + BetaNormConstE2 * (Pol09CUDA(smsb, IntBt2_CfP + 1) + *IntBt2_CfP);
+	}
+	else { Btx = dxds0; Crdx = x0 + dxds0 * (s - s0); IntBtxE2 = dxds0 * dxds0 * (s - s0); }
+	if (HorFieldIsNotZero)
+	{
+		Bt_CfP = BtzPlnCf[Indx]; C_CfP = zPlnCf[Indx]; IntBt2_CfP = IntBtz2PlnCf[Indx];
+		Btz = BtzCorr - BetaNormConst * (Pol04CUDA(smsb, Bt_CfP + 1) + *Bt_CfP);
+		double BufCrd = -BetaNormConst * (Pol05CUDA(smsb, C_CfP + 1) + *C_CfP);
+		Crdz = zCorr + BtzCorrForZ * s + BufCrd;
+		IntBtzE2 = IntBtzE2Corr + BtzCorrForZe2 * s + 2. * BtzCorrForZ * BufCrd + BetaNormConstE2 * (Pol09CUDA(smsb, IntBt2_CfP + 1) + *IntBt2_CfP);
+	}
+	else { Btz = dzds0; Crdz = z0 + dzds0 * (s - s0); IntBtzE2 = dzds0 * dzds0 * (s - s0); }
+}
+
+
+__global__ void srTRadInt::RadIntegrationAudo1CUDA_Stage1(char NearField, double xObs, double yObs, double zObs, double* pX, double* pZ, double s, double sStep, double AngPhConst, double PIm10e9_d_Lamb, double GmEm2, double* pBtx, double* pBtz, double* pIntBtxE2, double* pIntBtzE2, double& Sum1XRe, double& Sum1XIm, double& Sum1ZRe, double& Sum1ZIm, double& Sum2XRe, double& Sum2XIm, double& Sum2ZRe, double& Sum2ZIm)
+{
+	double One_d_ymis, xObs_mi_x, zObs_mi_z, Nx, Nz;
+	double Ax, Az, Ph, CosPh, SinPh, PhPrev, PhInit;
+	double LongTerm, a0;
+
+	int i = (blockIdx.x * blockDim.x + threadIdx.x);
+	if (NearField)
+	{
+		One_d_ymis = 1. / (yObs - s);
+		xObs_mi_x = xObs - *(pX + i); zObs_mi_z = zObs - *(pZ + i);
+		Nx = xObs_mi_x * One_d_ymis; Nz = zObs_mi_z * One_d_ymis;
+
+		LongTerm = *(pIntBtxE2 + i) + *(pIntBtzE2 + i);
+		//a0 = LongTerm*(1. + 0.25*LongTerm*One_d_ymis) + xObs_mi_x*Nx + zObs_mi_z*Nz;
+		//a = a0*One_d_ymis;
+		//Ph = PIm10e9_d_Lamb*(s*GmEm2 + a0*(1 + a*(-0.25 + a*(0.125 - 0.078125*a))));
+		//OC_test
+		a0 = LongTerm + xObs_mi_x * Nx + zObs_mi_z * Nz;
+		Ph = PIm10e9_d_Lamb * (s * GmEm2 + a0);
+		//end OC_test
+
+		Ax = (*(pBtx + i) - Nx) * One_d_ymis; Az = (*(pBtz + i) - Nz) * One_d_ymis;
+	}
+	else
+	{
+		Ph = PIm10e9_d_Lamb * (s * AngPhConst + *(pIntBtxE2 + i) + *(pIntBtzE2 + i) - (2. * xObs * (*(pX + i)) + 2. * zObs * (*(pZ + i))));
+		Ax = *(pBtx + i) - xObs; Az = *(pBtz + i) - zObs;
+	}
+	sincos(Ph, &SinPh, &CosPh);
+	Sum1XRe += Ax * CosPh; Sum1XIm += Ax * SinPh; Sum1ZRe += Az * CosPh; Sum1ZIm += Az * SinPh; s += sStep;
+
+	i += 1;
+	if (NearField)
+	{
+		One_d_ymis = 1. / (yObs - s);
+		xObs_mi_x = xObs - *(pX + i); zObs_mi_z = zObs - *(pZ + i);
+		Nx = xObs_mi_x * One_d_ymis; Nz = zObs_mi_z * One_d_ymis;
+
+		LongTerm = *(pIntBtxE2 + i) + *(pIntBtzE2 + i);
+		//a0 = LongTerm*(1. + 0.25*LongTerm*One_d_ymis) + xObs_mi_x*Nx + zObs_mi_z*Nz;
+		//a = a0*One_d_ymis;
+		//Ph = PIm10e9_d_Lamb*(s*GmEm2 + a0*(1 + a*(-0.25 + a*(0.125 - 0.078125*a))));
+		//OC_test
+		a0 = LongTerm + xObs_mi_x * Nx + zObs_mi_z * Nz;
+		Ph = PIm10e9_d_Lamb * (s * GmEm2 + a0);
+		//end OC_test
+
+		Ax = (*(pBtx + i) - Nx) * One_d_ymis; Az = (*(pBtz + i) - Nz) * One_d_ymis;
+	}
+	else
+	{
+		Ph = PIm10e9_d_Lamb * (s * AngPhConst + *(pIntBtxE2 + i) + *(pIntBtzE2 + i) - (2. * xObs * (*(pX + i)) + 2. * zObs * (*(pZ + i))));
+		Ax = *(pBtx + i) - xObs; Az = *(pBtz + i) - zObs;
+	}
+	sincos(Ph, &SinPh, &CosPh);
+	Sum2XRe += Ax * CosPh; Sum2XIm += Ax * SinPh; Sum2ZRe += Az * CosPh; Sum2ZIm += Az * SinPh; s += sStep;
+}
+
+__device__ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm, srLambXYZ ObsCoor)
 {
 	//const long NpOnLevelMaxNoResult = 800000000; //5000000; //2000000; // To steer; to stop computation as unsuccessful
 	const long long NpOnLevelMaxNoResult = 800000000; //5000000; //2000000; // To steer; to stop computation as unsuccessful
@@ -178,7 +317,6 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 	long long NpOnLevel = 5; // Must be non-even!
 
 	int result;
-	if (NumberOfLevelsFilled == 0) if (result = FillNextLevel(0, sStart, sEnd, NpOnLevel)) return result;
 
 	double sStep = (sEnd - sStart) / (NpOnLevel - 1);
 	double Ax, Az, Ph, CosPh, SinPh, PhPrev, PhInit;
@@ -218,7 +356,7 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 		Ph = PIm10e9_d_Lamb * (sStart * AngPhConst + *(pIntBtxE2++) + *(pIntBtzE2++) - (Two_xObs * (*(pX++)) + Two_zObs * (*(pZ++))));
 		Ax = *(pBtx++) - xObs; Az = *(pBtz++) - zObs;
 	}
-	CosAndSin(Ph, CosPh, SinPh);
+	sincos(Ph, &SinPh, &CosPh);
 	wFxRe = Ax * CosPh; wFxIm = Ax * SinPh; wFzRe = Az * CosPh; wFzIm = Az * SinPh;
 	PhInit = Ph;
 
@@ -252,7 +390,7 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 			Ph = PIm10e9_d_Lamb * (s * AngPhConst + *(pIntBtxE2++) + *(pIntBtzE2++) - (Two_xObs * (*(pX++)) + Two_zObs * (*(pZ++))));
 			Ax = *(pBtx++) - xObs; Az = *(pBtz++) - zObs;
 		}
-		CosAndSin(Ph, CosPh, SinPh);
+		sincos(Ph, &SinPh, &CosPh);
 		Sum1XRe += Ax * CosPh; Sum1XIm += Ax * SinPh; Sum1ZRe += Az * CosPh; Sum1ZIm += Az * SinPh; s += sStep;
 
 		if (NearField)
@@ -277,7 +415,7 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 			Ph = PIm10e9_d_Lamb * (s * AngPhConst + *(pIntBtxE2++) + *(pIntBtzE2++) - (Two_xObs * (*(pX++)) + Two_zObs * (*(pZ++))));
 			Ax = *(pBtx++) - xObs; Az = *(pBtz++) - zObs;
 		}
-		CosAndSin(Ph, CosPh, SinPh);
+		sincos(Ph, &SinPh, &CosPh);
 		Sum2XRe += Ax * CosPh; Sum2XIm += Ax * SinPh; Sum2ZRe += Az * CosPh; Sum2ZIm += Az * SinPh; s += sStep;
 	}
 	if (NearField)
@@ -302,7 +440,7 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 		Ph = PIm10e9_d_Lamb * (s * AngPhConst + *(pIntBtxE2++) + *(pIntBtzE2++) - (Two_xObs * (*(pX++)) + Two_zObs * (*(pZ++))));
 		Ax = *(pBtx++) - xObs; Az = *(pBtz++) - zObs;
 	}
-	CosAndSin(Ph, CosPh, SinPh);
+	sincos(Ph, &SinPh, &CosPh);
 	Sum1XRe += Ax * CosPh; Sum1XIm += Ax * SinPh; Sum1ZRe += Az * CosPh; Sum1ZIm += Az * SinPh; s += sStep;
 
 	if (NearField)
@@ -327,13 +465,13 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 		Ph = PIm10e9_d_Lamb * (s * AngPhConst + *pIntBtxE2 + *pIntBtzE2 - (Two_xObs * (*pX) + Two_zObs * (*pZ)));
 		Ax = *pBtx - xObs; Az = *pBtz - zObs;
 	}
-	CosAndSin(Ph, CosPh, SinPh);
+	sincos(Ph, &SinPh, &CosPh);
 	wFxRe += Ax * CosPh; wFxIm += Ax * SinPh; wFzRe += Az * CosPh; wFzIm += Az * SinPh;
 	wFxRe *= wfe; wFxIm *= wfe; wFzRe *= wfe; wFzIm *= wfe;
 
-	complex<double> DifDerX = *InitDerMan - *FinDerMan;
+	thrust::complex<double> DifDerX = *InitDerMan - *FinDerMan;
 	double wDifDerXRe = wd * DifDerX.real(), wDifDerXIm = wd * DifDerX.imag();
-	complex<double> DifDerZ = *(InitDerMan + 1) - *(FinDerMan + 1);
+	thrust::complex<double> DifDerZ = *(InitDerMan + 1) - *(FinDerMan + 1);
 	double wDifDerZRe = wd * DifDerZ.real(), wDifDerZIm = wd * DifDerZ.imag();
 
 	double ActNormConst_sStep = ActNormConst * sStep;
@@ -359,10 +497,7 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 		s = sStart + HalfStep;
 
 		if (LevelNo <= MaxLevelForMeth_10_11)
-		{
-			if (NumberOfLevelsFilled <= LevelNo) if (result = FillNextLevel(LevelNo, s, sEnd - HalfStep, NpOnLevel)) return result;
 			pBtx = BtxArrP[LevelNo]; pBtz = BtzArrP[LevelNo]; pX = XArrP[LevelNo]; pZ = ZArrP[LevelNo]; pIntBtxE2 = IntBtxE2ArrP[LevelNo]; pIntBtzE2 = IntBtzE2ArrP[LevelNo];
-		}
 
 		double DPhMax = 0.;
 
@@ -373,7 +508,7 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 			{
 				pBtx = &BtxLoc; pX = &xLoc; pIntBtxE2 = &IntBtxE2Loc;
 				pBtz = &BtzLoc; pZ = &zLoc; pIntBtzE2 = &IntBtzE2Loc;
-				TrjDatPtr->CompTrjDataDerivedAtPoint(s, *pBtx, *pX, *pIntBtxE2, *pBtz, *pZ, *pIntBtzE2);
+				TrjDatPtr->CompTrjDataDerivedAtPointCUDA(s, *pBtx, *pX, *pIntBtxE2, *pBtz, *pZ, *pIntBtzE2);
 			}
 
 			if (NearField)
@@ -404,7 +539,7 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 				pBtx++; pX++; pIntBtxE2++; pBtz++; pZ++; pIntBtzE2++;
 			}
 
-			CosAndSin(Ph, CosPh, SinPh);
+			sincos(Ph, &SinPh, &CosPh);
 			Sum1XRe += Ax * CosPh; Sum1XIm += Ax * SinPh; Sum1ZRe += Az * CosPh; Sum1ZIm += Az * SinPh;
 
 			//DEBUG
@@ -438,7 +573,7 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 
 		if (ThisMayBeTheLastLoop)
 		{
-			double TestVal = ::fabs(LocSqNorm - SqNorm);
+			double TestVal = fabs(LocSqNorm - SqNorm);
 			//char SharplyGoesDown = (LocSqNorm < 0.1*SqNorm);
 
 			char NotFinishedYetFirstTest;
@@ -473,7 +608,31 @@ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, dou
 	return 0;
 }
 
+__global__ void srTRadInt::GenRadIntegrationCUDA(float* pEx0, float* pEz0, double StepLamb, double StepX, double StepZ, long long PerX, long long PerZ)
+{// Put here more functionality (switching to different methods) later
+	int result;
 
+	long long PerX = DistrInfoDat.nLamb << 1;
+	long long PerZ = DistrInfoDat.nx * PerX;
+	srLambXYZ ObsCoor{ DistrInfoDat.LambStart + (blockIdx.z * blockDim.z + threadIdx.z) * StepLamb, DistrInfoDat.xStart + (blockIdx.y * blockDim.y + threadIdx.y) * StepX, DistrInfoDat.yStart, DistrInfoDat.zStart + (blockIdx.x * blockDim.x + threadIdx.x) * StepZ };
+
+	long long izPerZ = (blockIdx.x * blockDim.x + threadIdx.x) * PerZ;
+	long long ixPerX = (blockIdx.y * blockDim.y + threadIdx.y) * PerX;
+	int iLamb = (blockIdx.z * blockDim.z + threadIdx.z);
+
+	long long Offset = izPerZ + ixPerX + (iLamb << 1);
+	float* pEx = pEx0 + Offset, * pEz = pEz0 + Offset;
+
+	double IntXRe = *pEx, IntXIm = *(pEx + 1);
+	double IntZRe = *pEz, IntZIm = *(pEz + 1);
+
+	RadIntegrationAuto1CUDA(IntXRe, IntXIm, IntZRe, IntZIm, ObsCoor);
+
+	*pEx = IntXRe;
+	*(pEx + 1) = IntXIm;
+	*(pEz) = IntZRe;
+	*(pEz + 1) = IntZIm;
+}
 
 int srTRadInt::ComputeTotalRadDistrDirectOutCUDA(srTSRWRadStructAccessData& SRWRadStructAccessData, char showProgressInd)
 {
@@ -525,49 +684,70 @@ int srTRadInt::ComputeTotalRadDistrDirectOutCUDA(srTSRWRadStructAccessData& SRWR
 	if (!showProgressInd) TotalAmOfOutPointsForInd = 0;
 	srTCompProgressIndicator compProgressInd(TotalAmOfOutPointsForInd, UpdateTimeInt_s);
 
-	//long AbsPtCount = 0;
-	ObsCoor.y = DistrInfoDat.yStart;
-	ObsCoor.z = DistrInfoDat.zStart;
-	for (int iz = 0; iz < DistrInfoDat.nz; iz++)
+	if (NumberOfLevelsFilled == 0)
 	{
-		if (FinalResAreSymOverZ) { if ((ObsCoor.z - zc) > zTol) break; }
+		double sStart = sIntegStart;
+		double sEnd = sIntegFin;
+		int NpOnLevel = 5;
+		double sStep = (sEnd - sStart) / (NpOnLevel - 1);
 
-		//long izPerZ = iz*PerZ;
-		long long izPerZ = iz * PerZ;
-		ObsCoor.x = DistrInfoDat.xStart;
-		for (int ix = 0; ix < DistrInfoDat.nx; ix++)
-		{
-			if (FinalResAreSymOverX) { if ((ObsCoor.x - xc) > xTol) break; }
+		if (result = FillNextLevelCUDA(0, sStart, sEnd, 5)) return result;
 
-			//long ixPerX = ix*PerX;
-			long long ixPerX = ix * PerX;
-			ObsCoor.Lamb = DistrInfoDat.LambStart;
-			for (int iLamb = 0; iLamb < DistrInfoDat.nLamb; iLamb++)
-			{
-				if (result = GenRadIntegrationCUDA(RadIntegValues, &EwNormDer)) return result;
+		NpOnLevel--;
+		for (int LevelNo = 1; LevelNo <= MaxLevelForMeth_10_11; LevelNo++) {
+			double HalfStep = 0.5 * sStep;
+			double s = sStart + HalfStep;
 
-				//long Offset = izPerZ + ixPerX + (iLamb << 1);
-				long long Offset = izPerZ + ixPerX + (iLamb << 1);
-				float* pEx = pEx0 + Offset, * pEz = pEz0 + Offset;
-
-				*pEx = float(RadIntegValues->real());
-				*(pEx + 1) = float(RadIntegValues->imag());
-				*pEz = float(RadIntegValues[1].real());
-				*(pEz + 1) = float(RadIntegValues[1].imag());
-
-				if (showProgressInd)
-				{
-					//if(result = pCompProgressInd->UpdateIndicator(PointCount++)) return result;
-					if (result = compProgressInd.UpdateIndicator(PointCount++)) return result;
-				}
-				if (result = srYield.Check()) return result;
-
-				ObsCoor.Lamb += StepLambda;
-			}
-			ObsCoor.x += StepX;
+			if (NumberOfLevelsFilled <= LevelNo) if (result = FillNextLevelCUDA(LevelNo, s, sEnd - HalfStep, NpOnLevel)) return result;
+			sStep = HalfStep; NpOnLevel *= 2;
 		}
-		ObsCoor.z += StepZ;
 	}
+
+	//long AbsPtCount = 0;
+	//ObsCoor.y = DistrInfoDat.yStart;
+	//ObsCoor.z = DistrInfoDat.zStart;
+	if (m_CalcResidTerminTerms > 0)
+	{
+		for (int iz = 0; iz < DistrInfoDat.nz; iz++)
+		{
+			if (FinalResAreSymOverZ) { if ((ObsCoor.z - zc) > zTol) break; }
+
+			//long izPerZ = iz*PerZ;
+			long long izPerZ = iz * PerZ;
+			ObsCoor.x = DistrInfoDat.xStart;
+			for (int ix = 0; ix < DistrInfoDat.nx; ix++)
+			{
+				if (FinalResAreSymOverX) { if ((ObsCoor.x - xc) > xTol) break; }
+
+				//long ixPerX = ix*PerX;
+				long long ixPerX = ix * PerX;
+				ObsCoor.Lamb = DistrInfoDat.LambStart;
+				for (int iLamb = 0; iLamb < DistrInfoDat.nLamb; iLamb++)
+				{
+
+					complex<double> ResidVal[2];
+					RadIntegrationResiduals(ResidVal, &EwNormDer);
+
+					long long Offset = izPerZ + ixPerX + (iLamb << 1);
+					float* pEx = pEx0 + Offset, * pEz = pEz0 + Offset;
+
+					*pEx = float(ResidVal[0].real());
+					*(pEx + 1) = float(ResidVal[0].imag());
+					*pEz = float(ResidVal[1].real());
+					*(pEz + 1) = float(ResidVal[1].imag());
+
+					ObsCoor.Lamb += StepLambda;
+				}
+				ObsCoor.x += StepX;
+			}
+			ObsCoor.z += StepZ;
+		}
+	}
+
+	int bs = 1;
+	dim3 threads(DistrInfoDat.nz, DistrInfoDat.nx, DistrInfoDat.nLamb);
+	dim3 blocks(bs);
+	GenRadIntegrationCUDA << <blocks, threads >> > (pEx0, pEz0, StepLambda, StepX, StepZ, PerX, PerZ);
 
 	if (FinalResAreSymOverZ || FinalResAreSymOverX)
 		FillInSymPartsOfResults(FinalResAreSymOverX, FinalResAreSymOverZ, SRWRadStructAccessData);

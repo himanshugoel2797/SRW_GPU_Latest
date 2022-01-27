@@ -288,7 +288,7 @@ int srTRadInt::ComputeTotalRadDistrLoops()
 
 int srTRadInt::ComputeTotalRadDistrDirectOut(srTSRWRadStructAccessData& SRWRadStructAccessData, char showProgressInd)
 {
-	ComputeTotalRadDistrDirectOutCUDA(SRWRadStructAccessData, showProgressInd);
+	return ComputeTotalRadDistrDirectOutCUDA(SRWRadStructAccessData, showProgressInd);
 
 	int result = 0;
 	EstimateAbsoluteTolerance();

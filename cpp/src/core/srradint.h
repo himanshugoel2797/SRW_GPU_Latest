@@ -27,6 +27,8 @@
 #include "smartptr.h"
 #include "gmvect.h"
 
+#include <thrust/complex.h>
+
 //*************************************************************************
 
 typedef CSmartPtr<srTPartAutoRadInt> srTPartAutoRadIntHndl;
@@ -149,11 +151,14 @@ public:
 	int ComputeTotalRadDistrDirectOutCUDA(srTSRWRadStructAccessData&, char showProgressInd = 1);
 
 	inline int GenRadIntegration(complex<double>*, srTEFourier*);
-	int GenRadIntegrationCUDA(complex<double>*, srTEFourier*);
+	void GenRadIntegrationCUDA(float*, float*, double, double, double, long long, long long);
 
 	inline int RadIntegrationAutoByPieces(complex<double>*);
 	inline int RadIntegrationResiduals(complex<double>*, srTEFourier*);
+	int RadIntegrationResidualsCUDA(thrust::complex<double>*, srTEFourier*);
+
 	int ComputeNormalResidual(double, int, complex<double>*, srTEFourier*);
+	int ComputeNormalResidualCUDA(double, int, thrust::complex<double>*, srTEFourier*, srLambXYZ);
 
 	inline double AbsE2OfComplex(complex<double>&);
 	inline void InitializeTraverses();
@@ -180,7 +185,8 @@ public:
 	inline void FunForRadIntWithDer(double, complex<double>*, complex<double>*);
 	
 	int RadIntegrationAuto1(double&, double&, double&, double&, srTEFourier*);
-	int RadIntegrationAuto1CUDA(double&, double&, double&, double&, srTEFourier*);
+	int RadIntegrationAuto1CUDA(double&, double&, double&, double&, srLambXYZ);
+	void RadIntegrationAudo1CUDA_Stage1(char NearField, double xObs, double yObs, double zObs, double* pX, double* pZ, double s, double sStep, double AngPhConst, double PIm10e9_d_Lamb, double GmEm2, double* pBtx, double* pBtz, double* pIntBtxE2, double* pIntBtzE2, double& Sum1XRe, double& Sum1XIm, double& Sum1ZRe, double& Sum1ZIm, double& Sum2XRe, double& Sum2XIm, double& Sum2ZRe, double& Sum2ZIm);
 
 	//int RadIntegrationAuto1M(double sStart, double sEnd, double* FunArr, double* EdgeDerArr, int AmOfInitPo, int NextLevNo, double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm);
 	int RadIntegrationAuto1M(double sStart, double sEnd, double* FunArr, double* EdgeDerArr, long long AmOfInitPo, int NextLevNo, double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm);

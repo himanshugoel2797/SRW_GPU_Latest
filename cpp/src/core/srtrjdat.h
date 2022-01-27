@@ -161,14 +161,19 @@ public:
 	inline double Field(char, double);
 
 	inline void CompTrjDataDerivedAtPointPowDens(double s, double& Btx, double& Btz, double& X, double& Z, double& Bx, double& Bz);
+	void CompTrjDataDerivedAtPointPowDensCUDA(double s, double& Btx, double& Btz, double& X, double& Z, double& Bx, double& Bz);
 	inline void CompTrjDataDerivedAtPointPowDens_FromTrj(double s, double& Btx, double& Btz, double& X, double& Z, double& Bx, double& Bz);
+	void CompTrjDataDerivedAtPointPowDens_FromTrjCUDA(double s, double& Btx, double& Btz, double& X, double& Z, double& Bx, double& Bz);
+
 	inline void CompTrjDataAndFieldWithDerAtPoint(char, double, double&, double&, double&, double&, double&);
 	inline void CompTrjDataAndFieldWithDerAtPoint_FromTrj(char x_or_z, double s, double& dBds, double& B, double& Bt, double& Crd, double& IntBtE2);
 	inline void CompTrjDataAndFieldWithDerAtPoint_FromTrjInitial(char x_or_z, double s, double& dBds, double& B, double& Bt, double& Crd, double& IntBtE2);
 	inline void CompTrjDataDerivedAtPoint(char, double, double&, double&, double&);
 	inline void CompTrjDataDerivedAtPoint_FromTrj(char x_or_z, double s, double& Bt, double& Crd, double& IntBtE2);
 	inline void CompTrjDataDerivedAtPoint(double sArg, double& Btx, double& Crdx, double& IntBtE2x, double& Btz, double& Crdz, double& IntBtE2z);
+	void CompTrjDataDerivedAtPointCUDA(double sArg, double& Btx, double& Crdx, double& IntBtE2x, double& Btz, double& Crdz, double& IntBtE2z);
 	inline void CompTrjDataDerivedAtPoint_FromTrj(double s, double& Btx, double& Crdx, double& IntBtxE2, double& Btz, double& Crdz, double& IntBtzE2);
+	void CompTrjDataDerivedAtPoint_FromTrjCUDA(double s, double& Btx, double& Crdx, double& IntBtxE2, double& Btz, double& Crdz, double& IntBtzE2);
 	//void CompTotalTrjData(double sSt, double sEn, long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pIntBtxE2, double* pIntBtzE2, double* pBx, double* pBz);
 	//void CompTotalTrjData_FromTrj(double sSt, double sEn, long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pIntBtxE2, double* pIntBtzE2, double* pBx, double* pBz);
 	//void CompTotalTrjData(double sSt, double sEn, long Np, double* pBtx, double* pBtz, double* pX, double* pZ, double* pIntBtxE2, double* pIntBtzE2, double* pBx, double* pBz, double* pdBxds, double* pdBzds);
@@ -192,8 +197,13 @@ public:
 	void CompTotalTrjData_FromTrj(srTFieldBasedArrayKeys& Keys, srTFieldBasedArrays& FieldBasedArrays);
 
 	inline double Pol04(double, double*);
+	double Pol04CUDA(double, double*);
+	
 	inline double Pol05(double, double*);
+	double Pol05CUDA(double, double*);
+
 	inline double Pol09(double, double*);
+	double Pol09CUDA(double, double*);
 
 	//inline void ComponentArray(int, char, double, double, int, double*);
 	inline void ComponentArray(int, char, double, double, long long, double*);
