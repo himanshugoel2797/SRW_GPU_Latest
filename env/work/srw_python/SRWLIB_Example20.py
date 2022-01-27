@@ -499,7 +499,6 @@ def main():
     v = srwl_bl.srwl_uti_parse_options(varParam, use_sys_argv=True)
 
     op = set_optics(v)
-    input("waiting")
     srwl_bl.SRWLBeamline(_name=v.name).calc_all(v, op)
 
 main()

@@ -235,66 +235,6 @@ __device__ void srTTrjDat::CompTrjDataDerivedAtPointCUDA(double s, double& Btx, 
 	else { Btz = dzds0; Crdz = z0 + dzds0 * (s - s0); IntBtzE2 = dzds0 * dzds0 * (s - s0); }
 }
 
-
-__global__ void srTRadInt::RadIntegrationAudo1CUDA_Stage1(char NearField, double xObs, double yObs, double zObs, double* pX, double* pZ, double s, double sStep, double AngPhConst, double PIm10e9_d_Lamb, double GmEm2, double* pBtx, double* pBtz, double* pIntBtxE2, double* pIntBtzE2, double& Sum1XRe, double& Sum1XIm, double& Sum1ZRe, double& Sum1ZIm, double& Sum2XRe, double& Sum2XIm, double& Sum2ZRe, double& Sum2ZIm)
-{
-	double One_d_ymis, xObs_mi_x, zObs_mi_z, Nx, Nz;
-	double Ax, Az, Ph, CosPh, SinPh, PhPrev, PhInit;
-	double LongTerm, a0;
-
-	int i = (blockIdx.x * blockDim.x + threadIdx.x);
-	if (NearField)
-	{
-		One_d_ymis = 1. / (yObs - s);
-		xObs_mi_x = xObs - *(pX + i); zObs_mi_z = zObs - *(pZ + i);
-		Nx = xObs_mi_x * One_d_ymis; Nz = zObs_mi_z * One_d_ymis;
-
-		LongTerm = *(pIntBtxE2 + i) + *(pIntBtzE2 + i);
-		//a0 = LongTerm*(1. + 0.25*LongTerm*One_d_ymis) + xObs_mi_x*Nx + zObs_mi_z*Nz;
-		//a = a0*One_d_ymis;
-		//Ph = PIm10e9_d_Lamb*(s*GmEm2 + a0*(1 + a*(-0.25 + a*(0.125 - 0.078125*a))));
-		//OC_test
-		a0 = LongTerm + xObs_mi_x * Nx + zObs_mi_z * Nz;
-		Ph = PIm10e9_d_Lamb * (s * GmEm2 + a0);
-		//end OC_test
-
-		Ax = (*(pBtx + i) - Nx) * One_d_ymis; Az = (*(pBtz + i) - Nz) * One_d_ymis;
-	}
-	else
-	{
-		Ph = PIm10e9_d_Lamb * (s * AngPhConst + *(pIntBtxE2 + i) + *(pIntBtzE2 + i) - (2. * xObs * (*(pX + i)) + 2. * zObs * (*(pZ + i))));
-		Ax = *(pBtx + i) - xObs; Az = *(pBtz + i) - zObs;
-	}
-	sincos(Ph, &SinPh, &CosPh);
-	Sum1XRe += Ax * CosPh; Sum1XIm += Ax * SinPh; Sum1ZRe += Az * CosPh; Sum1ZIm += Az * SinPh; s += sStep;
-
-	i += 1;
-	if (NearField)
-	{
-		One_d_ymis = 1. / (yObs - s);
-		xObs_mi_x = xObs - *(pX + i); zObs_mi_z = zObs - *(pZ + i);
-		Nx = xObs_mi_x * One_d_ymis; Nz = zObs_mi_z * One_d_ymis;
-
-		LongTerm = *(pIntBtxE2 + i) + *(pIntBtzE2 + i);
-		//a0 = LongTerm*(1. + 0.25*LongTerm*One_d_ymis) + xObs_mi_x*Nx + zObs_mi_z*Nz;
-		//a = a0*One_d_ymis;
-		//Ph = PIm10e9_d_Lamb*(s*GmEm2 + a0*(1 + a*(-0.25 + a*(0.125 - 0.078125*a))));
-		//OC_test
-		a0 = LongTerm + xObs_mi_x * Nx + zObs_mi_z * Nz;
-		Ph = PIm10e9_d_Lamb * (s * GmEm2 + a0);
-		//end OC_test
-
-		Ax = (*(pBtx + i) - Nx) * One_d_ymis; Az = (*(pBtz + i) - Nz) * One_d_ymis;
-	}
-	else
-	{
-		Ph = PIm10e9_d_Lamb * (s * AngPhConst + *(pIntBtxE2 + i) + *(pIntBtzE2 + i) - (2. * xObs * (*(pX + i)) + 2. * zObs * (*(pZ + i))));
-		Ax = *(pBtx + i) - xObs; Az = *(pBtz + i) - zObs;
-	}
-	sincos(Ph, &SinPh, &CosPh);
-	Sum2XRe += Ax * CosPh; Sum2XIm += Ax * SinPh; Sum2ZRe += Az * CosPh; Sum2ZIm += Az * SinPh; s += sStep;
-}
-
 __device__ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& OutIntXIm, double& OutIntZRe, double& OutIntZIm, srLambXYZ ObsCoor)
 {
 	//const long NpOnLevelMaxNoResult = 800000000; //5000000; //2000000; // To steer; to stop computation as unsuccessful
@@ -608,12 +548,10 @@ __device__ int srTRadInt::RadIntegrationAuto1CUDA(double& OutIntXRe, double& Out
 	return 0;
 }
 
-__global__ void srTRadInt::GenRadIntegrationCUDA(float* pEx0, float* pEz0, double StepLamb, double StepX, double StepZ, long long PerX, long long PerZ)
+__device__ void srTRadInt::GenRadIntegrationCUDA(float* pEx0, float* pEz0, double StepLamb, double StepX, double StepZ, long long PerX, long long PerZ)
 {// Put here more functionality (switching to different methods) later
 	int result;
 
-	long long PerX = DistrInfoDat.nLamb << 1;
-	long long PerZ = DistrInfoDat.nx * PerX;
 	srLambXYZ ObsCoor{ DistrInfoDat.LambStart + (blockIdx.z * blockDim.z + threadIdx.z) * StepLamb, DistrInfoDat.xStart + (blockIdx.y * blockDim.y + threadIdx.y) * StepX, DistrInfoDat.yStart, DistrInfoDat.zStart + (blockIdx.x * blockDim.x + threadIdx.x) * StepZ };
 
 	long long izPerZ = (blockIdx.x * blockDim.x + threadIdx.x) * PerZ;
@@ -632,6 +570,11 @@ __global__ void srTRadInt::GenRadIntegrationCUDA(float* pEx0, float* pEz0, doubl
 	*(pEx + 1) = IntXIm;
 	*(pEz) = IntZRe;
 	*(pEz + 1) = IntZIm;
+}
+
+__global__ void GenRadIntegrationKernel(float* pEx0, float* pEz0, double StepLamb, double StepX, double StepZ, long long PerX, long long PerZ, srTRadInt* obj)
+{
+	obj->GenRadIntegrationCUDA(pEx0, pEz0, StepLamb, StepX, StepZ, PerX, PerZ);
 }
 
 int srTRadInt::ComputeTotalRadDistrDirectOutCUDA(srTSRWRadStructAccessData& SRWRadStructAccessData, char showProgressInd)
@@ -745,9 +688,11 @@ int srTRadInt::ComputeTotalRadDistrDirectOutCUDA(srTSRWRadStructAccessData& SRWR
 	}
 
 	int bs = 1;
-	dim3 threads(DistrInfoDat.nz, DistrInfoDat.nx, DistrInfoDat.nLamb);
-	dim3 blocks(bs);
-	GenRadIntegrationCUDA << <blocks, threads >> > (pEx0, pEz0, StepLambda, StepX, StepZ, PerX, PerZ);
+	dim3 blocks(DistrInfoDat.nz, DistrInfoDat.nx, DistrInfoDat.nLamb);
+	dim3 threads(bs);
+	GenRadIntegrationKernel << <blocks, threads >> > (pEx0, pEz0, StepLambda, StepX, StepZ, PerX, PerZ, this);
+	printf("%s\r\n", cudaGetErrorString(cudaGetLastError()));
+	cudaDeviceSynchronize();
 
 	if (FinalResAreSymOverZ || FinalResAreSymOverX)
 		FillInSymPartsOfResults(FinalResAreSymOverX, FinalResAreSymOverZ, SRWRadStructAccessData);
