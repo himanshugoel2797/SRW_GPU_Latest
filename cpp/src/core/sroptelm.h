@@ -120,6 +120,7 @@ public:
 	}
 
 	virtual int PropagateRadiation(srTSRWRadStructAccessData*, srTParPrecWfrPropag&, srTRadResizeVect&) { return 0;}
+	virtual int PropagateRadiationBatch(srTSRWRadStructAccessData*, srTParPrecWfrPropag&, srTRadResizeVect*, int) { return 0;}
 
 	virtual int PropagateRadMoments(srTSRWRadStructAccessData*, srTMomentsRatios*) { return 0;}
 	virtual int PropagateWaveFrontRadius(srTSRWRadStructAccessData*) { return 0;}

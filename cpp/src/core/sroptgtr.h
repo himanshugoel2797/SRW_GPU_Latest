@@ -101,6 +101,12 @@ public:
 		return result;
 	}
 
+	int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect* pResBeforeAndAfterArr, int WfrCount)
+	{
+
+		return 0;
+	}
+
 	//int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData)
 	//int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadDataSingleE, void* pBuf=0) //OC06092019
 	//OC01102019 (restored)
