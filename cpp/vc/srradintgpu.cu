@@ -690,9 +690,22 @@ int srTRadInt::ComputeTotalRadDistrDirectOutCUDA(srTSRWRadStructAccessData& SRWR
 	int bs = 1;
 	dim3 blocks(DistrInfoDat.nz, DistrInfoDat.nx, DistrInfoDat.nLamb);
 	dim3 threads(bs);
-	GenRadIntegrationKernel << <blocks, threads >> > (pEx0, pEz0, StepLambda, StepX, StepZ, PerX, PerZ, this);
+	srTRadInt* radInt;
+	srTTrjDat* trjDat;
+	cudaMallocManaged(&radInt, sizeof(srTRadInt));
+	cudaMallocManaged(&trjDat, sizeof(srTTrjDat));
+	*radInt = *this;
+	*trjDat = *TrjDatPtr;
+	radInt->TrjDatPtr = trjDat;
+
+	GenRadIntegrationKernel << <blocks, threads >> > (pEx0, pEz0, StepLambda, StepX, StepZ, PerX, PerZ, radInt);
 	printf("%s\r\n", cudaGetErrorString(cudaGetLastError()));
-	cudaDeviceSynchronize();
+	printf("%s\r\n", cudaGetErrorString(cudaDeviceSynchronize()));
+
+	*this = *radInt;
+	*TrjDatPtr = *trjDat;
+	cudaFree(radInt);
+	cudaFree(trjDat);
 
 	if (FinalResAreSymOverZ || FinalResAreSymOverX)
 		FillInSymPartsOfResults(FinalResAreSymOverX, FinalResAreSymOverZ, SRWRadStructAccessData);
