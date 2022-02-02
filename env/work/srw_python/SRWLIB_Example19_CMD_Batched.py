@@ -126,7 +126,29 @@ opSmp_Det = SRWLOptD(distSmp_Det)
 ppSmp =     [0, 0, 1., 0, 0, 1., 55., 1., 55.,  0, 0, 0]
 ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
+
 #***********Wavefront Propagation / Scattering calculation for different instances of Sample created by Brownnian motion
+cm_idx = 0
+wfr_list = []
+for wfr in wfrs:
+    print('   Setting up Coherent mode # {} ... '.format(cm_idx))
+    cm_idx+=1
+
+    mesh0 = deepcopy(wfr.mesh)
+    arI0 = array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
+    srwl.CalcIntFromElecField(arI0, wfr, 6, 0, 3, mesh0.eStart, 0, 0) #Extract intensity
+    #srwl_uti_save_intens_ascii( #Save Intensity of to a file
+    #    arI0, mesh0, os.path.join(os.getcwd(), strDataFolderName, strIntInitOutFileName), 0,
+    #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Intensity'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
+
+    #Plot the Initial Wavefront (without showing it yet)
+    #plotMesh0x = [mesh0.xStart, mesh0.xFin, mesh0.nx]
+    #plotMesh0y = [mesh0.yStart, mesh0.yFin, mesh0.ny]
+    #uti_plot2d1d(arI0, plotMesh0x, plotMesh0y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Intensity at Sample'], ['m', 'm', 'ph/s/.1%bw/mm^2'])
+
+    #Duplicating Initial Wavefront to perform its Propagaton
+    wfr_list.append(wfr)
+
 for it in range(len(listObjBrownian)):
 
     if(it == 0): print('   Performing Simulaitons for the Initial Nano-Particle Distribution ***********')
@@ -162,31 +184,13 @@ for it in range(len(listObjBrownian)):
     
     arI1_CM = None
 
-    cm_idx = 0
-    for wfr in wfrs:
-        print('   Propogating Coherent mode # {} ... '.format(cm_idx))
-        cm_idx+=1
+    print('   Propagating Wavefront ... ', end='')
+    t = time.time()
+    wfrP_list = deepcopy(wfr_list)
+    srwl.PropagElecField(wfrP_list, opBL, None, 1)
+    print('done in', round(time.time() - t, 3), 's')
 
-        mesh0 = deepcopy(wfr.mesh)
-        arI0 = array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
-        srwl.CalcIntFromElecField(arI0, wfr, 6, 0, 3, mesh0.eStart, 0, 0) #Extract intensity
-        #srwl_uti_save_intens_ascii( #Save Intensity of to a file
-        #    arI0, mesh0, os.path.join(os.getcwd(), strDataFolderName, strIntInitOutFileName), 0,
-        #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Intensity'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
-
-        #Plot the Initial Wavefront (without showing it yet)
-        #plotMesh0x = [mesh0.xStart, mesh0.xFin, mesh0.nx]
-        #plotMesh0y = [mesh0.yStart, mesh0.yFin, mesh0.ny]
-        #uti_plot2d1d(arI0, plotMesh0x, plotMesh0y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Intensity at Sample'], ['m', 'm', 'ph/s/.1%bw/mm^2'])
-
-        #Duplicating Initial Wavefront to perform its Propagaton
-        wfrP = deepcopy(wfr)
-
-        print('   Propagating Wavefront ... ', end='')
-        t = time.time()
-        srwl.PropagElecField(wfrP, opBL, None, 1)
-        print('done in', round(time.time() - t, 3), 's')
-
+    for wfrP in wfrP_list:
         print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
         t = time.time()
         mesh1 = deepcopy(wfrP.mesh)

@@ -101,8 +101,25 @@ public:
 		return result;
 	}
 
-	int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect* pResBeforeAndAfterArr, int WfrCount)
+	int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect* pResBeforeAndAfterArr, int nWfr)
 	{
+		for (int i = 0; i < nWfr; i++)
+			pRadAccessData[i].CheckAndSubtractPhaseTermsLin(TransvCenPoint.x, TransvCenPoint.y);
+
+		char& MethNo = ParPrecWfrPropag.MethNo;
+
+		int result = 0;
+
+		if (MethNo == 0) result = PropagateRadiationMeth_0_Batch(pRadAccessData, nWfr);
+		else {
+			//TODO: Implement batched version
+			for (int i = 0; i < nWfr; i++)
+				result = PropagateRadiationMeth_2(pRadAccessData + i, ParPrecWfrPropag, pResBeforeAndAfterArr[i]);
+		}
+
+		if (!ParPrecWfrPropag.DoNotResetAnalTreatTermsAfterProp)
+			for (int i = 0; i < nWfr; i++)
+				pRadAccessData[i].CheckAndResetPhaseTermsLin();
 
 		return 0;
 	}
@@ -122,6 +139,24 @@ public:
 		return 0;
 	}
 
+	int PropagateRadiationSingleE_Meth_0_Batch(srTSRWRadStructAccessData** pRadAccessData, srTSRWRadStructAccessData** pPrevRadDataSingleE, int nWfr)
+	{
+		int result;
+		for (int i = 0; i < nWfr; i++) {
+			if (result = PropagateRadMoments(pRadAccessData[i], 0)) return result;
+			if (result = PropagateWaveFrontRadius(pRadAccessData[i])) return result;
+			//if(result = PropagateRadiationSimple(pRadAccessData, pBuf)) return result; //OC06092019
+			//OC01102019 (restored)
+		}
+		if (result = PropagateRadiationSimpleBatch(pRadAccessData, nWfr)) return result;
+
+		for (int i = 0; i < nWfr; i++) 
+		{
+			if (result = Propagate4x4PropMatr(pRadAccessData[i])) return result;
+		}
+		return 0;
+	}
+
 	//int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData, void* pBuf=0) //OC06092019
 	//OC01102019 (restored)
 	int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData)
@@ -129,6 +164,13 @@ public:
 		int result;
 		if(pRadAccessData->Pres != 0) if(result = SetRadRepres(pRadAccessData, 0)) return result;
 		return TraverseRadZXE(pRadAccessData);
+	}
+	int PropagateRadiationSimpleBatch(srTSRWRadStructAccessData** pRadAccessData, int nWfr)
+	{
+		int result;
+		for (int i = 0; i < nWfr; i++)
+			if (pRadAccessData[i]->Pres != 0) if (result = SetRadRepres(pRadAccessData[i], 0)) return result;
+		return TraverseRadZXE_Batch(pRadAccessData, nWfr);
 	}
   	int PropagateRadiationSimple1D(srTRadSect1D* pSect1D)
 	{

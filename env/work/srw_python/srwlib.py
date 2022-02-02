@@ -23,6 +23,13 @@ import time
 from srwl_uti_cryst import *
 from uti_math_eigen import UtiMathEigen #OC21062021
 
+try:
+    import cupy as cp
+    import cupy.cuda.memory
+    cp.cuda.set_allocator(cupy.cuda.memory.malloc_managed)
+except:
+    pass
+
 #try:
 #    from uti_plot import * #universal simple plotting module distributed together with SRWLib
 #except:
@@ -2208,14 +2215,6 @@ class SRWLWfr(object):
         #print('          (re-)allocating: old point numbers: ne=',self.mesh.ne,' nx=',self.mesh.nx,' ny=',self.mesh.ny) #,' type:',self.numTypeElFld)
         #print('                           new point numbers: ne=',_ne,' nx=',_nx,' ny=',_ny) #,' type:',typeE)
         #print('                           backupNeeded',_backupNeeded)
-        
-
-        try:
-            import cupy as cp
-            import cupy.cuda.memory
-            cp.cuda.set_allocator(cupy.cuda.memory.malloc_managed)
-        except:
-            pass
 
         nTot = 2*_ne*_nx*_ny #array length to store one component of complex electric field
         nMom = 11*_ne
@@ -6490,11 +6489,6 @@ def srwl_uti_save_intens_hdf5(_ar_intens, _mesh, _file_path, _n_stokes=1,
         raise Exception('NumPy can not be loaded. You may need to install numpy. If you are using pip, you can use the following command to install it: \npip install numpy')
         #print('NumPy can not be loaded. You may need to install numpy. If you are using pip, you can use the following ' + 
         #      "command to install it: \npip install numpy")
-        
-    try:
-        import cupy as cp
-    except:
-        raise Exception('Cupy can not be loaded. You may need to install cupy. If you are using pip, you can use the following command to install it: \npip install cupy')
 
     ### Load package h5py
     try:
@@ -7335,20 +7329,16 @@ def srwl_uti_read_mag_fld_3d(_fpath, _scom='#'):
 def srwl_uti_array_alloc(_type, _n, _list_base=[0]): #OC14042019
 #def srwl_uti_array_alloc(_type, _n):
 
-    try:
-        import cupy as cp
-        import cupy.cuda.memory
-        cp.cuda.set_allocator(cupy.cuda.memory.malloc_managed)
-    except:
-        pass
-
     nPartMax = 10000000 #to tune
     #print('srwl_uti_array_alloc: array requested:', _n)
     lenBase = len(_list_base) #OC14042019
     nTrue = _n*lenBase #OC14042019
     
-    if(nTrue <= nPartMax): 
-        retObj = cp.array(array(_type, _list_base*_n))
+    if(nTrue <= nPartMax):
+        if _type == 'f': 
+            retObj = cp.zeros(_n, dtype=cp.float32) #cp.array(array(_type, _list_base*_n))
+        elif _type == 'd':
+            retObj = cp.zeros(_n, dtype=cp.float64)
         return retObj
     #if(_n <= nPartMax): return array(_type, [0]*_n)
         #resAr = array(_type, [0]*_n)
@@ -7972,11 +7962,6 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
     :param _del_aux_files: delete (or not) auxiliary files (applies to different types of calculations)
     :param _exec_gpu_id: GPU device ID to execute calculations on
    """
-
-    try:
-        import cupy as cp
-    except:
-        print('Cannot import cupy module')
 
     doMutual = 0 #OC30052017
     #if((_char >= 2) and (_char <= 4)): doMutual = 1

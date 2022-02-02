@@ -295,6 +295,17 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 
 //*************************************************************************
 
+int srTGenOptElem::TraverseRadZXE_Batch(srTSRWRadStructAccessData** pRadAccessData, int nWfr, void* pBufVars) //OC29082019
+//int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData)
+{
+	for (int i = 0; i < nWfr; i++)
+		TraverseRadZXE(pRadAccessData[i], pBufVars);
+
+	return 0;
+}
+
+//*************************************************************************
+
 int srTGenOptElem::TraverseRad1D(srTRadSect1D* pSect1D, void* pBufVars) //OC06092019
 //int srTGenOptElem::TraverseRad1D(srTRadSect1D* pSect1D)
 {
@@ -2496,10 +2507,11 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 				tBaseRadX[j] = 0.; tBaseRadZ[j] = 0.; 
 			}
 #else
-			for(long long j=0; j<TotAmOfNewData; j++)
-			{
-				*(tBaseRadX++) = 0.; *(tBaseRadZ++) = 0.; 
-			}
+			//for(long long j=0; j<TotAmOfNewData; j++)
+			//{
+			//	*(tBaseRadX++) = 0.; *(tBaseRadZ++) = 0.; 
+			//}
+			//NOTE: Memory is already zero initialized in python, would be faster to just allocate zero'd out memory than allocating and zero-ing 
 #endif
 			
 			SRWRadStructAccessData.pBaseRadX = OldRadXCopy;
@@ -2565,10 +2577,11 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 				tRadX[j] = 0.; tRadZ[j] = 0.;
 			}
 #else
-			for(long long j=0; j<TotAmOfNewData; j++)
-			{
-				*(tRadX++) = 0.; *(tRadZ++) = 0.; 
-			}
+			//for(long long j=0; j<TotAmOfNewData; j++)
+			//{
+			//	*(tRadX++) = 0.; *(tRadZ++) = 0.; 
+			//}
+			//NOTE: Memory is already zero initialized in python, would be faster to just allocate zero'd out memory than allocating and zero-ing 
 #endif
 			//Added by SY (for profiling?) at parallelizing SRW via OpenMP:
 			//srwlPrintTime(":RadResizeGen: TreatPolarizSepar-PrepareStructs",&start);
@@ -2628,10 +2641,11 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 				}
 				tBaseRadX = NewSRWRadStructAccessData.pBaseRadX;
 				//for(long j=0; j<TotAmOfNewData; j++) 
-				for(long long j=0; j<TotAmOfNewData; j++) 
-				{
-					*(tBaseRadX++) = 0.;
-				}
+				//for(long long j=0; j<TotAmOfNewData; j++) 
+				//{
+				//	*(tBaseRadX++) = 0.;
+				//}
+				//NOTE: Memory is already zero initialized in python, would be faster to just allocate zero'd out memory than allocating and zero-ing 
 				SRWRadStructAccessData.pBaseRadX = OldRadXCopy;
 				if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct, 'x')) return result;
 				if(OldRadXCopy != 0) delete[] OldRadXCopy;
@@ -2664,10 +2678,11 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 				}
 				tBaseRadZ = NewSRWRadStructAccessData.pBaseRadZ;
 				//for(long j=0; j<TotAmOfNewData; j++) 
-				for(long long j=0; j<TotAmOfNewData; j++) 
-				{
-					*(tBaseRadZ++) = 0.;
-				}
+				//for(long long j=0; j<TotAmOfNewData; j++) 
+				//{
+				//	*(tBaseRadZ++) = 0.;
+				//}
+				//NOTE: Memory is already zero initialized in python, would be faster to just allocate zero'd out memory than allocating and zero-ing 
 				SRWRadStructAccessData.pBaseRadZ = OldRadZCopy;
 				if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct, 'z')) return result;
 				if(OldRadZCopy != 0) delete[] OldRadZCopy;
@@ -2703,7 +2718,8 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 #endif
 				float *tRadX = NewSRWRadStructAccessData.pBaseRadX;
 				//for(long j=0; j<TotAmOfNewData; j++) *(tRadX++) = 0.;
-				for(long long j=0; j<TotAmOfNewData; j++) *(tRadX++) = 0.;
+				//for(long long j=0; j<TotAmOfNewData; j++) *(tRadX++) = 0.;
+				//NOTE: Memory is already zero initialized in python, would be faster to just allocate zero'd out memory than allocating and zero-ing 
 
 				if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct, 'x')) return result;
 
@@ -2733,8 +2749,9 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 #endif
 				float *tRadZ = NewSRWRadStructAccessData.pBaseRadZ;
 				//for(long i = 0; i < TotAmOfNewData; i++) *(tRadZ++) = 0.;
-				for(long long i = 0; i < TotAmOfNewData; i++) *(tRadZ++) = 0.;
-
+				//for(long long i = 0; i < TotAmOfNewData; i++) *(tRadZ++) = 0.;
+				//NOTE: Memory is already zero initialized in python, would be faster to just allocate zero'd out memory than allocating and zero-ing 
+				
 				if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct, 'z')) return result;
 
 #ifdef __IGOR_PRO__

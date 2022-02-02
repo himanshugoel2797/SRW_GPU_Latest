@@ -4963,7 +4963,7 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 	PyObject *oWfr=0, *oOptCnt=0, *oInt=0, *oDev=0; //OC14082018
 
 	vector<Py_buffer> vBuf;
-	SRWLWfr wfr;
+	vector<SRWLWfr> wfr;
 	SRWLOptC optCnt = {0,0,0,0,0}; //since SRWL structures are definied in C (no constructors)
 	
 	//char *arIndsInt=0, *arIntType=0, *arPol=0, *arDepType=0; //OC14082018
@@ -4974,6 +4974,7 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 	char **arInts=0;
 	gpuUsageArg_t gpuArgs;
 
+	srwlUtiDevInit();
 	try
 	{
 		//if(!PyArg_ParseTuple(args, "OO:PropagElecField", &oWfr, &oOptCnt)) throw strEr_BadArg_PropagElecField;
@@ -4983,8 +4984,20 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//double start;
 		//get_walltime(&start);
-
-		ParseSructSRWLWfr(&wfr, oWfr, &vBuf, gmWfrPyPtr);
+		if (PyList_Check(oWfr))
+		{
+			wfr.resize(PyList_Size(oWfr));
+			for (int i = 0; i < PyList_Size(oWfr); i++)
+			{
+				ParseSructSRWLWfr(wfr.data() + i, PyList_GetItem(oWfr, i), &vBuf, gmWfrPyPtr);
+			}
+		}
+		else 
+		{
+			SRWLWfr _wfr;
+			ParseSructSRWLWfr(&_wfr, oWfr, &vBuf, gmWfrPyPtr);
+			wfr.push_back(_wfr);
+		}
 
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime(":srwlpy_PropagElecField : ParseSructSRWLWfr", &start);
@@ -5009,14 +5022,15 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 			}
 		}
 
-		srwlUtiDevInit();
 		ParseDeviceParam(oDev, &gpuArgs); //Parse and setup device options
 
 		//ProcRes(srwlPropagElecField(&wfr, &optCnt));
-		ProcRes(srwlPropagElecField(&wfr, &optCnt, nInt, arIntDescr, arIntMesh, arInts, &gpuArgs)); //OC15082018
+		if (wfr.size() > 1)
+			ProcRes(srwlPropagElecFieldBatched(wfr.data(), wfr.size(), &optCnt, nInt, arIntDescr, arIntMesh, arInts, &gpuArgs));
+		else
+			ProcRes(srwlPropagElecField(wfr.data(), &optCnt, nInt, arIntDescr, arIntMesh, arInts, &gpuArgs)); //OC15082018
 
 		CleanDeviceParam(); //Reset device options to defaults
-		srwlUtiDevFini();
 
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime(":srwlpy_PropagElecField :srwlPropagElecField", &start);
@@ -5026,7 +5040,11 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 			UpdatePyPropInt(oInt, arIntMesh, arInts, nInt);
 		}
 
-		UpdatePyWfr(oWfr, &wfr);
+		if (wfr.size() > 1)
+			for (int i = 0; i < wfr.size(); i++)
+				UpdatePyWfr(PyList_GetItem(oWfr, i), wfr.data() + i);
+		else
+			UpdatePyWfr(oWfr, wfr.data());
 
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime(":srwlpy_PropagElecField :UpdatePyWfr", &start);
@@ -5040,7 +5058,9 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 
 	DeallocOptCntArrays(&optCnt);
 	ReleasePyBuffers(vBuf);
-	EraseElementFromMap(&wfr, gmWfrPyPtr);
+	for (int i = 0; i < wfr.size(); i++)
+		EraseElementFromMap(wfr.data() + i, gmWfrPyPtr);
+	srwlUtiDevFini();
 
 	for(int i=0; i<4; i++) if(arIntDescr[i] != 0) delete[] arIntDescr[i];
 	if(arIntMesh != 0) delete[] arIntMesh;
