@@ -190,29 +190,48 @@ for it in range(len(listObjBrownian)):
     srwl.PropagElecField(wfrP_list, opBL, None, 1)
     print('done in', round(time.time() - t, 3), 's')
 
+    wfrP_base = None
     for wfrP in wfrP_list:
-        print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
-        t = time.time()
-        mesh1 = deepcopy(wfrP.mesh)
-        arI1 = array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
-        srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
+        if wfrP_base is None:
+            wfrP_base = wfrP
+        else:
+            wfrP_base.addE(wfrP)
+            wfrP.delE()
+    
+    print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
+    t = time.time()
+    mesh1 = deepcopy(wfrP_base.mesh)
+    arI1 = array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
+    srwl.CalcIntFromElecField(arI1, wfrP_base, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
+    stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
+    mesh1 = stkDet.mesh
+    arI1 = stkDet.arS
+    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+    print('done in', round(time.time() - t, 3), 's')
 
-        stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
-        mesh1 = stkDet.mesh
-        arI1 = stkDet.arS
+    #for wfrP in wfrP_list:
+    #    print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
+    #    t = time.time()
+    #    mesh1 = deepcopy(wfrP.mesh)
+    #    arI1 = array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
+    #    srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
+
+    #    stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
+    #    mesh1 = stkDet.mesh
+    #    arI1 = stkDet.arS
         #srwl_uti_save_intens_ascii(
         #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
         #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
-        if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
-        print('done in', round(time.time() - t, 3), 's')
+    #    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+    #    print('done in', round(time.time() - t, 3), 's')
 
-        if arI1_CM is None:
-            arI1_CM = copy(arI1)
-        else:
-            arI1_CM += arI1
+    #    if arI1_CM is None:
+    #        arI1_CM = copy(arI1)
+    #    else:
+    #        arI1_CM += arI1
 
-    del wfrP_list
+    #    wfrP.delE()
 
     #Plotting the Results (requires 3rd party graphics package)
     print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')

@@ -204,7 +204,7 @@ void CGenMathFFT::NextCorrectNumberForFFT(long& n)
 
 //*************************************************************************
 
-int CGenMathFFT1D::Make1DFFT_InPlace(CGenMathFFT1DInfo& FFT1DInfo)
+int CGenMathFFT1D::Make1DFFT_InPlace(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t* pGpuUsage)
 {
 	//long TotAmOfPo = (FFT1DInfo.Nx << 1)*FFT1DInfo.HowMany;
 	long long TotAmOfPo = ((long long)(FFT1DInfo.Nx << 1)) * ((long long)FFT1DInfo.HowMany);
@@ -214,7 +214,7 @@ int CGenMathFFT1D::Make1DFFT_InPlace(CGenMathFFT1DInfo& FFT1DInfo)
 	FFT1DInfo.pOutData = AuxDataCont;
 
 	int result;
-	if (result = Make1DFFT(FFT1DInfo)) return result;
+	if (result = Make1DFFT(FFT1DInfo, pGpuUsage)) return result;
 
 	float* tOut = FFT1DInfo.pInData, * t = AuxDataCont;
 	for (int ix = 0; ix < TotAmOfPo; ix++) *(tOut++) = *(t++);

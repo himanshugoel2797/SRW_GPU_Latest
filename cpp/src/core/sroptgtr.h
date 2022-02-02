@@ -79,7 +79,7 @@ public:
 	}
 
 	//int PropagateRadiation(srTSRWRadStructAccessData* pRadAccessData, int MethNo, srTRadResizeVect& ResBeforeAndAfterArr)
-	int PropagateRadiation(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect& ResBeforeAndAfterArr)
+	int PropagateRadiation(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect& ResBeforeAndAfterArr, gpuUsageArg_t* pGpuUsage)
 	{
 		//if(ParPrecWfrPropag.AnalTreatment == 1)
 		//{// Treating linear terms analytically
@@ -101,7 +101,7 @@ public:
 		return result;
 	}
 
-	int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect* pResBeforeAndAfterArr, int nWfr)
+	int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect* pResBeforeAndAfterArr, int nWfr, gpuUsageArg_t* pGpuUsage)
 	{
 		for (int i = 0; i < nWfr; i++)
 			pRadAccessData[i].CheckAndSubtractPhaseTermsLin(TransvCenPoint.x, TransvCenPoint.y);

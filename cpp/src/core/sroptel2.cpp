@@ -310,7 +310,7 @@ int srTGenOptElem::PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAcces
 
 //*************************************************************************
 
-int srTGenOptElem::PropagateRadiationMeth_0_Batch(srTSRWRadStructAccessData* pRadAccessData, int nWfr)
+int srTGenOptElem::PropagateRadiationMeth_0_Batch(srTSRWRadStructAccessData* pRadAccessData, int nWfr, gpuUsageArg_t* pGpuUsage)
 {//Moved from derived classes: loops over E, calls derived PropagateRadiationSingleE_Meth_0
  //This propagation method doesn't allow for true wavefront "resizing/resampling" 
  //(which results in changing numbers of points) in "slices" vs photon energy.
@@ -396,7 +396,7 @@ int srTGenOptElem::PropagateRadiationMeth_0_Batch(srTSRWRadStructAccessData* pRa
 	//if(result = PropagateRadiationSingleE_Meth_0(pRadDataSingleE, pPrevRadDataSingleE, pBuf)) return result; //from derived classes
 	//OC01102019 (restored)
 	for (int ie = 0; ie < neOrig; ie++)
-		if (result = PropagateRadiationSingleE_Meth_0_Batch(pRadDataSingleE, pPrevRadDataSingleE, nWfr)) return result; //from derived classes
+		if (result = PropagateRadiationSingleE_Meth_0_Batch(pRadDataSingleE, pPrevRadDataSingleE, nWfr, pGpuUsage)) return result; //from derived classes
 
 	for (int i = 0; i < nWfr; i++) 
 	{

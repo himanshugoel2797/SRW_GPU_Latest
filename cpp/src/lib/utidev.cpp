@@ -52,9 +52,9 @@ bool UtiDev::GPUAvailable()
 bool UtiDev::GPUEnabled(gpuUsageArg_t *arg) 
 {
 	if (arg == NULL)
-		return isGPUEnabled;
-	if (*arg == 1) return false;
-	return isGPUEnabled;
+		return false;
+	if (*arg == 1) return GPUAvailable();
+	return false;
 }
 
 void UtiDev::SetGPUStatus(bool enabled)
@@ -76,7 +76,7 @@ void UtiDev::Fini() {
 	//deviceOffloadInitialized = false;
 }
 
-
+/*
 void* operator new[](std::size_t sz) // no inline, required by [replacement.functions]/3
 {
 	if (sz == 0)
@@ -99,3 +99,4 @@ void operator delete[](void* ptr) noexcept
 	else
 		std::free(ptr);
 }
+*/

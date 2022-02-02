@@ -119,12 +119,12 @@ public:
 #endif
 	}
 
-	virtual int PropagateRadiation(srTSRWRadStructAccessData*, srTParPrecWfrPropag&, srTRadResizeVect&) { return 0;}
-	virtual int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfr, srTRadResizeVect* pResAfter, int nWfr) 
+	virtual int PropagateRadiation(srTSRWRadStructAccessData*, srTParPrecWfrPropag&, srTRadResizeVect&, gpuUsageArg_t* pGpuUsage = 0) { return 0;}
+	virtual int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfr, srTRadResizeVect* pResAfter, int nWfr, gpuUsageArg_t* pGpuUsage = 0) 
 	{
 		int res = 0;
 		for (int i = 0; i < nWfr; i++)
-			if (res = PropagateRadiation(pRadAccessData + i, ParPrecWfr, *(pResAfter + i))) return res;
+			if (res = PropagateRadiation(pRadAccessData + i, ParPrecWfr, *(pResAfter + i), pGpuUsage)) return res;
 		return 0;
 	}
 
@@ -140,12 +140,12 @@ public:
 	
 	//virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData, void* pBuf=0) { return 0;} //OC06092019
 	//OC01102019 (restored)
-	virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData) { return 0;}
-	virtual int PropagateRadiationSingleE_Meth_0_Batch(srTSRWRadStructAccessData** pRadAccessData, srTSRWRadStructAccessData** pPrevRadData, int nWfr) 
+	virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData, gpuUsageArg_t* pGpuUsage = 0) { return 0;}
+	virtual int PropagateRadiationSingleE_Meth_0_Batch(srTSRWRadStructAccessData** pRadAccessData, srTSRWRadStructAccessData** pPrevRadData, int nWfr, gpuUsageArg_t* pGpuUsage = 0) 
 	{ 
 		int result = 0; 
 		for (int i = 0; i < nWfr; i++)
-			if (result = PropagateRadiationSingleE_Meth_0(pRadAccessData[i], pPrevRadData[i])) return result;
+			if (result = PropagateRadiationSingleE_Meth_0(pRadAccessData[i], pPrevRadData[i], pGpuUsage)) return result;
 		return result; 
 	}
 
@@ -197,7 +197,7 @@ public:
 	//virtual int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData, void* pBuf=0); //OC06092019
 	//OC01102019 (restored)
 	virtual int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData); //moved from derived classes: loops over E, calls derived PropagateRadiationSingleE_Meth_0
-	virtual int PropagateRadiationMeth_0_Batch(srTSRWRadStructAccessData* pRadAccessData, int nWfr);
+	virtual int PropagateRadiationMeth_0_Batch(srTSRWRadStructAccessData* pRadAccessData, int nWfr, gpuUsageArg_t* pGpuUsage = 0);
 
 	void FindWidestWfrMeshParam(vector<srTSRWRadStructAccessData>& vRadSlices, srTSRWRadStructAccessData* pRad, bool keepConstNumPoints);
 	int ReInterpolateWfrDataOnNewTransvMesh(vector<srTSRWRadStructAccessData>& vRadSlices, srTSRWRadStructAccessData* pAuxRadSingleE, srTSRWRadStructAccessData* pRadRes);
@@ -277,7 +277,7 @@ public:
 	int SetRadRepres(srTSRWRadStructAccessData*, char, double* ar_xStartInSlicesE=0, double* ar_zStartInSlicesE=0);
 	int SetRadRepres1D(srTRadSect1D*, char);
 
-	int SetupWfrEdgeCorrData(srTSRWRadStructAccessData*, float*, float*, srTDataPtrsForWfrEdgeCorr&);
+	int SetupWfrEdgeCorrData(srTSRWRadStructAccessData*, float*, float*, srTDataPtrsForWfrEdgeCorr&, gpuUsageArg_t* pGpuUsage = 0);
 	//inline void SetupExpCorrArray(float*, long, double, double, double);
 	inline void SetupExpCorrArray(float*, long long, double, double, double);
 	void MakeWfrEdgeCorrection(srTSRWRadStructAccessData*, float*, float*, srTDataPtrsForWfrEdgeCorr&);

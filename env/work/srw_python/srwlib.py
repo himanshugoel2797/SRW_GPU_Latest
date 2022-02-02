@@ -2292,10 +2292,14 @@ class SRWLWfr(object):
             wfr_arEx = _wfr.arEx
             wfr_arEy = _wfr.arEy
             
-            for i in range(nTot):
-                #for some reason, this increases memory requirements in Py:
-                self.arEx[i] += wfr_arEx[i] 
-                self.arEy[i] += wfr_arEy[i]
+            if isinstance(wfr_arEx, cp.ndarray) and isinstance(wfr_arEy, cp.ndarray) and isinstance(self.arEx, cp.ndarray) and isinstance(self.arEy, cp.ndarray):
+                self.arEx += wfr_arEx
+                self.arEy += wfr_arEy
+            else:
+                for i in range(nTot):
+                    #for some reason, this increases memory requirements in Py:
+                    self.arEx[i] += wfr_arEx[i] 
+                    self.arEy[i] += wfr_arEy[i]
                 
         elif(_meth == 1):
             #to implement

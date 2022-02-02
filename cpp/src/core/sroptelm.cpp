@@ -742,7 +742,7 @@ int srTGenOptElem::RemoveSliceConstE_FromGenRadStruct(srTSRWRadStructAccessData*
 
 //*************************************************************************
 
-int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessData, float* pDataEx, float* pDataEz, srTDataPtrsForWfrEdgeCorr& DataPtrsForWfrEdgeCorr)
+int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessData, float* pDataEx, float* pDataEz, srTDataPtrsForWfrEdgeCorr& DataPtrsForWfrEdgeCorr, gpuUsageArg_t* pGpuUsage)
 {
 	int result;
 
@@ -860,7 +860,7 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 			FFT1DInfo.xStart = pRadAccessData->zStart;
 			FFT1DInfo.Nx = pRadAccessData->nz;
 			CGenMathFFT1D FFT1D;
-			if(result = FFT1D.Make1DFFT_InPlace(FFT1DInfo)) return result;
+			if(result = FFT1D.Make1DFFT_InPlace(FFT1DInfo, pGpuUsage)) return result;
 		}
 		if(dxFi != 0.)
 		{
@@ -900,7 +900,7 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 			FFT1DInfo.xStart = pRadAccessData->zStart;
 			FFT1DInfo.Nx = pRadAccessData->nz;
 			CGenMathFFT1D FFT1D;
-			if(result = FFT1D.Make1DFFT_InPlace(FFT1DInfo)) return result;
+			if(result = FFT1D.Make1DFFT_InPlace(FFT1DInfo, pGpuUsage)) return result;
 		}
 		if(dzSt != 0.)
 		{
@@ -924,7 +924,7 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 			FFT1DInfo.xStart = pRadAccessData->xStart;
 			FFT1DInfo.Nx = pRadAccessData->nx;
 			CGenMathFFT1D FFT1D;
-			if(result = FFT1D.Make1DFFT_InPlace(FFT1DInfo)) return result;
+			if(result = FFT1D.Make1DFFT_InPlace(FFT1DInfo, pGpuUsage)) return result;
 		}
 		if(dzFi != 0.)
 		{
@@ -947,7 +947,7 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 			FFT1DInfo.xStart = pRadAccessData->xStart;
 			FFT1DInfo.Nx = pRadAccessData->nx;
 			CGenMathFFT1D FFT1D;
-			if(result = FFT1D.Make1DFFT_InPlace(FFT1DInfo)) return result;
+			if(result = FFT1D.Make1DFFT_InPlace(FFT1DInfo, pGpuUsage)) return result;
 		}
 		DataPtrsForWfrEdgeCorr.WasSetup = 1;
 	}

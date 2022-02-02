@@ -590,7 +590,7 @@ public:
 	}
 
 	int Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t* pGpuUsage = 0);
-	int Make1DFFT_InPlace(CGenMathFFT1DInfo& FFT1DInfo);
+	int Make1DFFT_InPlace(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t* pGpuUsage = 0);
 
 	void SetupLimitsTr(CGenMathFFT1DInfo& FFT1DInfo)
 	{ // Modify this if Make1DFFT is modified !
