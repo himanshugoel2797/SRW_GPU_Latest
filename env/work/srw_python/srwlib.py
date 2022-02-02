@@ -26,7 +26,7 @@ from uti_math_eigen import UtiMathEigen #OC21062021
 try:
     import cupy as cp
     import cupy.cuda.memory
-    cp.cuda.set_allocator(cupy.cuda.memory.malloc_managed)
+    cp.cuda.set_allocator(cupy.cuda.MemoryPool(cupy.cuda.memory.malloc_managed).malloc)
 except:
     pass
 
@@ -7334,6 +7334,11 @@ def srwl_uti_array_alloc(_type, _n, _list_base=[0]): #OC14042019
     lenBase = len(_list_base) #OC14042019
     nTrue = _n*lenBase #OC14042019
     
+    if _type == 'f':
+        return cp.zeros(nTrue, dtype=cp.float32)
+    elif _type == 'd':
+        return cp.zeros(nTrue, dtype=cp.float64)
+
     if(nTrue <= nPartMax):
         if _type == 'f': 
             retObj = cp.zeros(_n, dtype=cp.float32) #cp.array(array(_type, _list_base*_n))

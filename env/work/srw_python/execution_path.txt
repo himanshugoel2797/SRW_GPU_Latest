@@ -1,0 +1,56 @@
+PropagateRadiationGuided:
+ propAutoResizeBefore
+ propAutoResizeAfter
+ propAllowUnderSamp
+ RadResizeGen
+
+ PropagateRadiation
+  CheckAndSubtractPhaseTermsLin
+  PropagateRadiationMeth_0
+   PropagateRadiationSingleE_Meth_0
+    PropagateRadMoments
+     srTFocusingElem::
+      GenAuxPropagateRadMoments
+    PropagateWaveFrontRadius
+     srTFocusingElem::
+    PropagateRadiationSimple
+     TraverseRadZXE
+      RadPointModifier
+    Propagate4x4PropMatr
+     srTFocusingElem::
+      GenAuxPropagate4x4PropMatr
+  CheckAndResetPhaseTermsLin
+ 
+ propAutoResizeBefore
+ propAutoResizeAfter
+ propAllowUnderSamp
+ RadResizeGen
+
+ PropagateRadiation
+  srTDriftSpace::
+   ChooseLocalPropMode
+  PropagateRadiationMeth_0
+   PropagateRadiationSingleE_Meth_0
+    PropagateRadiationSimple
+     PropagateRadiationSimple_PropFromWaist
+      SetupPRopBufVars_PropFromWaist
+      TraverseRadZXE
+      SetupWfrEdgeCorrData
+       SetupExpCorrArray
+       SetupRadXorZSectFromSliceConstE
+       Make1DFFT_InPlace
+       SetupExpCorrArray
+       SetupRadXorZSectFromSliceConstE
+       Make1DFFT_InPlace
+      Make2DFFT
+      Make2DFFT
+      MakeWfrEdgeCorrection
+      TraverseRadZXE
+    PropagateRadMoments
+     srTDriftSpace::
+      AuxPropagateRadMoments
+    PropagateWaveFrontRadius
+     SetNonZeroWavefrontLimitsToFullRange
+    Propagate4x4PropMatr
+     GenAuxPropagate4x4PropMatr
+ RadResizeGen

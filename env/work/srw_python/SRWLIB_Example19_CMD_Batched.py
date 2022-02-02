@@ -212,6 +212,8 @@ for it in range(len(listObjBrownian)):
         else:
             arI1_CM += arI1
 
+    del wfrP_list
+
     #Plotting the Results (requires 3rd party graphics package)
     print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
 
