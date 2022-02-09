@@ -3086,6 +3086,12 @@ void ParseSructSRWLWfr(SRWLWfr* pWfr, PyObject* oWfr, vector<Py_buffer>* pvBuf, 
 	pWfr->yc = PyFloat_AsDouble(o_tmp);
 	Py_DECREF(o_tmp);
 
+	o_tmp = PyObject_GetAttrString(oWfr, "nWfr");
+	if (o_tmp == 0) throw strEr_BadWfr;
+	if (!PyNumber_Check(o_tmp)) throw strEr_BadWfr;
+	pWfr->nWfr = PyFloat_AsDouble(o_tmp);
+	Py_DECREF(o_tmp);
+
 	o_tmp = PyObject_GetAttrString(oWfr, "avgPhotEn");
 	if(o_tmp == 0) throw strEr_BadWfr;
 	if(!PyNumber_Check(o_tmp)) throw strEr_BadWfr;

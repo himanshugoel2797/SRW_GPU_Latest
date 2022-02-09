@@ -56,8 +56,106 @@ GsnBm.mx = 0 #Transverse Gauss-Hermite Mode Orders
 GsnBm.my = 0
 
 #***********Initial Wavefront
-wfrs = srwl_uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName))[:10]
-print('{} coherent modes loaded'.format(len(wfrs)))
+def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True): #OC11042020
+    """
+    Reads-in Wavefront data file (with a number of wavefronts, calculated in the same mesh vs x nad y)
+    :param _file_path: string specifying path do data file to be loaded
+    :param _gen0s: switch defining whether zero-electric field array(s) need to be created if some polarization component(s) are missing in the file 
+    :return: list of wavefronts (objects of SRWLWfr type)
+    """
+    ### Load package numpy
+    try:
+        import numpy as np
+    except:
+        raise Exception('NumPy can not be loaded. You may need to install numpy. If you are using pip, you can use the following command to install it: \npip install numpy')
+
+    ### Load package h5py
+    try:
+        import h5py as h5
+    except:
+        raise Exception('h5py can not be loaded. You may need to install h5py. If you are using pip, you can use the following command to install it: \npip install h5py')
+
+    wfr = SRWLWfr() #auxiliary wavefront
+    mesh = wfr.mesh
+
+    hf = h5.File(_file_path, 'r')
+
+    #Get attributes
+    ats = hf.attrs
+    mesh.eStart = float(ats.get('eStart'))
+    mesh.eFin = float(ats.get('eFin'))
+    mesh.ne = int(ats.get('ne'))
+    mesh.xStart = float(ats.get('xStart'))  
+    mesh.xFin = float(ats.get('xFin'))
+    mesh.nx = int(ats.get('nx'))
+    mesh.yStart = float(ats.get('yStart'))
+    mesh.yFin = float(ats.get('yFin'))
+    mesh.ny = int(ats.get('ny'))
+    mesh.zStart = float(ats.get('zStart'))
+
+    try: #OC09052021 (to walk around cases when this input is absent)
+        wfr.numTypeElFld = ats.get('numTypeElFld')
+        wfr.Rx = float(ats.get('Rx'))
+        wfr.Ry = float(ats.get('Ry'))
+        wfr.dRx = float(ats.get('dRx'))
+        wfr.dRy = float(ats.get('dRy'))
+        wfr.xc = float(ats.get('xc'))
+        wfr.yc = float(ats.get('yc'))
+        wfr.avgPhotEn = float(ats.get('avgPhotEn'))
+        wfr.presCA = int(ats.get('presCA'))
+        wfr.presFT = int(ats.get('presFT'))
+        wfr.unitElFld = int(ats.get('unitElFld'))
+        wfr.unitElFldAng = int(ats.get('unitElFldAng'))
+    except:
+        wfr.numTypeElFld = 'f'
+        wfr.Rx = 0
+        wfr.Ry = 0
+        wfr.dRx = 0
+        wfr.dRy = 0
+        wfr.xc = 0
+        wfr.yc = 0
+        wfr.avgPhotEn = 0
+        wfr.presCA = 0
+        wfr.presFT = 0
+        wfr.unitElFld = 1
+        wfr.unitElFldAng = 0
+
+    #Get All Electric Field data sets
+    arEx = None
+    arExH5 = hf.get('arEx')
+    if(arExH5 is not None): arEx = np.array(arExH5)[:10]
+
+    arEy = None
+    arEyH5 = hf.get('arEy')
+    if(arEyH5 is not None): arEy = np.array(arEyH5)[:10]
+
+    nWfr = 0
+    lenArE = 0
+    if(arEx is not None):
+        nWfr = len(arEx)
+        lenArE = len(arEx[0])
+    elif(arEy is not None):
+        nWfr = len(arEy)
+        lenArE = len(arEy[0])
+
+    arE0s = None #OC28062021
+    if(_gen0s and (lenArE > 0)): arE0s = np.array([0]*lenArE, 'f') #OC28062021
+    #arE0s = None if(lenArE <= 0) else np.array([0]*lenArE, 'f')
+    
+    wfr.nWfr = nWfr
+    if(arEx is not None):
+        wfr.arEx = arEx.reshape(-1)
+    if(arEy is not None):
+        wfr.arEy = arEy.reshape(-1)
+
+    #Tests
+    #print(wfr.arEx)
+    #print(wfr.arEy)
+
+    return [wfr]
+
+wfrs = uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName))
+print('{} groups of coherent modes with {} per group loaded'.format(len(wfrs), wfrs[0].nWfr))
 
 #************Defining Samples (lists of 3D objects (spheres))
 #Initial set of 3D objects

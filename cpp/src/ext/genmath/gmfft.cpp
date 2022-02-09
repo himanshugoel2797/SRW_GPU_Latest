@@ -399,6 +399,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 						PlanNx = Nx;
 						PlanNy = Ny;
+						BatchSz = 1;
 						cufftPlan2d(&Plan2DFFT_cu, Nx, Ny, CUFFT_C2C);
 					}
 				}
@@ -418,6 +419,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 						dPlanNx = Nx;
 						dPlanNy = Ny;
+						dBatchSz = 1;
 						cufftPlan2d(&dPlan2DFFT_cu, Nx, Ny, CUFFT_Z2Z);
 					}
 				}
@@ -498,6 +500,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 						PlanNx = Nx;
 						PlanNy = Ny;
+						BatchSz = 1;
 						cufftPlan2d(&Plan2DFFT_cu, Nx, Ny, CUFFT_C2C);
 					}
 				}
@@ -518,6 +521,7 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 						dPlanNx = Nx;
 						dPlanNy = Ny;
+						dBatchSz = 1;
 						cufftPlan2d(&dPlan2DFFT_cu, Nx, Ny, CUFFT_Z2Z);
 					}
 				}
@@ -805,7 +809,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 					PlanLen = Nx;
 					if (Plan1DFFT_cu != NULL)
 						cufftDestroy(Plan1DFFT_cu);
-					cufftPlanMany(&Plan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_C2C, 1);
+					cufftPlanMany(&Plan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_C2C, FFT1DInfo.HowMany);
 				}
 				if (Plan1DFFT_cu == 0) return ERROR_IN_FFT;
 				cufftExecC2C(Plan1DFFT_cu, DataToFFT_GPU, OutDataFFT_GPU, CUFFT_FORWARD);
@@ -816,7 +820,7 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 					if (dPlan1DFFT_cu != NULL)
 						cufftDestroy(dPlan1DFFT_cu);
 					dPlanLen = Nx;
-					cufftPlanMany(&dPlan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_Z2Z, 1);
+					cufftPlanMany(&dPlan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_Z2Z, FFT1DInfo.HowMany);
 				}
 				if (dPlan1DFFT_cu == 0) return ERROR_IN_FFT;
 				cufftExecZ2Z(dPlan1DFFT_cu, dDataToFFT_GPU, dOutDataFFT_GPU, CUFFT_FORWARD);
@@ -927,9 +931,10 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 			{
 				if (PlanLen != Nx) {
 					PlanLen = Nx;
+					HowMany = FFT1DInfo.HowMany;
 					if (Plan1DFFT_cu != NULL)
 						cufftDestroy(Plan1DFFT_cu);
-					cufftPlanMany(&Plan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_C2C, 1);
+					cufftPlanMany(&Plan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_C2C, FFT1DInfo.HowMany);
 				}
 				if (Plan1DFFT_cu == 0) return ERROR_IN_FFT;
 
@@ -941,9 +946,10 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 			{
 				if (dPlanLen != Nx) {
 					dPlanLen = Nx;
+					dHowMany = FFT1DInfo.HowMany;
 					if (dPlan1DFFT_cu != NULL)
 						cufftDestroy(dPlan1DFFT_cu);
-					cufftPlanMany(&dPlan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_Z2Z, 1);
+					cufftPlanMany(&dPlan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_Z2Z, FFT1DInfo.HowMany);
 				}
 				if (dPlan1DFFT_cu == 0) return ERROR_IN_FFT;
 

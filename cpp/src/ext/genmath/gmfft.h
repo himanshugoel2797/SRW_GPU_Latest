@@ -174,8 +174,8 @@ class CGenMathFFT2D : public CGenMathFFT {
 	double* m_dArrayShiftX, * m_dArrayShiftY;
 
 #ifdef _OFFLOAD_GPU
-	static long PlanNx, PlanNy;
-	static long dPlanNx, dPlanNy;
+	static long PlanNx, PlanNy, BatchSz;
+	static long dPlanNx, dPlanNy, dBatchSz;
 	static cufftHandle Plan2DFFT_cu;
 	static cufftHandle dPlan2DFFT_cu;
 #endif
@@ -185,7 +185,7 @@ public:
 	{
 		NeedsShiftBeforeX = NeedsShiftBeforeY = NeedsShiftAfterX = NeedsShiftAfterY = 0;
 #ifdef _OFFLOAD_GPU
-		PlanNx = PlanNy = dPlanNx = dPlanNy = 0;
+		BatchSz = dBatchSz = PlanNx = PlanNy = dPlanNx = dPlanNy = 0;
 		Plan2DFFT_cu = dPlan2DFFT_cu = 0;
 #endif
 	}
@@ -194,6 +194,7 @@ public:
 	//Modification by S.Yakubov for parallelizing SRW via OpenMP:
 #if _FFTW3 //28012019
 	int Make2DFFT(CGenMathFFT2DInfo&, fftwf_plan* pPrecreatedPlan2DFFT = 0, fftw_plan* pdPrecreatedPlan2DFFT = 0, gpuUsageArg_t *pGpuUsage = 0); //OC02022019 //HG01032022
+	int Make2DFFT_Batch(CGenMathFFT2DInfo*, int, fftwf_plan* pPrecreatedPlan2DFFT = 0, fftw_plan* pdPrecreatedPlan2DFFT = 0, gpuUsageArg_t* pGpuUsage = 0);
 	//int Make2DFFT(CGenMathFFT2DInfo&, fftwf_plan* pPrecreatedPlan2DFFT=0);
 #else
 	int Make2DFFT(CGenMathFFT2DInfo&, fftwnd_plan* pPrecreatedPlan2DFFT = 0); //OC27102018
@@ -573,8 +574,8 @@ class CGenMathFFT1D : public CGenMathFFT {
 	double* m_dArrayShiftX; //OC02022019
 
 #ifdef _OFFLOAD_GPU
-	static long PlanLen;
-	static long dPlanLen;
+	static long PlanLen, HowMany;
+	static long dPlanLen, dHowMany;
 	static cufftHandle Plan1DFFT_cu;
 	static cufftHandle dPlan1DFFT_cu;
 #endif
@@ -586,6 +587,7 @@ public:
 #ifdef _OFFLOAD_GPU
 		PlanLen = dPlanLen = 0;
 		Plan1DFFT_cu = dPlan1DFFT_cu = 0;
+		HowMany = dHowMany = 0;
 #endif
 	}
 
