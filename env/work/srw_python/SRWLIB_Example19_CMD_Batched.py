@@ -13,6 +13,8 @@ from uti_plot import * #required for plotting
 import os
 import time
 
+import cupy as cp
+
 npIsAvail = False
 try:
     import numpy as np
@@ -56,6 +58,21 @@ GsnBm.mx = 0 #Transverse Gauss-Hermite Mode Orders
 GsnBm.my = 0
 
 #***********Initial Wavefront
+def sum_wavefronts(wfr):
+    nTot = wfr.mesh.nx * wfr.mesh.ny * wfr.mesh.ne * 2
+    arExS = cp.zeros(nTot, dtype=cp.float32)
+    arEyS = cp.zeros(nTot, dtype=cp.float32)
+
+    for i in range(wfr.nWfr):
+        arExS += wfr.arEx[i*nTot: (i+1)*nTot]
+        arEyS += wfr.arEy[i*nTot: (i+1)*nTot]
+
+    wfrS = deepcopy(wfr)
+    wfrS.nWfr = 1
+    wfrS.arEx = arExS
+    wfrS.arEy = arEyS
+    return wfrS
+
 def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True): #OC11042020
     """
     Reads-in Wavefront data file (with a number of wavefronts, calculated in the same mesh vs x nad y)
@@ -123,11 +140,11 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True): #OC11042020
     #Get All Electric Field data sets
     arEx = None
     arExH5 = hf.get('arEx')
-    if(arExH5 is not None): arEx = np.array(arExH5)[:10]
+    if(arExH5 is not None): arEx = np.array(arExH5)[:2]
 
     arEy = None
     arEyH5 = hf.get('arEy')
-    if(arEyH5 is not None): arEy = np.array(arEyH5)[:10]
+    if(arEyH5 is not None): arEy = np.array(arEyH5)[:2]
 
     nWfr = 0
     lenArE = 0
@@ -139,14 +156,19 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True): #OC11042020
         lenArE = len(arEy[0])
 
     arE0s = None #OC28062021
-    if(_gen0s and (lenArE > 0)): arE0s = np.array([0]*lenArE, 'f') #OC28062021
+    if(_gen0s and (lenArE > 0)): arE0s = np.zeros(lenArE * nWfr, dtype=np.float32) #OC28062021
     #arE0s = None if(lenArE <= 0) else np.array([0]*lenArE, 'f')
     
     wfr.nWfr = nWfr
     if(arEx is not None):
-        wfr.arEx = arEx.reshape(-1)
+        wfr.arEx = np.concatenate(arEx)
+    else:
+        wfr.arEx = copy(arE0s)
+
     if(arEy is not None):
-        wfr.arEy = arEy.reshape(-1)
+        wfr.arEy = np.concatenate(arEy)
+    else:
+        wfr.arEy = copy(arE0s)
 
     #Tests
     #print(wfr.arEx)
@@ -232,9 +254,9 @@ for wfr in wfrs:
     print('   Setting up Coherent mode # {} ... '.format(cm_idx))
     cm_idx+=1
 
-    mesh0 = deepcopy(wfr.mesh)
-    arI0 = array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
-    srwl.CalcIntFromElecField(arI0, wfr, 6, 0, 3, mesh0.eStart, 0, 0) #Extract intensity
+    #mesh0 = deepcopy(wfr.mesh)
+    #arI0 = array('f', [0]*mesh0.nx*mesh0.ny) #"flat" array to take 2D intensity data
+    #srwl.CalcIntFromElecField(arI0, wfr, 6, 0, 3, mesh0.eStart, 0, 0) #Extract intensity
     #srwl_uti_save_intens_ascii( #Save Intensity of to a file
     #    arI0, mesh0, os.path.join(os.getcwd(), strDataFolderName, strIntInitOutFileName), 0,
     #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Intensity'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
@@ -285,11 +307,13 @@ for it in range(len(listObjBrownian)):
     print('   Propagating Wavefront ... ', end='')
     t = time.time()
     wfrP_list = deepcopy(wfr_list)
-    srwl.PropagElecField(wfrP_list, opBL, None, 1)
+    for wfrP in wfrP_list:
+        srwl.PropagElecField(wfrP, opBL, None, 1)
     print('done in', round(time.time() - t, 3), 's')
 
     wfrP_base = None
     for wfrP in wfrP_list:
+        wfrP = sum_wavefronts(wfrP)
         if wfrP_base is None:
             wfrP_base = wfrP
         else:

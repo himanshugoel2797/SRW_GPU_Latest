@@ -618,6 +618,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropFromWaist(srTSRWRadStructAccessD
 	FFT2DInfo.yStart = pRadAccessData->zStart;
 	FFT2DInfo.Nx = pRadAccessData->nx;
 	FFT2DInfo.Ny = pRadAccessData->nz;
+	FFT2DInfo.howMany = pRadAccessData->nWfr;
 	FFT2DInfo.Dir = 1;
 	FFT2DInfo.UseGivenStartTrValues = 0;
 

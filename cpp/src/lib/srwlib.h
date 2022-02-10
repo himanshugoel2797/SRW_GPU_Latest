@@ -808,16 +808,6 @@ EXP int CALL srwlSetRepresElecField(SRWLWfr* pWfr, char repr);
 EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt, int nInt=0, char** arID=0, SRWLRadMesh* arIM=0, char** arI=0, gpuUsageArg_t *pGpuUsage=0); //OC15082018
 //EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt);
 
-/**
- * "Propagates" Electric Field Wavefront through Optical Elements and free spaces
- * @param [in, out] pWfr pointer to pre-calculated Wavefront structure
- * @param [in] nWfr number of wavefronts in batch
- * @param [in] pOpt pointer to container of optical elements the propagation should be done through
- * @return	integer error (>0) or warnig (<0) code
- * @see ...
- */
-EXP int CALL srwlPropagElecFieldBatched(SRWLWfr* pWfr, int nWfr, SRWLOptC* pOpt, int nInt = 0, char** arID = 0, SRWLRadMesh* arIM = 0, char** arI = 0, gpuUsageArg_t* pGpuUsage = 0); //OC15082018
-
 /** TEST
  * "Propagates" multple Electric Field Wavefronts from different electrons through Optical Elements and free spaces
  * @param [in, out] pWfr0 pointer to pre-calculated Wavefront structure from an average electron

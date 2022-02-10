@@ -2,7 +2,23 @@ PropagateRadiationGuided:
  propAutoResizeBefore
  propAutoResizeAfter
  propAllowUnderSamp
- RadResizeGen
+ RadResizeGen (RadShouldBeChanged = true, CenterIsOffset = 0, RadResizeStruct.pxm = 1;pxd=55;pzm=1;pzd=55, TreatPolarizSepar=0, (pxmIn*pxdIn*pzmIn*pzdIn >= 1.)=true, NewSRWRadStructAccessData.BaseRadWasEmulated=false, )
+  ExtraMemSizeForResize
+  CheckMemoryAvailable
+  NewSRWRadStructAccessData.ModifyWfrNeNxNz
+  RadResizeCore (OnlyMakeLargerRange = false, (!RadResizeStruct.doNotTreatSpherTerm()) && WaveFrontTermCanBeTreated(OldRadAccessData)=true, ((izStOld != izStOldPrev) || (ixStOld != ixStOldPrev)) = true, TreatPolCompX = true, UseLowOrderInterp_PolCompX = false, TreatPolCompZ = true, UseLowOrderInterp_PolCompZ = false)
+    TreatStronglyOscillatingTerm
+    GetCellDataForInterpol
+    SetupCellDataI
+    CheckForLowOrderInterp
+    SetupInterpolAux02
+    InterpolF
+    InterpolFI
+    ImproveReAndIm
+    InterpolF_LowOrder
+    InterpolFI_LowOrder
+
+
 
  PropagateRadiation
   CheckAndSubtractPhaseTermsLin
@@ -54,3 +70,5 @@ PropagateRadiationGuided:
     Propagate4x4PropMatr
      GenAuxPropagate4x4PropMatr
  RadResizeGen
+
+ 60500000

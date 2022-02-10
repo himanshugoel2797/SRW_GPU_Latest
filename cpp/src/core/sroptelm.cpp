@@ -160,68 +160,72 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 
 	srTEFieldPtrs EFieldPtrs;
 	srTEXZ EXZ;
-	EXZ.z = pRadAccessData->zStart;
-	//long izPerZ = 0;
-	//long iTotTest = 0; //OCTEST
-	long long izPerZ = 0;
-	//long long iTotTest = 0; //OCTEST
 
-	//int result = 0;
-	for(int iz=0; iz<pRadAccessData->nz; iz++)
+	for (int iwfr = 0; iwfr < pRadAccessData->nWfr; iwfr++)
 	{
-		//if(result = srYield.Check()) return result;
+		EXZ.z = pRadAccessData->zStart;
+		//long izPerZ = 0;
+		//long iTotTest = 0; //OCTEST
+		long long izPerZ = 0;
+		//long long iTotTest = 0; //OCTEST
 
-		float *pEx_StartForX = pEx0 + izPerZ;
-		float *pEz_StartForX = pEz0 + izPerZ;
-		EXZ.x = pRadAccessData->xStart;
-		//long ixPerX = 0;
-		long long ixPerX = 0;
-
-		for(int ix=0; ix<pRadAccessData->nx; ix++)
+		//int result = 0;
+		for (int iz = 0; iz < pRadAccessData->nz; iz++)
 		{
-			float *pEx_StartForE = pEx_StartForX + ixPerX;
-			float *pEz_StartForE = pEz_StartForX + ixPerX;
-			EXZ.e = pRadAccessData->eStart;
-			//long iePerE = 0;
-			long long iePerE = 0;
+			//if(result = srYield.Check()) return result;
 
-			for(int ie=0; ie<pRadAccessData->ne; ie++)
+			float* pEx_StartForX = pEx0 + izPerZ;
+			float* pEz_StartForX = pEz0 + izPerZ;
+			EXZ.x = pRadAccessData->xStart;
+			//long ixPerX = 0;
+			long long ixPerX = 0;
+
+			for (int ix = 0; ix < pRadAccessData->nx; ix++)
 			{
-				if(pEx0 != 0)
-				{
-					EFieldPtrs.pExRe = pEx_StartForE + iePerE;
-					EFieldPtrs.pExIm = EFieldPtrs.pExRe + 1;
-				}
-				else
-				{
-					EFieldPtrs.pExRe = 0;
-					EFieldPtrs.pExIm = 0;
-				}
-				if(pEz0 != 0)
-				{
-					EFieldPtrs.pEzRe = pEz_StartForE + iePerE;
-					EFieldPtrs.pEzIm = EFieldPtrs.pEzRe + 1;
-				}
-				else
-				{
-					EFieldPtrs.pEzRe = 0;
-					EFieldPtrs.pEzIm = 0;
-				}
+				float* pEx_StartForE = pEx_StartForX + ixPerX;
+				float* pEz_StartForE = pEz_StartForX + ixPerX;
+				EXZ.e = pRadAccessData->eStart;
+				//long iePerE = 0;
+				long long iePerE = 0;
 
-				EXZ.aux_offset = izPerZ + ixPerX + iePerE;
-				RadPointModifier(EXZ, EFieldPtrs, pBufVars); //OC29082019
-				//RadPointModifier(EXZ, EFieldPtrs);
+				for (int ie = 0; ie < pRadAccessData->ne; ie++)
+				{
+					if (pEx0 != 0)
+					{
+						EFieldPtrs.pExRe = pEx_StartForE + iePerE;
+						EFieldPtrs.pExIm = EFieldPtrs.pExRe + 1;
+					}
+					else
+					{
+						EFieldPtrs.pExRe = 0;
+						EFieldPtrs.pExIm = 0;
+					}
+					if (pEz0 != 0)
+					{
+						EFieldPtrs.pEzRe = pEz_StartForE + iePerE;
+						EFieldPtrs.pEzIm = EFieldPtrs.pEzRe + 1;
+					}
+					else
+					{
+						EFieldPtrs.pEzRe = 0;
+						EFieldPtrs.pEzIm = 0;
+					}
 
-				//iTotTest++; //OCTEST
+					EXZ.aux_offset = izPerZ + ixPerX + iePerE;
+					RadPointModifier(EXZ, EFieldPtrs, pBufVars); //OC29082019
+					//RadPointModifier(EXZ, EFieldPtrs);
 
-				iePerE += 2;
-				EXZ.e += pRadAccessData->eStep;
+					//iTotTest++; //OCTEST
+
+					iePerE += 2;
+					EXZ.e += pRadAccessData->eStep;
+				}
+				ixPerX += PerX;
+				EXZ.x += pRadAccessData->xStep;
 			}
-			ixPerX += PerX;
-			EXZ.x += pRadAccessData->xStep;
+			izPerZ += PerZ;
+			EXZ.z += pRadAccessData->zStep;
 		}
-		izPerZ += PerZ;
-		EXZ.z += pRadAccessData->zStep;
 	}
 
 #else //OC28102018 (does this really need to be parallelized for OpenMP?)
@@ -804,13 +808,14 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 	FFT2DInfo.yStart = pRadAccessData->zStart;
 	FFT2DInfo.Nx = pRadAccessData->nx;
 	FFT2DInfo.Ny = pRadAccessData->nz;
+	FFT2DInfo.howMany = pRadAccessData->nWfr;
 	FFT2DInfo.UseGivenStartTrValues = 0;
 	CGenMathFFT2D FFT2D;
 	FFT2D.SetupLimitsTr(FFT2DInfo);
 
 	CGenMathFFT1DInfo FFT1DInfo;
 	FFT1DInfo.Dir = 1;
-	FFT1DInfo.HowMany = 2;
+	FFT1DInfo.HowMany = 2 * pRadAccessData->nWfr;
 	FFT1DInfo.UseGivenStartTrValue = 0;
 
 	if(xWfrCorrNeeded || zWfrCorrNeeded)
@@ -820,22 +825,24 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 
 		long TwoNx = pRadAccessData->nx << 1;
 		long TwoNz = pRadAccessData->nz << 1;
+		long PerWfr = pRadAccessData->nx * pRadAccessData->nz * (pRadAccessData->ne << 1);
+		long nWfr = pRadAccessData->nWfr;
 
 		if(dxSt != 0.)
 		{
 			DataPtrsForWfrEdgeCorr.ExpArrXSt = new float[TwoNx];
 			if(DataPtrsForWfrEdgeCorr.ExpArrXSt == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrXStEx = new float[TwoNz << 1];
+			DataPtrsForWfrEdgeCorr.FFTArrXStEx = new float[(TwoNz << 1) * nWfr];
 			if(DataPtrsForWfrEdgeCorr.FFTArrXStEx == 0) return MEMORY_ALLOCATION_FAILURE;
-			DataPtrsForWfrEdgeCorr.FFTArrXStEz = DataPtrsForWfrEdgeCorr.FFTArrXStEx + TwoNz;
+			DataPtrsForWfrEdgeCorr.FFTArrXStEz = DataPtrsForWfrEdgeCorr.FFTArrXStEx + TwoNz * nWfr;
 			DataPtrsForWfrEdgeCorr.dxSt = dxSt;
 
 			long jxSt = ixWfrMinLower + 1;
 			double xjSt = pRadAccessData->xStart + jxSt*pRadAccessData->xStep;
 			SetupExpCorrArray(DataPtrsForWfrEdgeCorr.ExpArrXSt, pRadAccessData->nx, xjSt, FFT2DInfo.xStartTr, FFT2DInfo.xStepTr);
-
-			SetupRadXorZSectFromSliceConstE(pDataEx, pDataEz, pRadAccessData->nx, pRadAccessData->nz, 'z', jxSt, DataPtrsForWfrEdgeCorr.FFTArrXStEx, DataPtrsForWfrEdgeCorr.FFTArrXStEz);
+			for (long iWfr = 0; iWfr < nWfr; iWfr++)
+				SetupRadXorZSectFromSliceConstE(pDataEx + PerWfr * iWfr, pDataEz + PerWfr * iWfr, pRadAccessData->nx, pRadAccessData->nz, 'z', jxSt, DataPtrsForWfrEdgeCorr.FFTArrXStEx + TwoNz * iWfr, DataPtrsForWfrEdgeCorr.FFTArrXStEz + TwoNz * iWfr);
 
 			if(dzSt != 0.)
 			{
@@ -844,6 +851,11 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 				DataPtrsForWfrEdgeCorr.fxStzSt[1] = *(DataPtrsForWfrEdgeCorr.FFTArrXStEx + jzSt2 + 1);
 				DataPtrsForWfrEdgeCorr.fxStzSt[2] = *(DataPtrsForWfrEdgeCorr.FFTArrXStEz + jzSt2);
 				DataPtrsForWfrEdgeCorr.fxStzSt[3] = *(DataPtrsForWfrEdgeCorr.FFTArrXStEz + jzSt2 + 1);
+
+				DataPtrsForWfrEdgeCorr.fxStzSt_[0] = (jzSt2);
+				DataPtrsForWfrEdgeCorr.fxStzSt_[1] = (jzSt2 + 1);
+				DataPtrsForWfrEdgeCorr.fxStzSt_[2] = (jzSt2);
+				DataPtrsForWfrEdgeCorr.fxStzSt_[3] = (jzSt2 + 1);
 			}
 			if(dzFi != 0.)
 			{
@@ -852,6 +864,11 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 				DataPtrsForWfrEdgeCorr.fxStzFi[1] = *(DataPtrsForWfrEdgeCorr.FFTArrXStEx + jzFi2 + 1);
 				DataPtrsForWfrEdgeCorr.fxStzFi[2] = *(DataPtrsForWfrEdgeCorr.FFTArrXStEz + jzFi2);
 				DataPtrsForWfrEdgeCorr.fxStzFi[3] = *(DataPtrsForWfrEdgeCorr.FFTArrXStEz + jzFi2 + 1);
+
+				DataPtrsForWfrEdgeCorr.fxStzFi_[0] = (jzFi2);
+				DataPtrsForWfrEdgeCorr.fxStzFi_[1] = (jzFi2 + 1);
+				DataPtrsForWfrEdgeCorr.fxStzFi_[2] = (jzFi2);
+				DataPtrsForWfrEdgeCorr.fxStzFi_[3] = (jzFi2 + 1);
 			}
 
 			FFT1DInfo.pInData = DataPtrsForWfrEdgeCorr.FFTArrXStEx;
@@ -867,15 +884,16 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 			DataPtrsForWfrEdgeCorr.ExpArrXFi = new float[TwoNx];
 			if(DataPtrsForWfrEdgeCorr.ExpArrXFi == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrXFiEx = new float[TwoNz << 1];
+			DataPtrsForWfrEdgeCorr.FFTArrXFiEx = new float[(TwoNz << 1) * nWfr];
 			if(DataPtrsForWfrEdgeCorr.FFTArrXFiEx == 0) return MEMORY_ALLOCATION_FAILURE;
-			DataPtrsForWfrEdgeCorr.FFTArrXFiEz = DataPtrsForWfrEdgeCorr.FFTArrXFiEx + TwoNz;
+			DataPtrsForWfrEdgeCorr.FFTArrXFiEz = DataPtrsForWfrEdgeCorr.FFTArrXFiEx + TwoNz * nWfr;
 			DataPtrsForWfrEdgeCorr.dxFi = dxFi;
 
 			double xjFi = pRadAccessData->xStart + ixWfrMaxLower*pRadAccessData->xStep;
 			SetupExpCorrArray(DataPtrsForWfrEdgeCorr.ExpArrXFi, pRadAccessData->nx, xjFi, FFT2DInfo.xStartTr, FFT2DInfo.xStepTr);
 
-			SetupRadXorZSectFromSliceConstE(pDataEx, pDataEz, pRadAccessData->nx, pRadAccessData->nz, 'z', ixWfrMaxLower, DataPtrsForWfrEdgeCorr.FFTArrXFiEx, DataPtrsForWfrEdgeCorr.FFTArrXFiEz);
+			for (long iWfr = 0; iWfr < nWfr; iWfr++)
+				SetupRadXorZSectFromSliceConstE(pDataEx + PerWfr * iWfr, pDataEz + PerWfr * iWfr, pRadAccessData->nx, pRadAccessData->nz, 'z', ixWfrMaxLower, DataPtrsForWfrEdgeCorr.FFTArrXFiEx + TwoNz * iWfr, DataPtrsForWfrEdgeCorr.FFTArrXFiEz + TwoNz * iWfr);
 
 			if(dzSt != 0.)
 			{
@@ -884,6 +902,11 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 				DataPtrsForWfrEdgeCorr.fxFizSt[1] = *(DataPtrsForWfrEdgeCorr.FFTArrXFiEx + jzSt2 + 1);
 				DataPtrsForWfrEdgeCorr.fxFizSt[2] = *(DataPtrsForWfrEdgeCorr.FFTArrXFiEz + jzSt2);
 				DataPtrsForWfrEdgeCorr.fxFizSt[3] = *(DataPtrsForWfrEdgeCorr.FFTArrXFiEz + jzSt2 + 1);
+
+				DataPtrsForWfrEdgeCorr.fxFizSt_[0] = (jzSt2);
+				DataPtrsForWfrEdgeCorr.fxFizSt_[1] = (jzSt2 + 1);
+				DataPtrsForWfrEdgeCorr.fxFizSt_[2] = (jzSt2);
+				DataPtrsForWfrEdgeCorr.fxFizSt_[3] = (jzSt2 + 1);
 			}
 			if(dzFi != 0.)
 			{
@@ -892,6 +915,11 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 				DataPtrsForWfrEdgeCorr.fxFizFi[1] = *(DataPtrsForWfrEdgeCorr.FFTArrXFiEx + jzFi2 + 1);
 				DataPtrsForWfrEdgeCorr.fxFizFi[2] = *(DataPtrsForWfrEdgeCorr.FFTArrXFiEz + jzFi2);
 				DataPtrsForWfrEdgeCorr.fxFizFi[3] = *(DataPtrsForWfrEdgeCorr.FFTArrXFiEz + jzFi2 + 1);
+
+				DataPtrsForWfrEdgeCorr.fxFizFi_[0] = (jzFi2);
+				DataPtrsForWfrEdgeCorr.fxFizFi_[1] = (jzFi2 + 1);
+				DataPtrsForWfrEdgeCorr.fxFizFi_[2] = (jzFi2);
+				DataPtrsForWfrEdgeCorr.fxFizFi_[3] = (jzFi2 + 1);
 			}
 
 			FFT1DInfo.pInData = DataPtrsForWfrEdgeCorr.FFTArrXFiEx;
@@ -907,16 +935,17 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 			DataPtrsForWfrEdgeCorr.ExpArrZSt = new float[TwoNz];
 			if(DataPtrsForWfrEdgeCorr.ExpArrZSt == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrZStEx = new float[TwoNx << 1];
+			DataPtrsForWfrEdgeCorr.FFTArrZStEx = new float[(TwoNx << 1) * nWfr];
 			if(DataPtrsForWfrEdgeCorr.FFTArrZStEx == 0) return MEMORY_ALLOCATION_FAILURE;
-			DataPtrsForWfrEdgeCorr.FFTArrZStEz = DataPtrsForWfrEdgeCorr.FFTArrZStEx + TwoNx;
+			DataPtrsForWfrEdgeCorr.FFTArrZStEz = DataPtrsForWfrEdgeCorr.FFTArrZStEx + TwoNx * nWfr;
 			DataPtrsForWfrEdgeCorr.dzSt = dzSt;
 
 			long jzSt = izWfrMinLower + 1;
 			double zjSt = pRadAccessData->zStart + jzSt*pRadAccessData->zStep;
 			SetupExpCorrArray(DataPtrsForWfrEdgeCorr.ExpArrZSt, pRadAccessData->nz, zjSt, FFT2DInfo.yStartTr, FFT2DInfo.yStepTr);
 
-			SetupRadXorZSectFromSliceConstE(pDataEx, pDataEz, pRadAccessData->nx, pRadAccessData->nz, 'x', jzSt, DataPtrsForWfrEdgeCorr.FFTArrZStEx, DataPtrsForWfrEdgeCorr.FFTArrZStEz);
+			for (int iwfr=0; iwfr<nWfr; iwfr++)
+				SetupRadXorZSectFromSliceConstE(pDataEx + iwfr*PerWfr, pDataEz + iwfr*PerWfr, pRadAccessData->nx, pRadAccessData->nz, 'x', jzSt, DataPtrsForWfrEdgeCorr.FFTArrZStEx + TwoNx*iwfr, DataPtrsForWfrEdgeCorr.FFTArrZStEz + TwoNx*iwfr);
 
 			FFT1DInfo.pInData = DataPtrsForWfrEdgeCorr.FFTArrZStEx;
 			FFT1DInfo.pOutData = 0;
@@ -931,15 +960,16 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 			DataPtrsForWfrEdgeCorr.ExpArrZFi = new float[TwoNz];
 			if(DataPtrsForWfrEdgeCorr.ExpArrZFi == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrZFiEx = new float[TwoNx << 1];
+			DataPtrsForWfrEdgeCorr.FFTArrZFiEx = new float[(TwoNx << 1) * nWfr];
 			if(DataPtrsForWfrEdgeCorr.FFTArrZFiEx == 0) return MEMORY_ALLOCATION_FAILURE;
-			DataPtrsForWfrEdgeCorr.FFTArrZFiEz = DataPtrsForWfrEdgeCorr.FFTArrZFiEx + TwoNx;
+			DataPtrsForWfrEdgeCorr.FFTArrZFiEz = DataPtrsForWfrEdgeCorr.FFTArrZFiEx + TwoNx * nWfr;
 			DataPtrsForWfrEdgeCorr.dzFi = dzFi;
 
 			double zjFi = pRadAccessData->zStart + izWfrMaxLower*pRadAccessData->zStep;
 			SetupExpCorrArray(DataPtrsForWfrEdgeCorr.ExpArrZFi, pRadAccessData->nz, zjFi, FFT2DInfo.yStartTr, FFT2DInfo.yStepTr);
 
-			SetupRadXorZSectFromSliceConstE(pDataEx, pDataEz, pRadAccessData->nx, pRadAccessData->nz, 'x', izWfrMaxLower, DataPtrsForWfrEdgeCorr.FFTArrZFiEx, DataPtrsForWfrEdgeCorr.FFTArrZFiEz);
+			for (int iwfr=0; iwfr<nWfr; iwfr++)
+				SetupRadXorZSectFromSliceConstE(pDataEx + iwfr*PerWfr, pDataEz + iwfr*PerWfr, pRadAccessData->nx, pRadAccessData->nz, 'x', izWfrMaxLower, DataPtrsForWfrEdgeCorr.FFTArrZFiEx + TwoNx*iwfr, DataPtrsForWfrEdgeCorr.FFTArrZFiEz + TwoNx*iwfr);
 
 			FFT1DInfo.pInData = DataPtrsForWfrEdgeCorr.FFTArrZFiEx;
 			FFT1DInfo.pOutData = 0;
@@ -1028,132 +1058,151 @@ int srTGenOptElem::SetupWfrEdgeCorrData1D(srTRadSect1D* pRadSect1D, float* pData
 
 void srTGenOptElem::MakeWfrEdgeCorrection(srTSRWRadStructAccessData* pRadAccessData, float* pDataEx, float* pDataEz, srTDataPtrsForWfrEdgeCorr& DataPtrs)
 {
-	float *tEx = pDataEx, *tEz = pDataEz;
 
 	double dxSt_dzSt = DataPtrs.dxSt*DataPtrs.dzSt;
 	double dxSt_dzFi = DataPtrs.dxSt*DataPtrs.dzFi;
 	double dxFi_dzSt = DataPtrs.dxFi*DataPtrs.dzSt;
 	double dxFi_dzFi = DataPtrs.dxFi*DataPtrs.dzFi;
 
-	float fSSExRe = DataPtrs.fxStzSt[0], fSSExIm = DataPtrs.fxStzSt[1], fSSEzRe = DataPtrs.fxStzSt[2], fSSEzIm = DataPtrs.fxStzSt[3];
-	float fFSExRe = DataPtrs.fxFizSt[0], fFSExIm = DataPtrs.fxFizSt[1], fFSEzRe = DataPtrs.fxFizSt[2], fFSEzIm = DataPtrs.fxFizSt[3];
-	float fSFExRe = DataPtrs.fxStzFi[0], fSFExIm = DataPtrs.fxStzFi[1], fSFEzRe = DataPtrs.fxStzFi[2], fSFEzIm = DataPtrs.fxStzFi[3];
-	float fFFExRe = DataPtrs.fxFizFi[0], fFFExIm = DataPtrs.fxFizFi[1], fFFEzRe = DataPtrs.fxFizFi[2], fFFEzIm = DataPtrs.fxFizFi[3];
+	long TwoNz = pRadAccessData->nz << 1;
+	long PerWfr = pRadAccessData->nx * pRadAccessData->nz * (pRadAccessData->ne << 1);
+	for (long iwfr = 0; iwfr < pRadAccessData->nWfr; iwfr++) {
+		
+		float* tEx = pDataEx + iwfr*PerWfr, * tEz = pDataEz + iwfr*PerWfr;
 
-	float bRe, bIm, cRe, cIm;
+#define DATAPTR_CHECK(x, a) ((x >= 0) ? a[x + TwoNz * iwfr] : 0.)
+		float fSSExRe = DATAPTR_CHECK(DataPtrs.fxStzSt_[0], DataPtrs.FFTArrXStEx);
+		float fSSExIm = DATAPTR_CHECK(DataPtrs.fxStzSt_[1], DataPtrs.FFTArrXStEx);
+		float fSSEzRe = DATAPTR_CHECK(DataPtrs.fxStzSt_[2], DataPtrs.FFTArrXStEz);
+		float fSSEzIm = DATAPTR_CHECK(DataPtrs.fxStzSt_[3], DataPtrs.FFTArrXStEz);
+		float fFSExRe = DATAPTR_CHECK(DataPtrs.fxFizSt_[0], DataPtrs.FFTArrXStEx);
+		float fFSExIm = DATAPTR_CHECK(DataPtrs.fxFizSt_[1], DataPtrs.FFTArrXStEx);
+		float fFSEzRe = DATAPTR_CHECK(DataPtrs.fxFizSt_[2], DataPtrs.FFTArrXStEz);
+		float fFSEzIm = DATAPTR_CHECK(DataPtrs.fxFizSt_[3], DataPtrs.FFTArrXStEz);
+		float fSFExRe = DATAPTR_CHECK(DataPtrs.fxStzFi_[0], DataPtrs.FFTArrXFiEx);
+		float fSFExIm = DATAPTR_CHECK(DataPtrs.fxStzFi_[1], DataPtrs.FFTArrXFiEx);
+		float fSFEzRe = DATAPTR_CHECK(DataPtrs.fxStzFi_[2], DataPtrs.FFTArrXFiEz);
+		float fSFEzIm = DATAPTR_CHECK(DataPtrs.fxStzFi_[3], DataPtrs.FFTArrXFiEz);
+		float fFFExRe = DATAPTR_CHECK(DataPtrs.fxFizFi_[0], DataPtrs.FFTArrXFiEx);
+		float fFFExIm = DATAPTR_CHECK(DataPtrs.fxFizFi_[1], DataPtrs.FFTArrXFiEx);
+		float fFFEzRe = DATAPTR_CHECK(DataPtrs.fxFizFi_[2], DataPtrs.FFTArrXFiEz);
+		float fFFEzIm = DATAPTR_CHECK(DataPtrs.fxFizFi_[3], DataPtrs.FFTArrXFiEz);
 
-	for(long iz=0; iz<pRadAccessData->nz; iz++)
-	{
-		//long Two_iz = iz << 1;
-		//long Two_iz_p_1 = Two_iz + 1;
-		long long Two_iz = iz << 1;
-		long long Two_iz_p_1 = Two_iz + 1;
+		float bRe, bIm, cRe, cIm;
 
-		for(long ix=0; ix<pRadAccessData->nx; ix++)
+		for (long iz = 0; iz < pRadAccessData->nz; iz++)
 		{
-			//long Two_ix = ix << 1;
-			//long Two_ix_p_1 = Two_ix + 1;
-			long long Two_ix = ix << 1;
-			long long Two_ix_p_1 = Two_ix + 1;
+			//long Two_iz = iz << 1;
+			//long Two_iz_p_1 = Two_iz + 1;
+			long long Two_iz = iz << 1;
+			long long Two_iz_p_1 = Two_iz + 1;
 
-			float ExRe = *tEx, ExIm = *(tEx+1);
-			float EzRe = *tEz, EzIm = *(tEz+1);
-
-			if(DataPtrs.dxSt != 0.)
+			for (long ix = 0; ix < pRadAccessData->nx; ix++)
 			{
-				float ExpXStRe = DataPtrs.ExpArrXSt[Two_ix], ExpXStIm = DataPtrs.ExpArrXSt[Two_ix_p_1];
+				//long Two_ix = ix << 1;
+				//long Two_ix_p_1 = Two_ix + 1;
+				long long Two_ix = ix << 1;
+				long long Two_ix_p_1 = Two_ix + 1;
 
-				bRe = DataPtrs.FFTArrXStEx[Two_iz]; bIm = DataPtrs.FFTArrXStEx[Two_iz_p_1];
-				ExRe += (float)(DataPtrs.dxSt*(ExpXStRe*bRe - ExpXStIm*bIm));
-				ExIm += (float)(DataPtrs.dxSt*(ExpXStRe*bIm + ExpXStIm*bRe));
+				float ExRe = *tEx, ExIm = *(tEx + 1);
+				float EzRe = *tEz, EzIm = *(tEz + 1);
 
-				bRe = DataPtrs.FFTArrXStEz[Two_iz]; bIm = DataPtrs.FFTArrXStEz[Two_iz_p_1];
-				EzRe += (float)(DataPtrs.dxSt*(ExpXStRe*bRe - ExpXStIm*bIm));
-				EzIm += (float)(DataPtrs.dxSt*(ExpXStRe*bIm + ExpXStIm*bRe));
-
-				if(DataPtrs.dzSt != 0.)
+				if (DataPtrs.dxSt != 0.)
 				{
-					bRe = DataPtrs.ExpArrZSt[Two_iz], bIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
-					cRe = ExpXStRe*bRe - ExpXStIm*bIm; cIm = ExpXStRe*bIm + ExpXStIm*bRe;
+					float ExpXStRe = DataPtrs.ExpArrXSt[Two_ix], ExpXStIm = DataPtrs.ExpArrXSt[Two_ix_p_1];
 
-					ExRe += (float)(dxSt_dzSt*(fSSExRe*cRe - fSSExIm*cIm));
-					ExIm += (float)(dxSt_dzSt*(fSSExRe*cIm + fSSExIm*cRe));
-					EzRe += (float)(dxSt_dzSt*(fSSEzRe*cRe - fSSEzIm*cIm));
-					EzIm += (float)(dxSt_dzSt*(fSSEzRe*cIm + fSSEzIm*cRe));
+					bRe = DataPtrs.FFTArrXStEx[Two_iz + TwoNz * iwfr]; bIm = DataPtrs.FFTArrXStEx[Two_iz_p_1 + TwoNz * iwfr];
+					ExRe += (float)(DataPtrs.dxSt * (ExpXStRe * bRe - ExpXStIm * bIm));
+					ExIm += (float)(DataPtrs.dxSt * (ExpXStRe * bIm + ExpXStIm * bRe));
+
+					bRe = DataPtrs.FFTArrXStEz[Two_iz + TwoNz * iwfr]; bIm = DataPtrs.FFTArrXStEz[Two_iz_p_1 + TwoNz * iwfr];
+					EzRe += (float)(DataPtrs.dxSt * (ExpXStRe * bRe - ExpXStIm * bIm));
+					EzIm += (float)(DataPtrs.dxSt * (ExpXStRe * bIm + ExpXStIm * bRe));
+
+					if (DataPtrs.dzSt != 0.)
+					{
+						bRe = DataPtrs.ExpArrZSt[Two_iz], bIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
+						cRe = ExpXStRe * bRe - ExpXStIm * bIm; cIm = ExpXStRe * bIm + ExpXStIm * bRe;
+
+						ExRe += (float)(dxSt_dzSt * (fSSExRe * cRe - fSSExIm * cIm));
+						ExIm += (float)(dxSt_dzSt * (fSSExRe * cIm + fSSExIm * cRe));
+						EzRe += (float)(dxSt_dzSt * (fSSEzRe * cRe - fSSEzIm * cIm));
+						EzIm += (float)(dxSt_dzSt * (fSSEzRe * cIm + fSSEzIm * cRe));
+					}
+					if (DataPtrs.dzFi != 0.)
+					{
+						bRe = DataPtrs.ExpArrZFi[Two_iz], bIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
+						cRe = ExpXStRe * bRe - ExpXStIm * bIm; cIm = ExpXStRe * bIm + ExpXStIm * bRe;
+
+						ExRe -= (float)(dxSt_dzFi * (fSFExRe * cRe - fSFExIm * cIm));
+						ExIm -= (float)(dxSt_dzFi * (fSFExRe * cIm + fSFExIm * cRe));
+						EzRe -= (float)(dxSt_dzFi * (fSFEzRe * cRe - fSFEzIm * cIm));
+						EzIm -= (float)(dxSt_dzFi * (fSFEzRe * cIm + fSFEzIm * cRe));
+					}
 				}
-				if(DataPtrs.dzFi != 0.)
+				if (DataPtrs.dxFi != 0.)
 				{
-					bRe = DataPtrs.ExpArrZFi[Two_iz], bIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
-					cRe = ExpXStRe*bRe - ExpXStIm*bIm; cIm = ExpXStRe*bIm + ExpXStIm*bRe;
+					float ExpXFiRe = DataPtrs.ExpArrXFi[Two_ix], ExpXFiIm = DataPtrs.ExpArrXFi[Two_ix_p_1];
 
-					ExRe -= (float)(dxSt_dzFi*(fSFExRe*cRe - fSFExIm*cIm));
-					ExIm -= (float)(dxSt_dzFi*(fSFExRe*cIm + fSFExIm*cRe));
-					EzRe -= (float)(dxSt_dzFi*(fSFEzRe*cRe - fSFEzIm*cIm));
-					EzIm -= (float)(dxSt_dzFi*(fSFEzRe*cIm + fSFEzIm*cRe));
+					bRe = DataPtrs.FFTArrXFiEx[Two_iz + TwoNz * iwfr]; bIm = DataPtrs.FFTArrXFiEx[Two_iz_p_1 + TwoNz * iwfr];
+					ExRe -= (float)(DataPtrs.dxFi * (ExpXFiRe * bRe - ExpXFiIm * bIm));
+					ExIm -= (float)(DataPtrs.dxFi * (ExpXFiRe * bIm + ExpXFiIm * bRe));
+
+					bRe = DataPtrs.FFTArrXFiEz[Two_iz + TwoNz * iwfr]; bIm = DataPtrs.FFTArrXFiEz[Two_iz_p_1 + TwoNz * iwfr];
+					EzRe -= (float)(DataPtrs.dxFi * (ExpXFiRe * bRe - ExpXFiIm * bIm));
+					EzIm -= (float)(DataPtrs.dxFi * (ExpXFiRe * bIm + ExpXFiIm * bRe));
+
+					if (DataPtrs.dzSt != 0.)
+					{
+						bRe = DataPtrs.ExpArrZSt[Two_iz], bIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
+						cRe = ExpXFiRe * bRe - ExpXFiIm * bIm; cIm = ExpXFiRe * bIm + ExpXFiIm * bRe;
+
+						ExRe -= (float)(dxFi_dzSt * (fFSExRe * cRe - fFSExIm * cIm));
+						ExIm -= (float)(dxFi_dzSt * (fFSExRe * cIm + fFSExIm * cRe));
+						EzRe -= (float)(dxFi_dzSt * (fFSEzRe * cRe - fFSEzIm * cIm));
+						EzIm -= (float)(dxFi_dzSt * (fFSEzRe * cIm + fFSEzIm * cRe));
+					}
+					if (DataPtrs.dzFi != 0.)
+					{
+						bRe = DataPtrs.ExpArrZFi[Two_iz], bIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
+						cRe = ExpXFiRe * bRe - ExpXFiIm * bIm; cIm = ExpXFiRe * bIm + ExpXFiIm * bRe;
+
+						ExRe += (float)(dxFi_dzFi * (fFFExRe * cRe - fFFExIm * cIm));
+						ExIm += (float)(dxFi_dzFi * (fFFExRe * cIm + fFFExIm * cRe));
+						EzRe += (float)(dxFi_dzFi * (fFFEzRe * cRe - fFFEzIm * cIm));
+						EzIm += (float)(dxFi_dzFi * (fFFEzRe * cIm + fFFEzIm * cRe));
+					}
 				}
-			}
-			if(DataPtrs.dxFi != 0.)
-			{
-				float ExpXFiRe = DataPtrs.ExpArrXFi[Two_ix], ExpXFiIm = DataPtrs.ExpArrXFi[Two_ix_p_1];
-
-				bRe = DataPtrs.FFTArrXFiEx[Two_iz]; bIm = DataPtrs.FFTArrXFiEx[Two_iz_p_1];
-				ExRe -= (float)(DataPtrs.dxFi*(ExpXFiRe*bRe - ExpXFiIm*bIm));
-				ExIm -= (float)(DataPtrs.dxFi*(ExpXFiRe*bIm + ExpXFiIm*bRe));
-
-				bRe = DataPtrs.FFTArrXFiEz[Two_iz]; bIm = DataPtrs.FFTArrXFiEz[Two_iz_p_1];
-				EzRe -= (float)(DataPtrs.dxFi*(ExpXFiRe*bRe - ExpXFiIm*bIm));
-				EzIm -= (float)(DataPtrs.dxFi*(ExpXFiRe*bIm + ExpXFiIm*bRe));
-
-				if(DataPtrs.dzSt != 0.)
+				if (DataPtrs.dzSt != 0.)
 				{
-					bRe = DataPtrs.ExpArrZSt[Two_iz], bIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
-					cRe = ExpXFiRe*bRe - ExpXFiIm*bIm; cIm = ExpXFiRe*bIm + ExpXFiIm*bRe;
+					float ExpZStRe = DataPtrs.ExpArrZSt[Two_iz], ExpZStIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
 
-					ExRe -= (float)(dxFi_dzSt*(fFSExRe*cRe - fFSExIm*cIm));
-					ExIm -= (float)(dxFi_dzSt*(fFSExRe*cIm + fFSExIm*cRe));
-					EzRe -= (float)(dxFi_dzSt*(fFSEzRe*cRe - fFSEzIm*cIm));
-					EzIm -= (float)(dxFi_dzSt*(fFSEzRe*cIm + fFSEzIm*cRe));
+					bRe = DataPtrs.FFTArrZStEx[Two_ix + TwoNz * iwfr]; bIm = DataPtrs.FFTArrZStEx[Two_ix_p_1 + TwoNz * iwfr];
+					ExRe += (float)(DataPtrs.dzSt * (ExpZStRe * bRe - ExpZStIm * bIm));
+					ExIm += (float)(DataPtrs.dzSt * (ExpZStRe * bIm + ExpZStIm * bRe));
+
+					bRe = DataPtrs.FFTArrZStEz[Two_ix + TwoNz * iwfr]; bIm = DataPtrs.FFTArrZStEz[Two_ix_p_1 + TwoNz * iwfr];
+					EzRe += (float)(DataPtrs.dzSt * (ExpZStRe * bRe - ExpZStIm * bIm));
+					EzIm += (float)(DataPtrs.dzSt * (ExpZStRe * bIm + ExpZStIm * bRe));
 				}
-				if(DataPtrs.dzFi != 0.)
+				if (DataPtrs.dzFi != 0.)
 				{
-					bRe = DataPtrs.ExpArrZFi[Two_iz], bIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
-					cRe = ExpXFiRe*bRe - ExpXFiIm*bIm; cIm = ExpXFiRe*bIm + ExpXFiIm*bRe;
+					float ExpZFiRe = DataPtrs.ExpArrZFi[Two_iz], ExpZFiIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
 
-					ExRe += (float)(dxFi_dzFi*(fFFExRe*cRe - fFFExIm*cIm));
-					ExIm += (float)(dxFi_dzFi*(fFFExRe*cIm + fFFExIm*cRe));
-					EzRe += (float)(dxFi_dzFi*(fFFEzRe*cRe - fFFEzIm*cIm));
-					EzIm += (float)(dxFi_dzFi*(fFFEzRe*cIm + fFFEzIm*cRe));
+					bRe = DataPtrs.FFTArrZFiEx[Two_ix + TwoNz * iwfr]; bIm = DataPtrs.FFTArrZFiEx[Two_ix_p_1 + TwoNz * iwfr];
+					ExRe -= (float)(DataPtrs.dzFi * (ExpZFiRe * bRe - ExpZFiIm * bIm));
+					ExIm -= (float)(DataPtrs.dzFi * (ExpZFiRe * bIm + ExpZFiIm * bRe));
+
+					bRe = DataPtrs.FFTArrZFiEz[Two_ix + TwoNz * iwfr]; bIm = DataPtrs.FFTArrZFiEz[Two_ix_p_1 + TwoNz * iwfr];
+					EzRe -= (float)(DataPtrs.dzFi * (ExpZFiRe * bRe - ExpZFiIm * bIm));
+					EzIm -= (float)(DataPtrs.dzFi * (ExpZFiRe * bIm + ExpZFiIm * bRe));
 				}
+
+				*tEx = ExRe; *(tEx + 1) = ExIm;
+				*tEz = EzRe; *(tEz + 1) = EzIm;
+
+				tEx += 2; tEz += 2;
 			}
-			if(DataPtrs.dzSt != 0.)
-			{
-				float ExpZStRe = DataPtrs.ExpArrZSt[Two_iz], ExpZStIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
-
-				bRe = DataPtrs.FFTArrZStEx[Two_ix]; bIm = DataPtrs.FFTArrZStEx[Two_ix_p_1];
-				ExRe += (float)(DataPtrs.dzSt*(ExpZStRe*bRe - ExpZStIm*bIm));
-				ExIm += (float)(DataPtrs.dzSt*(ExpZStRe*bIm + ExpZStIm*bRe));
-
-				bRe = DataPtrs.FFTArrZStEz[Two_ix]; bIm = DataPtrs.FFTArrZStEz[Two_ix_p_1];
-				EzRe += (float)(DataPtrs.dzSt*(ExpZStRe*bRe - ExpZStIm*bIm));
-				EzIm += (float)(DataPtrs.dzSt*(ExpZStRe*bIm + ExpZStIm*bRe));
-			}
-			if(DataPtrs.dzFi != 0.)
-			{
-				float ExpZFiRe = DataPtrs.ExpArrZFi[Two_iz], ExpZFiIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
-
-				bRe = DataPtrs.FFTArrZFiEx[Two_ix]; bIm = DataPtrs.FFTArrZFiEx[Two_ix_p_1];
-				ExRe -= (float)(DataPtrs.dzFi*(ExpZFiRe*bRe - ExpZFiIm*bIm));
-				ExIm -= (float)(DataPtrs.dzFi*(ExpZFiRe*bIm + ExpZFiIm*bRe));
-
-				bRe = DataPtrs.FFTArrZFiEz[Two_ix]; bIm = DataPtrs.FFTArrZFiEz[Two_ix_p_1];
-				EzRe -= (float)(DataPtrs.dzFi*(ExpZFiRe*bRe - ExpZFiIm*bIm));
-				EzIm -= (float)(DataPtrs.dzFi*(ExpZFiRe*bIm + ExpZFiIm*bRe));
-			}
-
-			*tEx = ExRe; *(tEx+1) = ExIm;
-			*tEz = EzRe; *(tEz+1) = EzIm;
-
-			tEx += 2; tEz += 2;
 		}
 	}
 }
@@ -1235,6 +1284,7 @@ int srTGenOptElem::SetRadRepres(srTSRWRadStructAccessData* pRadAccessData, char 
 	FFT2DInfo.yStart = pRadAccessData->zStart;
 	FFT2DInfo.Nx = pRadAccessData->nx;
 	FFT2DInfo.Ny = pRadAccessData->nz;
+	FFT2DInfo.howMany = pRadAccessData->nWfr;
 	FFT2DInfo.Dir = DirFFT;
 	FFT2DInfo.UseGivenStartTrValues = 0;
 //New
@@ -2438,15 +2488,15 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 
 	//long TotAmOfOldData = (SRWRadStructAccessData.ne*SRWRadStructAccessData.nx*SRWRadStructAccessData.nz) << 1;
 	//long TotAmOfNewData = (NewSRWRadStructAccessData.ne*NewSRWRadStructAccessData.nx*NewSRWRadStructAccessData.nz) << 1;
-	long long TotAmOfOldData = (((long long)SRWRadStructAccessData.ne)*((long long)SRWRadStructAccessData.nx)*((long long)SRWRadStructAccessData.nz)) << 1;
-	long long TotAmOfNewData = (((long long)NewSRWRadStructAccessData.ne)*((long long)NewSRWRadStructAccessData.nx)*((long long)NewSRWRadStructAccessData.nz)) << 1;
+	long long TotAmOfOldData = (((long long)SRWRadStructAccessData.nWfr)*((long long)SRWRadStructAccessData.ne)*((long long)SRWRadStructAccessData.nx)*((long long)SRWRadStructAccessData.nz)) << 1;
+	long long TotAmOfNewData = (((long long)NewSRWRadStructAccessData.nWfr)*((long long)NewSRWRadStructAccessData.ne)*((long long)NewSRWRadStructAccessData.nx)*((long long)NewSRWRadStructAccessData.nz)) << 1;
 
 	//char TreatPolarizSepar = 0;
 	char TreatPolarizSepar = (!ExIsOK) || (!EzIsOK); //OC13112011
 	if(!TreatPolarizSepar)
 	{
 		long nxCurRad = SRWRadStructAccessData.nx, nzCurRad = SRWRadStructAccessData.nz;
-		double ExtraMemSize = ExtraMemSizeForResize(nxCurRad, nzCurRad, pxmIn, pxdIn, pzmIn, pzdIn, 1);
+		double ExtraMemSize = ExtraMemSizeForResize(nxCurRad, nzCurRad, pxmIn, pxdIn, pzmIn, pzdIn, 1) * SRWRadStructAccessData.nWfr;
 		double MemoryAvail = CheckMemoryAvailable();
 
 		double SecurityMemResizeCoef = 0.95; //to tune
@@ -2880,11 +2930,13 @@ int srTGenOptElem::RadResizeCore(srTSRWRadStructAccessData& OldRadAccessData, sr
 	//long PerZ_New = PerX_New*NewRadAccessData.nx;
 	long long PerX_New = NewRadAccessData.ne << 1;
 	long long PerZ_New = PerX_New*NewRadAccessData.nx;
+	long long PerWfr_New = PerZ_New*NewRadAccessData.nz;
 
 	//long PerX_Old = PerX_New;
 	//long PerZ_Old = PerX_Old*OldRadAccessData.nx;
 	long long PerX_Old = PerX_New;
 	long long PerZ_Old = PerX_Old*OldRadAccessData.nx;
+	long long PerWfr_Old = PerZ_Old*OldRadAccessData.nz;
 
 	//OC31102018: moved by SY at OpenMP parallelization
 	//float BufF[4], BufFI[2];
@@ -2950,9 +3002,9 @@ int srTGenOptElem::RadResizeCore(srTSRWRadStructAccessData& OldRadAccessData, sr
 			{
 				//long ixPerX_New_p_Two_ie = ix*PerX_New + Two_ie;
 				long long ixPerX_New_p_Two_ie = ix*PerX_New + Two_ie;
-				float *pEX_New = 0, *pEZ_New = 0;
-				if(TreatPolCompX) pEX_New = pEX_StartForX_New + ixPerX_New_p_Two_ie;
-				if(TreatPolCompZ) pEZ_New = pEZ_StartForX_New + ixPerX_New_p_Two_ie;
+				float *pEX_StartForWfr_New = 0, *pEZ_StartForWfr_New = 0;
+				if(TreatPolCompX) pEX_StartForWfr_New = pEX_StartForX_New + ixPerX_New_p_Two_ie;
+				if(TreatPolCompZ) pEZ_StartForWfr_New = pEZ_StartForX_New + ixPerX_New_p_Two_ie;
 
 				double xAbs = NewRadAccessData.xStart + ix*NewRadAccessData.xStep;
 
@@ -2975,98 +3027,108 @@ int srTGenOptElem::RadResizeCore(srTSRWRadStructAccessData& OldRadAccessData, sr
 
 				int ixcOld_mi_ixStOld = ixcOld - ixStOld;
 
-				if((izStOld != izStOldPrev) || (ixStOld != ixStOldPrev))
+				for (int iwfr = 0; iwfr < OldRadAccessData.nWfr; iwfr++)
 				{
-					UseLowOrderInterp_PolCompX = 0; UseLowOrderInterp_PolCompZ = 0;
+					long long iwfrPerWfr_New_p_Two_ie = iwfr*PerWfr_New;
+					float* pEX_New = 0, * pEZ_New = 0;
+					if (TreatPolCompX) pEX_New = pEX_StartForWfr_New + iwfrPerWfr_New_p_Two_ie;
+					if (TreatPolCompZ) pEZ_New = pEZ_StartForWfr_New + iwfrPerWfr_New_p_Two_ie;
 
-					//long TotOffsetOld = izStOld*PerZ_Old + ixStOld*PerX_Old + Two_ie;
-					long long TotOffsetOld = izStOld*PerZ_Old + ixStOld*PerX_Old + Two_ie;
-
-					if(TreatPolCompX)
+					if ((izStOld != izStOldPrev) || (ixStOld != ixStOldPrev))
 					{
-						float* pExSt_Old = OldRadAccessData.pBaseRadX + TotOffsetOld;
-						GetCellDataForInterpol(pExSt_Old, PerX_Old, PerZ_Old, AuxF);
+						UseLowOrderInterp_PolCompX = 0; UseLowOrderInterp_PolCompZ = 0;
 
-						SetupCellDataI(AuxF, AuxFI);
-						UseLowOrderInterp_PolCompX = CheckForLowOrderInterp(AuxF, AuxFI, ixcOld_mi_ixStOld, izcOld_mi_izStOld, &InterpolAux01, InterpolAux02, InterpolAux02I);
+						//long TotOffsetOld = izStOld*PerZ_Old + ixStOld*PerX_Old + Two_ie;
+						long long TotOffsetOld = iwfr * PerWfr_Old + izStOld * PerZ_Old + ixStOld * PerX_Old + Two_ie;
 
-						if(!UseLowOrderInterp_PolCompX)
+						if (TreatPolCompX)
 						{
-							for(int i=0; i<2; i++) 
+							float* pExSt_Old = OldRadAccessData.pBaseRadX + TotOffsetOld;
+							GetCellDataForInterpol(pExSt_Old, PerX_Old, PerZ_Old, AuxF);
+
+							SetupCellDataI(AuxF, AuxFI);
+							UseLowOrderInterp_PolCompX = CheckForLowOrderInterp(AuxF, AuxFI, ixcOld_mi_ixStOld, izcOld_mi_izStOld, &InterpolAux01, InterpolAux02, InterpolAux02I);
+
+							if (!UseLowOrderInterp_PolCompX)
 							{
-								SetupInterpolAux02(AuxF + i, &InterpolAux01, InterpolAux02 + i);
+								for (int i = 0; i < 2; i++)
+								{
+									SetupInterpolAux02(AuxF + i, &InterpolAux01, InterpolAux02 + i);
+								}
+								SetupInterpolAux02(AuxFI, &InterpolAux01, InterpolAux02I);
 							}
-							SetupInterpolAux02(AuxFI, &InterpolAux01, InterpolAux02I);
+						}
+						if (TreatPolCompZ)
+						{
+							float* pEzSt_Old = OldRadAccessData.pBaseRadZ + TotOffsetOld;
+							GetCellDataForInterpol(pEzSt_Old, PerX_Old, PerZ_Old, AuxF + 2);
+
+							SetupCellDataI(AuxF + 2, AuxFI + 1);
+							UseLowOrderInterp_PolCompZ = CheckForLowOrderInterp(AuxF + 2, AuxFI + 1, ixcOld_mi_ixStOld, izcOld_mi_izStOld, &InterpolAux01, InterpolAux02 + 2, InterpolAux02I + 1);
+
+							if (!UseLowOrderInterp_PolCompZ)
+							{
+								for (int i = 0; i < 2; i++)
+								{
+									SetupInterpolAux02(AuxF + 2 + i, &InterpolAux01, InterpolAux02 + 2 + i);
+								}
+								SetupInterpolAux02(AuxFI + 1, &InterpolAux01, InterpolAux02I + 1);
+							}
 						}
 					}
-					if(TreatPolCompZ)
+
+					if (TreatPolCompX)
 					{
-						float* pEzSt_Old = OldRadAccessData.pBaseRadZ + TotOffsetOld;
-						GetCellDataForInterpol(pEzSt_Old, PerX_Old, PerZ_Old, AuxF+2);
-
-						SetupCellDataI(AuxF+2, AuxFI+1);
-						UseLowOrderInterp_PolCompZ = CheckForLowOrderInterp(AuxF+2, AuxFI+1, ixcOld_mi_ixStOld, izcOld_mi_izStOld, &InterpolAux01, InterpolAux02+2, InterpolAux02I+1);
-
-						if(!UseLowOrderInterp_PolCompZ)
+						if (UseLowOrderInterp_PolCompX)
 						{
-							for(int i=0; i<2; i++) 
-							{
-								SetupInterpolAux02(AuxF+2+i, &InterpolAux01, InterpolAux02+2+i);
-							}
-							SetupInterpolAux02(AuxFI+1, &InterpolAux01, InterpolAux02I+1);
+							InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 0);
+							InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 0);
 						}
-					}
+						else
+						{
+							InterpolF(InterpolAux02, xRel, zRel, BufF, 0);
+							InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 0);
+						}
 
+						(*BufFI) *= AuxFI->fNorm;
+						ImproveReAndIm(BufF, BufFI);
+
+						if (FieldShouldBeZeroed)
+						{
+							*BufF = 0.; *(BufF + 1) = 0.;
+						}
+
+						*pEX_New = *BufF;
+						*(pEX_New + 1) = *(BufF + 1);
+					}
+					if (TreatPolCompZ)
+					{
+						if (UseLowOrderInterp_PolCompZ)
+						{
+							InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 2);
+							InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 1);
+						}
+						else
+						{
+							InterpolF(InterpolAux02, xRel, zRel, BufF, 2);
+							InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 1);
+						}
+
+						(*(BufFI + 1)) *= (AuxFI + 1)->fNorm;
+						ImproveReAndIm(BufF + 2, BufFI + 1);
+
+						if (FieldShouldBeZeroed)
+						{
+							*(BufF + 2) = 0.; *(BufF + 3) = 0.;
+						}
+
+						*pEZ_New = *(BufF + 2);
+						*(pEZ_New + 1) = *(BufF + 3);
+					}
+				}
+				if ((izStOld != izStOldPrev) || (ixStOld != ixStOldPrev)) 
+				{
 					ixStOldPrev = ixStOld; izStOldPrev = izStOld;
-				}
-
-				if(TreatPolCompX)
-				{
-					if(UseLowOrderInterp_PolCompX) 
-					{
-						InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 0);
-						InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 0);
-					}
-					else
-					{
-						InterpolF(InterpolAux02, xRel, zRel, BufF, 0);
-						InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 0);
-					}
-
-					(*BufFI) *= AuxFI->fNorm;
-					ImproveReAndIm(BufF, BufFI);
-
-					if(FieldShouldBeZeroed)
-					{
-						*BufF = 0.; *(BufF+1) = 0.;
-					}
-
-					*pEX_New = *BufF;
-					*(pEX_New+1) = *(BufF+1);
-				}
-				if(TreatPolCompZ)
-				{
-					if(UseLowOrderInterp_PolCompZ) 
-					{
-						InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 2);
-						InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 1);
-					}
-					else
-					{
-						InterpolF(InterpolAux02, xRel, zRel, BufF, 2);
-						InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 1);
-					}
-
-					(*(BufFI+1)) *= (AuxFI+1)->fNorm;
-					ImproveReAndIm(BufF+2, BufFI+1);
-
-					if(FieldShouldBeZeroed)
-					{
-						*(BufF+2) = 0.; *(BufF+3) = 0.;
-					}
-
-					*pEZ_New = *(BufF+2);
-					*(pEZ_New+1) = *(BufF+3);
 				}
 			}
 		}
@@ -4614,6 +4676,7 @@ void srTGenOptElem::TreatStronglyOscillatingTerm(srTSRWRadStructAccessData& RadA
 	//long PerZ = PerX*RadAccessData.nx;
 	long long PerX = RadAccessData.ne << 1;
 	long long PerZ = PerX*RadAccessData.nx;
+	long long PerWfr = PerZ*RadAccessData.nz;
 
 	//srTFFT2D AuxFFT2D;
 	int ieStart=0, ieBefEnd=RadAccessData.ne;
@@ -4690,23 +4753,30 @@ void srTGenOptElem::TreatStronglyOscillatingTerm(srTSRWRadStructAccessData& RadA
 				//AuxFFT2D.CosAndSin(Phase, CosPh, SinPh);
 				CosAndSin(Phase, CosPh, SinPh);
 
-				if(TreatPolCompX)
-				{
-					float *pExRe = pEX_StartForX + ixPerX_p_Two_ie;
-					float *pExIm = pExRe + 1;
-					double ExReNew = (*pExRe)*CosPh - (*pExIm)*SinPh;
-					double ExImNew = (*pExRe)*SinPh + (*pExIm)*CosPh;
-					*pExRe = (float)ExReNew; *pExIm = (float)ExImNew;
-				}
-				if(TreatPolCompZ)
-				{
-					float *pEzRe = pEZ_StartForX + ixPerX_p_Two_ie;
-					float *pEzIm = pEzRe + 1;
-					double EzReNew = (*pEzRe)*CosPh - (*pEzIm)*SinPh;
-					double EzImNew = (*pEzRe)*SinPh + (*pEzIm)*CosPh;
-					*pEzRe = (float)EzReNew; *pEzIm = (float)EzImNew;
-				}
+				float* pEX_StartForWfr = pEX_StartForX + ixPerX_p_Two_ie;
+				float* pEZ_StartForWfr = pEZ_StartForX + ixPerX_p_Two_ie;
 
+				for (int iwfr = 0; iwfr < RadAccessData.nWfr; iwfr++) 
+				{
+					long long iwfrPerWfr = iwfr*PerWfr;
+
+					if (TreatPolCompX)
+					{
+						float* pExRe = pEX_StartForWfr + iwfrPerWfr;
+						float* pExIm = pExRe + 1;
+						double ExReNew = (*pExRe) * CosPh - (*pExIm) * SinPh;
+						double ExImNew = (*pExRe) * SinPh + (*pExIm) * CosPh;
+						*pExRe = (float)ExReNew; *pExIm = (float)ExImNew;
+					}
+					if (TreatPolCompZ)
+					{
+						float* pEzRe = pEZ_StartForWfr + iwfrPerWfr;
+						float* pEzIm = pEzRe + 1;
+						double EzReNew = (*pEzRe) * CosPh - (*pEzIm) * SinPh;
+						double EzImNew = (*pEzRe) * SinPh + (*pEzIm) * CosPh;
+						*pEzRe = (float)EzReNew; *pEzIm = (float)EzImNew;
+					}
+				}
 				x += RadAccessData.xStep;
 			}
 			z += RadAccessData.zStep;

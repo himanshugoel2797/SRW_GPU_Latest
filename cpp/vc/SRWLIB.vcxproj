@@ -617,7 +617,7 @@
       <TypeLibraryName>.\Debug/SRWLIB.tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(CUDA_PATH)\include;..\src\core;..\src\lib;..\src\ext\genmath;..\src\ext\auxparse;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;__VC__;SRWLIB_STATIC;_GM_WITHOUT_BASE;_CRT_SECURE_NO_WARNINGS;NON_UNIX_STDIO;_FFTW3;_OFFLOAD_GPU;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>

@@ -56,7 +56,7 @@ GsnBm.mx = 0 #Transverse Gauss-Hermite Mode Orders
 GsnBm.my = 0
 
 #***********Initial Wavefront
-wfrs = srwl_uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName))[:10]
+wfrs = srwl_uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName))[:2]
 print('{} coherent modes loaded'.format(len(wfrs)))
 
 #************Defining Samples (lists of 3D objects (spheres))

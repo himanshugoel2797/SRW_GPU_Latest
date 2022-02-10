@@ -139,6 +139,8 @@ long CGenMathFFT::LenGoodNum10000s = 11;
 #ifdef _OFFLOAD_GPU
 long CGenMathFFT1D::PlanLen;
 long CGenMathFFT1D::dPlanLen;
+long CGenMathFFT1D::HowMany;
+long CGenMathFFT1D::dHowMany;
 cufftHandle CGenMathFFT1D::Plan1DFFT_cu;
 cufftHandle CGenMathFFT1D::dPlan1DFFT_cu;
 #endif
@@ -146,8 +148,10 @@ cufftHandle CGenMathFFT1D::dPlan1DFFT_cu;
 #ifdef _OFFLOAD_GPU
 long CGenMathFFT2D::PlanNx;
 long CGenMathFFT2D::PlanNy;
+long CGenMathFFT2D::HowMany;
 long CGenMathFFT2D::dPlanNx;
 long CGenMathFFT2D::dPlanNy;
+long CGenMathFFT2D::dHowMany;
 cufftHandle CGenMathFFT2D::Plan2DFFT_cu;
 cufftHandle CGenMathFFT2D::dPlan2DFFT_cu;
 #endif
@@ -372,17 +376,17 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	{
 		GPU_COND(pGpuUsage, {
 			if (DataToFFT_cu != 0) {
-				TreatShifts((fftwf_complex*)DataToFFT_cu);
+				TreatShifts((fftwf_complex*)DataToFFT_cu, FFT2DInfo.howMany);
 			}
 			else if (dDataToFFT_cu != 0) {
-				TreatShifts((fftw_complex*)dDataToFFT_cu); //OC02022019
+				TreatShifts((fftw_complex*)dDataToFFT_cu, FFT2DInfo.howMany); //OC02022019
 			}
 		})
 		else {
-			if (DataToFFT != 0) TreatShifts(DataToFFT);
+			if (DataToFFT != 0) TreatShifts(DataToFFT, FFT2DInfo.howMany);
 
 #ifdef _FFTW3 //OC27022019
-			else if (dDataToFFT != 0) TreatShifts(dDataToFFT); //OC02022019
+			else if (dDataToFFT != 0) TreatShifts(dDataToFFT, FFT2DInfo.howMany); //OC02022019
 #endif
 		}
 	}
@@ -393,14 +397,16 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			if (DataToFFT_cu != 0)
 			{
 				if (pPrecreatedPlan2DFFT == 0) {
-					if (!(PlanNx == Nx && PlanNy == Ny)) {
+					if (!(PlanNx == Nx && PlanNy == Ny && HowMany == FFT2DInfo.howMany)) {
 						if (Plan2DFFT_cu != NULL)
 							cufftDestroy(Plan2DFFT_cu);
 
 						PlanNx = Nx;
 						PlanNy = Ny;
-						BatchSz = 1;
-						cufftPlan2d(&Plan2DFFT_cu, Nx, Ny, CUFFT_C2C);
+						HowMany = FFT2DInfo.howMany;
+						int plan_shape[2]; plan_shape[0] = Nx; plan_shape[1] = Ny;
+						cufftPlanMany(&Plan2DFFT_cu, 2, plan_shape, NULL, 0, 0, NULL, 0, 0, CUFFT_C2C, FFT2DInfo.howMany);
+						//cufftPlan2d(&Plan2DFFT_cu, Nx, Ny, CUFFT_C2C);
 					}
 				}
 				else Plan2DFFT_cu = *(cufftHandle*)pPrecreatedPlan2DFFT;
@@ -413,14 +419,16 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			else if (dDataToFFT_cu != 0)
 			{
 				if (pdPrecreatedPlan2DFFT == 0) {
-					if (!(dPlanNx == Nx && dPlanNy == Ny)) {
+					if (!(dPlanNx == Nx && dPlanNy == Ny && dHowMany == FFT2DInfo.howMany)) {
 						if (dPlan2DFFT_cu != NULL)
 							cufftDestroy(dPlan2DFFT_cu);
 
 						dPlanNx = Nx;
 						dPlanNy = Ny;
-						dBatchSz = 1;
-						cufftPlan2d(&dPlan2DFFT_cu, Nx, Ny, CUFFT_Z2Z);
+						HowMany = FFT2DInfo.howMany;
+						int plan_shape[2]; plan_shape[0] = Nx; plan_shape[1] = Ny;
+						cufftPlanMany(&Plan2DFFT_cu, 2, plan_shape, 0, 0, 0, 0, 0, 0, CUFFT_Z2Z, FFT2DInfo.howMany);
+						//cufftPlan2d(&dPlan2DFFT_cu, Nx, Ny, CUFFT_Z2Z);
 					}
 				}
 				else dPlan2DFFT_cu = *(cufftHandle*)pdPrecreatedPlan2DFFT;
@@ -435,21 +443,25 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			//SY: adopted for OpenMP
 #if _FFTW3 //OC28012019
 
-			if (DataToFFT != 0)
+			for (long iHowMany = 0; iHowMany < FFT2DInfo.howMany; iHowMany++)
 			{
-				if (pPrecreatedPlan2DFFT == 0) Plan2DFFT = fftwf_plan_dft_2d(Ny, Nx, DataToFFT, DataToFFT, FFTW_FORWARD, FFTW_ESTIMATE);
-				else Plan2DFFT = *pPrecreatedPlan2DFFT;
-				if (Plan2DFFT == 0) return ERROR_IN_FFT;
+				long iFFT = Nx * Ny * iHowMany;
+				if (DataToFFT != 0)
+				{
+					if (pPrecreatedPlan2DFFT == 0) Plan2DFFT = fftwf_plan_dft_2d(Ny, Nx, DataToFFT + iFFT, DataToFFT + iFFT, FFTW_FORWARD, FFTW_ESTIMATE);
+					else Plan2DFFT = *pPrecreatedPlan2DFFT;
+					if (Plan2DFFT == 0) return ERROR_IN_FFT;
 
-				fftwf_execute(Plan2DFFT);
-			}
-			else if (dDataToFFT != 0)
-			{
-				if (pdPrecreatedPlan2DFFT == 0) dPlan2DFFT = fftw_plan_dft_2d(Ny, Nx, dDataToFFT, dDataToFFT, FFTW_FORWARD, FFTW_ESTIMATE);
-				else dPlan2DFFT = *pdPrecreatedPlan2DFFT;
-				if (dPlan2DFFT == 0) return ERROR_IN_FFT;
+					fftwf_execute(Plan2DFFT);
+				}
+				else if (dDataToFFT != 0)
+				{
+					if (pdPrecreatedPlan2DFFT == 0) dPlan2DFFT = fftw_plan_dft_2d(Ny, Nx, dDataToFFT + iFFT, dDataToFFT + iFFT, FFTW_FORWARD, FFTW_ESTIMATE);
+					else dPlan2DFFT = *pdPrecreatedPlan2DFFT;
+					if (dPlan2DFFT == 0) return ERROR_IN_FFT;
 
-				fftw_execute(dPlan2DFFT);
+					fftw_execute(dPlan2DFFT);
+				}
 			}
 
 #else
@@ -475,15 +487,15 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 		else {
 			if (DataToFFT != 0)
 			{
-				RepairSignAfter2DFFT(DataToFFT);
-				RotateDataAfter2DFFT(DataToFFT);
+				RepairSignAfter2DFFT(DataToFFT, FFT2DInfo.howMany);
+				RotateDataAfter2DFFT(DataToFFT, FFT2DInfo.howMany);
 			}
 
 #ifdef _FFTW3 //OC27022019
 			else if (dDataToFFT != 0)
 			{
-				RepairSignAfter2DFFT(dDataToFFT);
-				RotateDataAfter2DFFT(dDataToFFT);
+				RepairSignAfter2DFFT(dDataToFFT, FFT2DInfo.howMany);
+				RotateDataAfter2DFFT(dDataToFFT, FFT2DInfo.howMany);
 			}
 #endif
 		}
@@ -494,14 +506,16 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			if (DataToFFT_cu != 0)
 			{
 				if (pPrecreatedPlan2DFFT == 0) {
-					if (!(PlanNx == Nx && PlanNy == Ny)) {
+					if (!(PlanNx == Nx && PlanNy == Ny && HowMany == FFT2DInfo.howMany)) {
 						if (Plan2DFFT_cu != NULL)
 							cufftDestroy(Plan2DFFT_cu);
 
 						PlanNx = Nx;
 						PlanNy = Ny;
-						BatchSz = 1;
-						cufftPlan2d(&Plan2DFFT_cu, Nx, Ny, CUFFT_C2C);
+						HowMany = FFT2DInfo.howMany;
+						int plan_shape[2]; plan_shape[0] = Nx; plan_shape[1] = Ny;
+						cufftPlanMany(&Plan2DFFT_cu, 2, plan_shape, NULL, 0, 0, NULL, 0, 0, CUFFT_C2C, FFT2DInfo.howMany);
+						//cufftPlan2d(&Plan2DFFT_cu, Nx, Ny, CUFFT_C2C);
 					}
 				}
 				else Plan2DFFT_cu = *(cufftHandle*)pPrecreatedPlan2DFFT;
@@ -515,14 +529,16 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			else if (dDataToFFT_cu != 0)
 			{
 				if (pdPrecreatedPlan2DFFT == 0) {
-					if (!(dPlanNx == Nx && dPlanNy == Ny)) {
+					if (!(dPlanNx == Nx && dPlanNy == Ny && dHowMany == FFT2DInfo.howMany)) {
 						if (dPlan2DFFT_cu != NULL)
 							cufftDestroy(dPlan2DFFT_cu);
 
 						dPlanNx = Nx;
 						dPlanNy = Ny;
-						dBatchSz = 1;
-						cufftPlan2d(&dPlan2DFFT_cu, Nx, Ny, CUFFT_Z2Z);
+						dHowMany = FFT2DInfo.howMany;
+						int plan_shape[2]; plan_shape[0] = Nx; plan_shape[1] = Ny;
+						cufftPlanMany(&Plan2DFFT_cu, 2, plan_shape, NULL, 0, 0, NULL, 0, 0, CUFFT_Z2Z, FFT2DInfo.howMany);
+						//cufftPlan2d(&dPlan2DFFT_cu, Nx, Ny, CUFFT_Z2Z);
 					}
 				}
 				else dPlan2DFFT_cu = *(cufftHandle*)pdPrecreatedPlan2DFFT;
@@ -538,23 +554,27 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			//OC27102018
 			//SY: adopted for OpenMP
 #ifdef _FFTW3 //OC28012019
-			if (DataToFFT != 0)
+			for (long iHowMany = 0; iHowMany < FFT2DInfo.howMany; iHowMany++)
 			{
-				if (pPrecreatedPlan2DFFT == 0) Plan2DFFT = fftwf_plan_dft_2d(Ny, Nx, DataToFFT, DataToFFT, FFTW_BACKWARD, FFTW_ESTIMATE);
-				else Plan2DFFT = *pPrecreatedPlan2DFFT;
-				if (Plan2DFFT == 0) return ERROR_IN_FFT;
-				RotateDataAfter2DFFT(DataToFFT);
-				RepairSignAfter2DFFT(DataToFFT);
-				fftwf_execute(Plan2DFFT);
-			}
-			else if (dDataToFFT != 0)
-			{
-				if (pdPrecreatedPlan2DFFT == 0) dPlan2DFFT = fftw_plan_dft_2d(Ny, Nx, dDataToFFT, dDataToFFT, FFTW_BACKWARD, FFTW_ESTIMATE);
-				else dPlan2DFFT = *pdPrecreatedPlan2DFFT;
-				if (dPlan2DFFT == 0) return ERROR_IN_FFT;
-				RotateDataAfter2DFFT(dDataToFFT);
-				RepairSignAfter2DFFT(dDataToFFT);
-				fftw_execute(dPlan2DFFT);
+				long iFFT = Nx * Ny * iHowMany;
+				if (DataToFFT != 0)
+				{
+					if (pPrecreatedPlan2DFFT == 0) Plan2DFFT = fftwf_plan_dft_2d(Ny, Nx, DataToFFT + iFFT, DataToFFT + iFFT, FFTW_BACKWARD, FFTW_ESTIMATE);
+					else Plan2DFFT = *pPrecreatedPlan2DFFT;
+					if (Plan2DFFT == 0) return ERROR_IN_FFT;
+					RotateDataAfter2DFFT(DataToFFT, FFT2DInfo.howMany);
+					RepairSignAfter2DFFT(DataToFFT, FFT2DInfo.howMany);
+					fftwf_execute(Plan2DFFT);
+				}
+				else if (dDataToFFT != 0)
+				{
+					if (pdPrecreatedPlan2DFFT == 0) dPlan2DFFT = fftw_plan_dft_2d(Ny, Nx, dDataToFFT + iFFT, dDataToFFT + iFFT, FFTW_BACKWARD, FFTW_ESTIMATE);
+					else dPlan2DFFT = *pdPrecreatedPlan2DFFT;
+					if (dPlan2DFFT == 0) return ERROR_IN_FFT;
+					RotateDataAfter2DFFT(dDataToFFT, FFT2DInfo.howMany);
+					RepairSignAfter2DFFT(dDataToFFT, FFT2DInfo.howMany);
+					fftw_execute(dPlan2DFFT);
+				}
 			}
 #else
 			if (pPrecreatedPlan2DFFT == 0) Plan2DFFT = fftw2d_create_plan(Ny, Nx, FFTW_BACKWARD, FFTW_IN_PLACE);
@@ -577,10 +597,10 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			NormalizeDataAfter2DFFT_CUDA((double*)dDataToFFT_cu, Nx, Ny, Mult);
 	})
 	else {
-		if (DataToFFT != 0) NormalizeDataAfter2DFFT(DataToFFT, Mult);
+		if (DataToFFT != 0) NormalizeDataAfter2DFFT(DataToFFT, Mult, FFT2DInfo.howMany);
 
 #ifdef _FFTW3 //OC27022019
-		else if (dDataToFFT != 0) NormalizeDataAfter2DFFT(dDataToFFT, Mult);
+		else if (dDataToFFT != 0) NormalizeDataAfter2DFFT(dDataToFFT, Mult, FFT2DInfo.howMany);
 #endif
 	}
 
@@ -604,17 +624,17 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	{
 		GPU_COND(pGpuUsage, {
 			if (DataToFFT_cu != 0) {
-				TreatShifts((fftwf_complex*)DataToFFT_cu);
+				TreatShifts((fftwf_complex*)DataToFFT_cu, FFT2DInfo.howMany);
 			}
 			else if (dDataToFFT_cu != 0) {
-				TreatShifts((fftw_complex*)dDataToFFT_cu); //OC02022019
+				TreatShifts((fftw_complex*)dDataToFFT_cu, FFT2DInfo.howMany); //OC02022019
 			}
 		})
 		else {
-			if (DataToFFT != 0) TreatShifts(DataToFFT);
+			if (DataToFFT != 0) TreatShifts(DataToFFT, FFT2DInfo.howMany);
 
 #ifdef _FFTW3 //OC27022019
-			else if (dDataToFFT != 0) TreatShifts(dDataToFFT); //OC02022019
+			else if (dDataToFFT != 0) TreatShifts(dDataToFFT, FFT2DInfo.howMany); //OC02022019
 #endif
 		}
 	}

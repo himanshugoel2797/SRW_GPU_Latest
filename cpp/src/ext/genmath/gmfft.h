@@ -174,8 +174,8 @@ class CGenMathFFT2D : public CGenMathFFT {
 	double* m_dArrayShiftX, * m_dArrayShiftY;
 
 #ifdef _OFFLOAD_GPU
-	static long PlanNx, PlanNy, BatchSz;
-	static long dPlanNx, dPlanNy, dBatchSz;
+	static long PlanNx, PlanNy, HowMany;
+	static long dPlanNx, dPlanNy, dHowMany;
 	static cufftHandle Plan2DFFT_cu;
 	static cufftHandle dPlan2DFFT_cu;
 #endif
@@ -185,7 +185,7 @@ public:
 	{
 		NeedsShiftBeforeX = NeedsShiftBeforeY = NeedsShiftAfterX = NeedsShiftAfterY = 0;
 #ifdef _OFFLOAD_GPU
-		BatchSz = dBatchSz = PlanNx = PlanNy = dPlanNx = dPlanNy = 0;
+		HowMany = PlanNx = PlanNy = dHowMany = dPlanNx = dPlanNy = 0;
 		Plan2DFFT_cu = dPlan2DFFT_cu = 0;
 #endif
 	}
@@ -249,7 +249,7 @@ public:
 	}
 
 #ifdef _FFTW3 //OC29012019
-	template <class T> void RotateDataAfter2DFFT(T* pAfterFFT)
+	template <class T> void RotateDataAfter2DFFT(T* pAfterFFT, long HowMany)
 		//void RotateDataAfter2DFFT(fftwf_complex* pAfterFFT)
 	{// Assumes Nx, Ny even !
 	 //OC281117: Make it work for odd Nx, Ny as well!
@@ -260,23 +260,27 @@ public:
 		//fftwf_complex *t1 = pAfterFFT, *t2 = pAfterFFT + (HalfNyNx + HalfNx);
 		//fftwf_complex *t3 = pAfterFFT + HalfNx, *t4 = pAfterFFT + HalfNyNx;
 		//fftwf_complex Buf;
-		T* t1 = pAfterFFT, * t2 = pAfterFFT + (HalfNyNx + HalfNx);
-		T* t3 = pAfterFFT + HalfNx, * t4 = pAfterFFT + HalfNyNx;
-		T Buf;
-
-		for (long jj = 0; jj < HalfNy; jj++)
+		for (long iHowMany = 0; iHowMany < HowMany; iHowMany++)
 		{
-			for (long ii = 0; ii < HalfNx; ii++)
-			{
-				Buf[0] = (*t1)[0]; Buf[1] = (*t1)[1]; //Buf = *t1;
-				(*t1)[0] = (*t2)[0]; (*(t1++))[1] = (*t2)[1]; //*(t1++) = *t2;
-				(*t2)[0] = Buf[0]; (*(t2++))[1] = Buf[1]; //*(t2++) = Buf;
+			long PerFFT = Nx * Ny * iHowMany;
+			T* t1 = pAfterFFT + PerFFT, * t2 = pAfterFFT + (HalfNyNx + HalfNx) + PerFFT;
+			T* t3 = pAfterFFT + HalfNx + PerFFT, * t4 = pAfterFFT + HalfNyNx + PerFFT;
+			T Buf;
 
-				Buf[0] = (*t3)[0]; Buf[1] = (*t3)[1]; //Buf = *t3; 
-				(*t3)[0] = (*t4)[0]; (*(t3++))[1] = (*t4)[1]; //*(t3++) = *t4; 
-				(*t4)[0] = Buf[0]; (*(t4++))[1] = Buf[1]; //*(t4++) = Buf;
+			for (long jj = 0; jj < HalfNy; jj++)
+			{
+				for (long ii = 0; ii < HalfNx; ii++)
+				{
+					Buf[0] = (*t1)[0]; Buf[1] = (*t1)[1]; //Buf = *t1;
+					(*t1)[0] = (*t2)[0]; (*(t1++))[1] = (*t2)[1]; //*(t1++) = *t2;
+					(*t2)[0] = Buf[0]; (*(t2++))[1] = Buf[1]; //*(t2++) = Buf;
+
+					Buf[0] = (*t3)[0]; Buf[1] = (*t3)[1]; //Buf = *t3; 
+					(*t3)[0] = (*t4)[0]; (*(t3++))[1] = (*t4)[1]; //*(t3++) = *t4; 
+					(*t4)[0] = Buf[0]; (*(t4++))[1] = Buf[1]; //*(t4++) = Buf;
+				}
+				t1 += HalfNx; t2 += HalfNx; t3 += HalfNx; t4 += HalfNx;
 			}
-			t1 += HalfNx; t2 += HalfNx; t3 += HalfNx; t4 += HalfNx;
 		}
 	}
 #else
@@ -304,34 +308,40 @@ public:
 #endif
 
 #ifdef _FFTW3 //OC29012019
-	void RepairSignAfter2DFFT(fftwf_complex* pAfterFFT)
+	void RepairSignAfter2DFFT(fftwf_complex* pAfterFFT, long HowMany)
 	{// Assumes Nx, Ny even !
 	 //OC281117: Make it work for odd Nx, Ny as well!
-		fftwf_complex* t = pAfterFFT;
-		float sx0 = 1., sy0 = 1., s;
-		for (long iy = 0; iy < Ny; iy++)
+		for (long iHowMany = 0; iHowMany < HowMany; iHowMany++)
 		{
-			s = sy0 * sx0;
-			for (long ix = 0; ix < Nx; ix++)
+			fftwf_complex* t = pAfterFFT + Nx * Ny * iHowMany;
+			float sx0 = 1., sy0 = 1., s;
+			for (long iy = 0; iy < Ny; iy++)
 			{
-				(*t)[0] *= s; (*(t++))[1] *= s; s = -s;
+				s = sy0 * sx0;
+				for (long ix = 0; ix < Nx; ix++)
+				{
+					(*t)[0] *= s; (*(t++))[1] *= s; s = -s;
+				}
+				sy0 = -sy0;
 			}
-			sy0 = -sy0;
 		}
 	}
-	void RepairSignAfter2DFFT(fftw_complex* pAfterFFT)
+	void RepairSignAfter2DFFT(fftw_complex* pAfterFFT, long HowMany)
 	{// Assumes Nx, Ny even !
 	 //OC281117: Make it work for odd Nx, Ny as well!
-		fftw_complex* t = pAfterFFT;
-		double sx0 = 1., sy0 = 1., s;
-		for (long iy = 0; iy < Ny; iy++)
+		for (long iHowMany = 0; iHowMany < HowMany; iHowMany++)
 		{
-			s = sy0 * sx0;
-			for (long ix = 0; ix < Nx; ix++)
+			fftw_complex* t = pAfterFFT + Nx * Ny * iHowMany;
+			double sx0 = 1., sy0 = 1., s;
+			for (long iy = 0; iy < Ny; iy++)
 			{
-				(*t)[0] *= s; (*(t++))[1] *= s; s = -s;
+				s = sy0 * sx0;
+				for (long ix = 0; ix < Nx; ix++)
+				{
+					(*t)[0] *= s; (*(t++))[1] *= s; s = -s;
+				}
+				sy0 = -sy0;
 			}
-			sy0 = -sy0;
 		}
 	}
 #else
@@ -353,25 +363,32 @@ public:
 #endif
 
 #ifdef _FFTW3 //OC29012019
-	void NormalizeDataAfter2DFFT(fftwf_complex* pAfterFFT, double Mult)
+	void NormalizeDataAfter2DFFT(fftwf_complex* pAfterFFT, double Mult, long HowMany)
 	{// Assumes Nx, Ny even !
 	 //OC281117: To make it work for odd Nx, Ny as well in the future!
 		float fMult = (float)Mult;
 		long long NxNy = ((long long)Nx) * ((long long)Ny);
-		fftwf_complex* t = pAfterFFT;
-		for (long long i = 0; i < NxNy; i++)
+
+		for (long iHowMany = 0; iHowMany < HowMany; iHowMany++)
 		{
-			(*t)[0] *= fMult; (*(t++))[1] *= fMult;
+			fftwf_complex* t = pAfterFFT + NxNy * iHowMany;
+			for (long long i = 0; i < NxNy; i++)
+			{
+				(*t)[0] *= fMult; (*(t++))[1] *= fMult;
+			}
 		}
 	}
-	void NormalizeDataAfter2DFFT(fftw_complex* pAfterFFT, double Mult)
+	void NormalizeDataAfter2DFFT(fftw_complex* pAfterFFT, double Mult, long HowMany)
 	{// Assumes Nx, Ny even !
 	 //OC281117: To make it work for odd Nx, Ny as well in the future!
 		long long NxNy = ((long long)Nx) * ((long long)Ny);
-		fftw_complex* t = pAfterFFT;
-		for (long long i = 0; i < NxNy; i++)
+		for (long iHowMany = 0; iHowMany < HowMany; iHowMany++)
 		{
-			(*t)[0] *= Mult; (*(t++))[1] *= Mult;
+			fftw_complex* t = pAfterFFT + NxNy * iHowMany;
+			for (long long i = 0; i < NxNy; i++)
+			{
+				(*t)[0] *= Mult; (*(t++))[1] *= Mult;
+			}
 		}
 	}
 #else
@@ -390,7 +407,7 @@ public:
 #endif
 
 #ifdef _FFTW3 //OC29012019
-	void TreatShifts(fftwf_complex* pData)
+	void TreatShifts(fftwf_complex* pData, long HowMany)
 	{
 		fftwf_complex* t = pData;
 #else
@@ -401,87 +418,93 @@ public:
 		char NeedsShiftX = NeedsShiftBeforeX || NeedsShiftAfterX;
 		char NeedsShiftY = NeedsShiftBeforeY || NeedsShiftAfterY;
 
-		float* tShiftY = m_ArrayShiftY;
-		float MultY_Re = 1., MultY_Im = 0., MultX_Re = 1., MultX_Im = 0.;
-		float MultRe, MultIm;
-
-		for (long iy = 0; iy < Ny; iy++)
+		for (long iHowMany = 0; iHowMany < HowMany; iHowMany++)
 		{
-			if (NeedsShiftY) { MultY_Re = *(tShiftY++); MultY_Im = *(tShiftY++); }
-			float* tShiftX = m_ArrayShiftX;
-			for (long ix = 0; ix < Nx; ix++)
+			float* tShiftY = m_ArrayShiftY;
+			float MultY_Re = 1., MultY_Im = 0., MultX_Re = 1., MultX_Im = 0.;
+			float MultRe, MultIm;
+
+			for (long iy = 0; iy < Ny; iy++)
 			{
-				if (NeedsShiftX)
+				if (NeedsShiftY) { MultY_Re = *(tShiftY++); MultY_Im = *(tShiftY++); }
+				float* tShiftX = m_ArrayShiftX;
+				for (long ix = 0; ix < Nx; ix++)
 				{
-					MultX_Re = *(tShiftX++); MultX_Im = *(tShiftX++);
-					if (NeedsShiftY)
+					if (NeedsShiftX)
 					{
-						MultRe = MultX_Re * MultY_Re - MultX_Im * MultY_Im;
-						MultIm = MultX_Re * MultY_Im + MultX_Im * MultY_Re;
+						MultX_Re = *(tShiftX++); MultX_Im = *(tShiftX++);
+						if (NeedsShiftY)
+						{
+							MultRe = MultX_Re * MultY_Re - MultX_Im * MultY_Im;
+							MultIm = MultX_Re * MultY_Im + MultX_Im * MultY_Re;
+						}
+						else
+						{
+							MultRe = MultX_Re; MultIm = MultX_Im;
+						}
 					}
 					else
 					{
-						MultRe = MultX_Re; MultIm = MultX_Im;
+						MultRe = MultY_Re; MultIm = MultY_Im;
 					}
-				}
-				else
-				{
-					MultRe = MultY_Re; MultIm = MultY_Im;
-				}
 
 #ifdef _FFTW3 //OC29012019
-				float NewRe = (*t)[0] * MultRe - (*t)[1] * MultIm;
-				float NewIm = (*t)[0] * MultIm + (*t)[1] * MultRe;
-				(*t)[0] = NewRe;
-				(*(t++))[1] = NewIm;
+					float NewRe = (*t)[0] * MultRe - (*t)[1] * MultIm;
+					float NewIm = (*t)[0] * MultIm + (*t)[1] * MultRe;
+					(*t)[0] = NewRe;
+					(*(t++))[1] = NewIm;
 #else
-				float NewRe = t->re * MultRe - t->im * MultIm;
-				float NewIm = t->re * MultIm + t->im * MultRe;
-				t->re = NewRe;
-				(t++)->im = NewIm;
+					float NewRe = t->re * MultRe - t->im * MultIm;
+					float NewIm = t->re * MultIm + t->im * MultRe;
+					t->re = NewRe;
+					(t++)->im = NewIm;
 #endif
+				}
 			}
 		}
 	}
 #ifdef _FFTW3 //OC02022019
-	void TreatShifts(fftw_complex * pData)
+	void TreatShifts(fftw_complex * pData, long HowMany)
 	{
 		fftw_complex* t = pData;
 		char NeedsShiftX = NeedsShiftBeforeX || NeedsShiftAfterX;
 		char NeedsShiftY = NeedsShiftBeforeY || NeedsShiftAfterY;
 
-		double* tShiftY = m_dArrayShiftY;
-		double MultY_Re = 1., MultY_Im = 0., MultX_Re = 1., MultX_Im = 0.;
-		double MultRe, MultIm;
-
-		for (long iy = 0; iy < Ny; iy++)
+		for (long iHowMany = 0; iHowMany < HowMany; iHowMany++)
 		{
-			if (NeedsShiftY) { MultY_Re = *(tShiftY++); MultY_Im = *(tShiftY++); }
-			double* tShiftX = m_dArrayShiftX;
-			for (long ix = 0; ix < Nx; ix++)
+			double* tShiftY = m_dArrayShiftY;
+			double MultY_Re = 1., MultY_Im = 0., MultX_Re = 1., MultX_Im = 0.;
+			double MultRe, MultIm;
+
+			for (long iy = 0; iy < Ny; iy++)
 			{
-				if (NeedsShiftX)
+				if (NeedsShiftY) { MultY_Re = *(tShiftY++); MultY_Im = *(tShiftY++); }
+				double* tShiftX = m_dArrayShiftX;
+				for (long ix = 0; ix < Nx; ix++)
 				{
-					MultX_Re = *(tShiftX++); MultX_Im = *(tShiftX++);
-					if (NeedsShiftY)
+					if (NeedsShiftX)
 					{
-						MultRe = MultX_Re * MultY_Re - MultX_Im * MultY_Im;
-						MultIm = MultX_Re * MultY_Im + MultX_Im * MultY_Re;
+						MultX_Re = *(tShiftX++); MultX_Im = *(tShiftX++);
+						if (NeedsShiftY)
+						{
+							MultRe = MultX_Re * MultY_Re - MultX_Im * MultY_Im;
+							MultIm = MultX_Re * MultY_Im + MultX_Im * MultY_Re;
+						}
+						else
+						{
+							MultRe = MultX_Re; MultIm = MultX_Im;
+						}
 					}
 					else
 					{
-						MultRe = MultX_Re; MultIm = MultX_Im;
+						MultRe = MultY_Re; MultIm = MultY_Im;
 					}
-				}
-				else
-				{
-					MultRe = MultY_Re; MultIm = MultY_Im;
-				}
 
-				double NewRe = (*t)[0] * MultRe - (*t)[1] * MultIm;
-				double NewIm = (*t)[0] * MultIm + (*t)[1] * MultRe;
-				(*t)[0] = NewRe;
-				(*(t++))[1] = NewIm;
+					double NewRe = (*t)[0] * MultRe - (*t)[1] * MultIm;
+					double NewIm = (*t)[0] * MultIm + (*t)[1] * MultRe;
+					(*t)[0] = NewRe;
+					(*(t++))[1] = NewIm;
+				}
 			}
 		}
 	}

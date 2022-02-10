@@ -1055,54 +1055,6 @@ EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt, int nInt, char**
 
 //-------------------------------------------------------------------------
 
-EXP int CALL srwlPropagElecFieldBatched(SRWLWfr* pWfr, int nWfr, SRWLOptC* pOpt, int nInt, char** arID, SRWLRadMesh* arIM, char** arI, gpuUsageArg_t* pGpuUsage) //OC15082018
-//EXP int CALL srwlPropagElecField(SRWLWfr* pWfr, SRWLOptC* pOpt)
-{
-	if ((pWfr == 0) || (pOpt == 0)) return SRWL_INCORRECT_PARAM_FOR_WFR_PROP;
-	int locErNo = 0;
-
-	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
-	//double start;
-	//get_walltime (&start);
-
-	try
-	{
-		srTCompositeOptElem optCont(*pOpt);
-		vector<srTSRWRadStructAccessData> wfr;
-
-		for (int i = 0; i < nWfr; i++)
-		{
-			srTSRWRadStructAccessData _wfr(pWfr + i);
-			if (locErNo = optCont.CheckRadStructForPropagation(&_wfr)) return locErNo;
-			wfr.push_back(_wfr);
-		}
-
-		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
-		//srwlPrintTime("srwlPropagElecField: CheckRadStructForPropagation",&start);
-
-		//if(locErNo = optCont.PropagateRadiationGuided(wfr)) return locErNo;
-		if (locErNo = optCont.PropagateRadiationGuidedBatch(wfr.data(), wfr.size(), nInt, arID, arIM, arI, pGpuUsage)) return locErNo; //OC15082018
-
-		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
-		//srwlPrintTime("srwlPropagElecField: PropagateRadiationGuided",&start);
-
-		for (int i = 0; i < nWfr; i++)
-			wfr[i].OutSRWRadPtrs(pWfr[i]);
-
-		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
-		//srwlPrintTime("srwlPropagElecField: PropagateRadiationGuided",&start);
-
-		UtiWarnCheck();
-	}
-	catch (int erNo)
-	{
-		return erNo;
-	}
-	return 0;
-}
-
-//-------------------------------------------------------------------------
-
 EXP int CALL srwlCalcTransm(SRWLOptT* pOpTr, const double* pDelta, const double* pAttenLen, double** arObjShapeDefs, int nObj3D, const double* arPar) //OC24082021
 //EXP int CALL srwlCalcTransm(SRWLOptT* pOpTr, const double* pAttenLen, const double* pDelta, double** arObjShapeDefs, int nObj3D, const double* arPar) //HG28122020
 {
