@@ -172,77 +172,6 @@ public:
 		return result;
 	}
 
-	//int PropagateRadiation(srTSRWRadStructAccessData* pRadAccessData, int MethNo, srTRadResizeVect& ResizeBeforeAndAfterVect)
-	int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect* ResizeBeforeAndAfterVect, int nWfr, gpuUsageArg_t* pGpuUsage = 0)
-	{
-		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
-		//double start;
-		//get_walltime(&start);
-
-		int result = 0;
-
-		for (int i = 0; i < nWfr; i++) 
-		{
-			//srTDriftPropBufVars BufVars; //OC06092019
-			//BufVars.LocalPropMode = ChooseLocalPropMode(pRadAccessData, ParPrecWfrPropag, BufVars.AnalytTreatSubType); //OC06092019
-			//OC01102019
-			LocalPropMode = ChooseLocalPropMode(pRadAccessData + i, ParPrecWfrPropag, AnalytTreatSubType);
-
-			//BufVars.UseExactRxRzForAnalytTreatQuadPhaseTerm = (bool)(ParPrecWfrPropag.UseExactRxRzForAnalytTreatQuadPhaseTerm); //OC06092019
-			//OC01102019
-			UseExactRxRzForAnalytTreatQuadPhaseTerm = (bool)(ParPrecWfrPropag.UseExactRxRzForAnalytTreatQuadPhaseTerm);
-			//ChooseLocalPropMode(pRadAccessData, ParPrecWfrPropag);
-
-			//if(BufVars.LocalPropMode == -1) //OC06092019
-			//OC01102019 (restored)
-			if (LocalPropMode == -1)
-			{
-				double GoodNx = pRadAccessData[i].nx * pRadAccessData[i].UnderSamplingX;
-				double GoodNz = pRadAccessData[i].nz * pRadAccessData[i].UnderSamplingZ;
-
-				if (result = TryToRemoveUndersamplingByResizing(pRadAccessData + i)) return result;
-				if (pRadAccessData[i].ThereIsUnderSamplingX() || pRadAccessData[i].ThereIsUnderSamplingZ()) return PROP_CAN_NOT_BE_DONE_DUE_TO_MEMORY_LIMIT;
-				//else BufVars.LocalPropMode = 0; //OC06092019
-				//OC01102019 (restored)
-				else LocalPropMode = 0;
-
-				if ((GoodNx * 0.7 > double(pRadAccessData[i].nx)) || (GoodNz * 0.7 > double(pRadAccessData[i].nz)))
-				{// To steer
-					CErrWarn::AddWarningMessage(&gVectWarnNos, PROPAG_PREC_REDUCED_DUE_TO_MEMORY_LIMIT);
-				}
-			}
-		}
-		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
-		//srwlPrintTime(":PropagateRadiation : LocalPropMode == -1",&start);
-
-		//if(ParPrecWfrPropag.AnalTreatment == 1)
-		//{// Treating linear terms analytically
-		//OC25102010: commented-out because of errors in case of partially-coherent emission and B fiber
-		//	pRadAccessData->CheckAndSubtractPhaseTermsLin(pRadAccessData->GetWfrMiddleHor(), pRadAccessData->GetWfrMiddleVer());
-		//}
-		//return result; //test
-
-		char& MethNo = ParPrecWfrPropag.MethNo;
-
-		//if(MethNo == 0) result = PropagateRadiationMeth_0(pRadAccessData, &BufVars); //OC06092019
-		//OC01102019 (restored)
-		if (MethNo == 0) result = PropagateRadiationMeth_0_Batch(pRadAccessData, nWfr, pGpuUsage);
-		else {
-			for (int i = 0; i < nWfr; i++) {
-				if (MethNo == 1) result = PropagateRadiationMeth_1(pRadAccessData + i);
-				else if (MethNo == 2) result = PropagateRadiationMeth_2(pRadAccessData + i, ParPrecWfrPropag, ResizeBeforeAndAfterVect[i]);
-			}
-		}
-
-		//if(ParPrecWfrPropag.AnalTreatment == 1)
-		//{// Treating linear terms analytically
-		//OC25102010: commented-out because of errors in case of partially-coherent emission and B fiber
-		//	if(!ParPrecWfrPropag.DoNotResetAnalTreatTermsAfterProp) pRadAccessData->CheckAndResetPhaseTermsLin();
-		//}
-
-		return result;
-	}
-
 	//int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData)
 	//int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadAccessData, void* pBuf=0) //OC06092019
 	//OC01102019 (restored)
@@ -255,21 +184,6 @@ public:
 		if(result = PropagateRadMoments(pRadAccessData, 0)) return result;
 		if(result = PropagateWaveFrontRadius(pRadAccessData)) return result;
 		if(result = Propagate4x4PropMatr(pRadAccessData)) return result;
-		return 0;
-	}
-
-	int PropagateRadiationSingleE_Meth_0_Batch(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadAccessData, int nWfr, gpuUsageArg_t* pGpuUsage = 0)
-	{//it works for many photon energies too!
-		int result;
-		//if(result = PropagateRadiationSimple(pRadAccessData, pBuf)) return result; //OC06092019
-		//OC01102019 (restored)
-		if (result = PropagateRadiationSimple(pRadAccessData, pGpuUsage)) return result;
-
-		for (int i = 0; i < nWfr; i++) {
-			if (result = PropagateRadMoments(pRadAccessData + i, 0)) return result;
-			if (result = PropagateWaveFrontRadius(pRadAccessData + i)) return result;
-			if (result = Propagate4x4PropMatr(pRadAccessData + i)) return result;
-		}
 		return 0;
 	}
 
@@ -413,37 +327,6 @@ public:
 		else if(LocalPropMode == 100) return PropagateRadiationSimple_NumIntFresnel(pRadAccessData);
 
 		else return 0;
-	}
-
-	//int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData, void* pBuf=0) //OC06092019
-	//OC01102019 (restored)
-	int PropagateRadiationSimpleBatch(srTSRWRadStructAccessData* pRadAccessData, int nWfr, gpuUsageArg_t* pGpuUsage = 0)
-	{
-		//srTDriftPropBufVars* pBufVars = (srTDriftPropBufVars*)pBuf; //OC06092019
-		//char LocalPropMode = pBufVars->LocalPropMode; //OC06092019
-		//OC01102019 (commented-out / restored)
-
-		if (LocalPropMode == 2) return PropagateRadiationSimple_PropFromWaist_Batch(pRadAccessData, nWfr, pGpuUsage); //OC240114 (added)
-		else {
-			for (int i = 0; i < nWfr; i++) 
-			{
-				if (LocalPropMode == 0) return PropagateRadiationSimple_AngRepres(pRadAccessData + i);
-				//OC01102019 (restored)
-				else if (LocalPropMode == 1) return PropagateRadiationSimple_PropToWaist(pRadAccessData + i);
-
-				else if (LocalPropMode == 11) return PropagateRadiationSimple_PropToWaistBeyondParax(pRadAccessData + i); //OC10112019
-
-				else if (LocalPropMode == 3) return PropagateRadiationSimple_AnalytTreatQuadPhaseTerm(pRadAccessData + i);
-				//OC06092019
-				//else if(LocalPropMode == 1) return PropagateRadiationSimple_PropToWaist(pRadAccessData, pBufVars);
-				//else if(LocalPropMode == 2) return PropagateRadiationSimple_PropFromWaist(pRadAccessData, pBufVars); //OC240114 (added)
-				//else if(LocalPropMode == 3) return PropagateRadiationSimple_AnalytTreatQuadPhaseTerm(pRadAccessData, pBufVars);
-
-				//OC100914 Aux. methods for testing / benchmarking
-				else if (LocalPropMode == 100) return PropagateRadiationSimple_NumIntFresnel(pRadAccessData + i);
-				else return 0;
-			}
-		}
 	}
 
 	int PropagateRadiationSimple_AngRepres(srTSRWRadStructAccessData* pRadAccessData)

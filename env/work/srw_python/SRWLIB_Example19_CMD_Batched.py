@@ -5,7 +5,8 @@
 # v 0.02
 #############################################################################
 
-from __future__ import print_function #Python 2.7 compatibility
+from __future__ import print_function
+from tabnanny import check #Python 2.7 compatibility
 from srwlib import *
 from srwl_uti_smp import *
 import srwl_uti_smp_rnd_obj3d
@@ -72,6 +73,23 @@ def sum_wavefronts(wfr):
     wfrS.arEx = arExS
     wfrS.arEy = arEyS
     return wfrS
+
+def check_wavefronts(wfr):
+    nTot = wfr.mesh.nx * wfr.mesh.ny * wfr.mesh.ne * 2
+    arExS = cp.zeros(nTot, dtype=cp.float32)
+    arEyS = cp.zeros(nTot, dtype=cp.float32)
+
+    for i in range(wfr.nWfr):
+        if i == 0:
+            arExS += wfr.arEx[i*nTot: (i+1)*nTot]
+            arEyS += wfr.arEy[i*nTot: (i+1)*nTot]
+        if i >= 1:
+            if not cp.array_equal(arExS, wfr.arEx[i*nTot: (i+1)*nTot]):
+                print("arEx Not equal")
+            if not cp.array_equal(arEyS, wfr.arEy[i*nTot: (i+1)*nTot]):
+                print("arEy Not equal")
+
+
 
 def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True): #OC11042020
     """
@@ -140,11 +158,15 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True): #OC11042020
     #Get All Electric Field data sets
     arEx = None
     arExH5 = hf.get('arEx')
-    if(arExH5 is not None): arEx = np.array(arExH5)[:2]
+    if(arExH5 is not None):
+        arEx = np.array(arExH5)[:2]#.reshape(-1)
+        #arEx = [arEx, arEx]
 
     arEy = None
     arEyH5 = hf.get('arEy')
-    if(arEyH5 is not None): arEy = np.array(arEyH5)[:2]
+    if(arEyH5 is not None):
+        arEy = np.array(arEyH5)[:2]#.reshape(-1)
+        #arEy = [arEy, arEy]
 
     nWfr = 0
     lenArE = 0
@@ -313,6 +335,7 @@ for it in range(len(listObjBrownian)):
 
     wfrP_base = None
     for wfrP in wfrP_list:
+        check_wavefronts(wfrP)
         wfrP = sum_wavefronts(wfrP)
         if wfrP_base is None:
             wfrP_base = wfrP

@@ -149,12 +149,11 @@ int srTGenOptElem::ExtraDataExpected(const char* sElemID) //OC01062020
 int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars) //OC29082019
 //int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData)
 {
-	float *pEx0 = pRadAccessData->pBaseRadX;
-	float *pEz0 = pRadAccessData->pBaseRadZ;
 	//long PerX = pRadAccessData->ne << 1;
 	//long PerZ = PerX*pRadAccessData->nx;
 	long long PerX = pRadAccessData->ne << 1;
 	long long PerZ = PerX*pRadAccessData->nx;
+	long long PerWfr = PerZ * pRadAccessData->nz;
 
 #ifndef _WITH_OMP //OC28102018
 
@@ -163,6 +162,9 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 
 	for (int iwfr = 0; iwfr < pRadAccessData->nWfr; iwfr++)
 	{
+		float* pEx0 = pRadAccessData->pBaseRadX + iwfr*PerWfr;
+		float* pEz0 = pRadAccessData->pBaseRadZ + iwfr*PerWfr;
+
 		EXZ.z = pRadAccessData->zStart;
 		//long izPerZ = 0;
 		//long iTotTest = 0; //OCTEST
@@ -2961,7 +2963,7 @@ int srTGenOptElem::RadResizeCore(srTSRWRadStructAccessData& OldRadAccessData, sr
 		srTInterpolAux02 InterpolAux02[4], InterpolAux02I[2];
 		srTInterpolAuxF AuxF[4], AuxFI[2];
 		int ixStOld, izStOld, ixStOldPrev = -1000, izStOldPrev = -1000;
-		float BufF[4], BufFI[2];
+		float* BufF = new float[4 * OldRadAccessData.nWfr], *BufFI = new float[2 * OldRadAccessData.nWfr];
 		char UseLowOrderInterp_PolCompX, UseLowOrderInterp_PolCompZ;
 
 		//long Two_ie = ie << 1;
@@ -3081,49 +3083,49 @@ int srTGenOptElem::RadResizeCore(srTSRWRadStructAccessData& OldRadAccessData, sr
 					{
 						if (UseLowOrderInterp_PolCompX)
 						{
-							InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 0);
-							InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 0);
+							InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF + 4 * iwfr, 0);
+							InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI + 2 * iwfr, 0);
 						}
 						else
 						{
-							InterpolF(InterpolAux02, xRel, zRel, BufF, 0);
-							InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 0);
+							InterpolF(InterpolAux02, xRel, zRel, BufF + 4 * iwfr, 0);
+							InterpolFI(InterpolAux02I, xRel, zRel, BufFI + 2 * iwfr, 0);
 						}
 
-						(*BufFI) *= AuxFI->fNorm;
-						ImproveReAndIm(BufF, BufFI);
+						(*(BufFI + 2 * iwfr)) *= AuxFI->fNorm;
+						ImproveReAndIm(BufF + 4 * iwfr, BufFI + 2 * iwfr);
 
 						if (FieldShouldBeZeroed)
 						{
-							*BufF = 0.; *(BufF + 1) = 0.;
+							*(BufF + 4 * iwfr) = 0.; *(BufF + 4 * iwfr + 1) = 0.;
 						}
 
-						*pEX_New = *BufF;
-						*(pEX_New + 1) = *(BufF + 1);
+						*pEX_New = *(BufF + 4 * iwfr);
+						*(pEX_New + 1) = *(BufF + 4 * iwfr + 1);
 					}
 					if (TreatPolCompZ)
 					{
 						if (UseLowOrderInterp_PolCompZ)
 						{
-							InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 2);
-							InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 1);
+							InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF + 4 * iwfr, 2);
+							InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI + 2 * iwfr, 1);
 						}
 						else
 						{
-							InterpolF(InterpolAux02, xRel, zRel, BufF, 2);
-							InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 1);
+							InterpolF(InterpolAux02, xRel, zRel, BufF + 4 * iwfr, 2);
+							InterpolFI(InterpolAux02I, xRel, zRel, BufFI + 2 * iwfr, 1);
 						}
 
-						(*(BufFI + 1)) *= (AuxFI + 1)->fNorm;
-						ImproveReAndIm(BufF + 2, BufFI + 1);
+						(*(BufFI + 2 * iwfr + 1)) *= (AuxFI + 1)->fNorm;
+						ImproveReAndIm(BufF + 4 * iwfr + 2, BufFI + 2 * iwfr + 1);
 
 						if (FieldShouldBeZeroed)
 						{
-							*(BufF + 2) = 0.; *(BufF + 3) = 0.;
+							*(BufF + 4 * iwfr + 2) = 0.; *(BufF + 4 * iwfr + 3) = 0.;
 						}
 
-						*pEZ_New = *(BufF + 2);
-						*(pEZ_New + 1) = *(BufF + 3);
+						*pEZ_New = *(BufF + 4 * iwfr + 2);
+						*(pEZ_New + 1) = *(BufF + 4 * iwfr + 3);
 					}
 				}
 				if ((izStOld != izStOldPrev) || (ixStOld != ixStOldPrev)) 
@@ -3132,6 +3134,9 @@ int srTGenOptElem::RadResizeCore(srTSRWRadStructAccessData& OldRadAccessData, sr
 				}
 			}
 		}
+
+		delete[] BufF;
+		delete[] BufFI;
 	}
 
 	//OC31102018: added by SY (for profiling?) at parallelizing SRW via OpenMP
