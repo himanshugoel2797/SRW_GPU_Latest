@@ -1092,10 +1092,11 @@ class SRWLStokes(object):
         :param _mult: optional multiplier of the _more_stokes
         """
         #print (self.arS)
-        srwl.UtiStokesAvgUpdateInterp(
-            self, _more_stokes, _iter, _n_stokes_comp, _mult)
-        #print (self.arS)
-        return
+        if _ord == 1 and not _sum:
+            srwl.UtiStokesAvgUpdateInterp(
+                self, _more_stokes, _iter, _n_stokes_comp, _mult)
+            #print (self.arS)
+            return
         
         #DEBUG
         #print('avg_update_interp: iter=', _iter, _mult)

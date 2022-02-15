@@ -1509,24 +1509,24 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 	auto xStartMeshRes = pStokes->mesh.xStart;
 	double xStepMeshRes = 0;
 	if (xNpMeshRes > 1)
-		xStepMeshRes = (pStokes->mesh.xFin - xStartMeshRes) / (xNpMeshRes - 1);
+		xStepMeshRes = (pStokes->mesh.xFin - xStartMeshRes) / (double)(xNpMeshRes - 1);
 	auto yNpMeshRes = pStokes->mesh.ny;
 	auto yStartMeshRes = pStokes->mesh.yStart;
 	double yStepMeshRes = 0;
 	if (yNpMeshRes > 1)
-		yStepMeshRes = (pStokes->mesh.yFin - yStartMeshRes) / (yNpMeshRes - 1);
+		yStepMeshRes = (pStokes->mesh.yFin - yStartMeshRes) / (double)(yNpMeshRes - 1);
 
 	auto eNpWfr = pMoreStokes->mesh.ne;
 	auto xStartWfr = pMoreStokes->mesh.xStart;
 	auto xNpWfr = pMoreStokes->mesh.nx;
 	double xStepWfr = 0;
 	if (xNpWfr > 1)
-		xStepWfr = (pMoreStokes->mesh.xFin - xStartWfr) / (xNpWfr - 1);
+		xStepWfr = (pMoreStokes->mesh.xFin - xStartWfr) / (double)(xNpWfr - 1);
 	auto yStartWfr = pMoreStokes->mesh.yStart;
 	auto yNpWfr = pMoreStokes->mesh.ny;
 	double yStepWfr = 0;
 	if (yNpWfr > 1)
-		yStepWfr = (pMoreStokes->mesh.yFin - yStartWfr) / (yNpWfr - 1);
+		yStepWfr = (pMoreStokes->mesh.yFin - yStartWfr) / (double)(yNpWfr - 1);
 
 	auto nRawWfr = eNpWfr * xNpWfr * yNpWfr;
 	int iOfstSt = 0;
@@ -1560,18 +1560,18 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 						switch (nOrder) {
 						case 1:
 						{
-							int ix0 = (int)trunc((xMeshRes - xStartWfr) / xStepWfr + 1e-09);
-							if ((ix0 < 0) | (ix0 >= xNpWfr - 1)) {
-								((float*)pStokes->arS0)[ir] = ((float*)pStokes->arS0)[ir] * nIters / (nIters + 1);
+							int ix0 = (int)trunc((xMeshRes - xStartWfr) / xStepWfr + 1e-09); //-5180
+							if ((ix0 < 0) || (ix0 >= xNpWfr - 1)) {
+								pStokesArS[ir] = pStokesArS[ir] * nIters / (float)(nIters + 1);
 								ir += 1;
 								continue;
 							}
 							int ix1 = ix0 + 1;
 							auto tx = (xMeshRes - (xStartWfr + xStepWfr * ix0)) / xStepWfr;
 							int iy0 = (int)trunc((yMeshRes - yStartWfr) / yStepWfr + 1e-09);
-							if ((iy0 < 0) | (iy0 >= yNpWfr - 1)) {
-								((float*)pStokes->arS0)[ir] = ((float*)pStokes->arS0)[ir] * nIters / (nIters + 1);
-								ir + 1;
+							if ((iy0 < 0) || (iy0 >= yNpWfr - 1)) {
+								pStokesArS[ir] = pStokesArS[ir] * nIters / (float)(nIters + 1);
+								ir += 1;
 								continue;
 							}
 
@@ -1582,10 +1582,10 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 							auto iy1_nx_ix_per = iy1 * nx_ix_per;
 							auto ix0_ix_per_p_ix_ofst = ix0 * eNpWfr + loc_ix_ofst;
 							auto ix1_ix_per_p_ix_ofst = ix1 * eNpWfr + loc_ix_ofst;
-							auto a00 = ((float*)pMoreStokes->arS0)[iy0_nx_ix_per + ix0_ix_per_p_ix_ofst];
-							auto f10 = ((float*)pMoreStokes->arS0)[iy0_nx_ix_per + ix1_ix_per_p_ix_ofst];
-							auto f01 = ((float*)pMoreStokes->arS0)[iy1_nx_ix_per + ix0_ix_per_p_ix_ofst];
-							auto f11 = ((float*)pMoreStokes->arS0)[iy1_nx_ix_per + ix1_ix_per_p_ix_ofst];
+							auto a00 = pMoreStokesArS[iy0_nx_ix_per + ix0_ix_per_p_ix_ofst];
+							auto f10 = pMoreStokesArS[iy0_nx_ix_per + ix1_ix_per_p_ix_ofst];
+							auto f01 = pMoreStokesArS[iy1_nx_ix_per + ix0_ix_per_p_ix_ofst];
+							auto f11 = pMoreStokesArS[iy1_nx_ix_per + ix1_ix_per_p_ix_ofst];
 							auto a10 = f10 - a00;
 							auto a01 = f01 - a00;
 							auto a11 = a00 - f01 - f10 + f11;
@@ -1593,15 +1593,12 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 
 						}
 							break;
-						case 2:
-
-							break;
-						case 3:
-
-							break;
+						default:
+							printf("Unknown interpolation order %d\n", nOrder);
+							return -1;
 						}
 
-						((float*)pStokes->arS0)[ir] = (((float*)pStokes->arS0)[ir] * nIters + mult * fInterp) / (nIters + 1); 
+						pStokesArS[ir] = (pStokesArS[ir] * nIters + mult * fInterp) / (float)(nIters + 1); 
 						ir += 1;
 					}
 				}
