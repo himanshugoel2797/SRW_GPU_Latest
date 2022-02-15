@@ -194,7 +194,6 @@ public:
 	//Modification by S.Yakubov for parallelizing SRW via OpenMP:
 #if _FFTW3 //28012019
 	int Make2DFFT(CGenMathFFT2DInfo&, fftwf_plan* pPrecreatedPlan2DFFT = 0, fftw_plan* pdPrecreatedPlan2DFFT = 0, gpuUsageArg_t *pGpuUsage = 0); //OC02022019 //HG01032022
-	int Make2DFFT_Batch(CGenMathFFT2DInfo*, int, fftwf_plan* pPrecreatedPlan2DFFT = 0, fftw_plan* pdPrecreatedPlan2DFFT = 0, gpuUsageArg_t* pGpuUsage = 0);
 	//int Make2DFFT(CGenMathFFT2DInfo&, fftwf_plan* pPrecreatedPlan2DFFT=0);
 #else
 	int Make2DFFT(CGenMathFFT2DInfo&, fftwnd_plan* pPrecreatedPlan2DFFT = 0); //OC27102018

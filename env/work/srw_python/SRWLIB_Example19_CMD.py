@@ -33,28 +33,6 @@ strIntPropOutFileName = 'ex19_res_int_prop_%d.dat' #propagated wavefront intensi
 strIntPropOutFileNameDet = 'ex19_res_int_det.h5' #intensity distribution regisgtered by detector output file name
 strCmDataFileName = 'chx_res_pr_dir_100k_cm.h5' #file name for loading coherent modes from
 
-#***********Gaussian Beam Source
-GsnBm = SRWLGsnBm() #Gaussian Beam structure (just parameters)
-GsnBm.x = 0 #Transverse Positions of Gaussian Beam Center at Waist [m]
-GsnBm.y = 0
-GsnBm.z = 0 #Longitudinal Position of Waist [m]
-GsnBm.xp = 0 #Average Angles of Gaussian Beam at Waist [rad]
-GsnBm.yp = 0
-GsnBm.avgPhotEn = 8000 #Photon Energy [eV]
-GsnBm.pulseEn = 0.001 #Energy per Pulse [J] - to be corrected
-GsnBm.repRate = 1 #Rep. Rate [Hz] - to be corrected
-GsnBm.polar = 1 #1- linear horizontal
-GsnBm.sigX = 7.e-06/2.35 #Horiz. RMS size at Waist [m]
-GsnBm.sigY = GsnBm.sigX #Vert. RMS size at Waist [m]
-
-constConvRad = 1.23984186e-06/(4*3.1415926536)
-rmsAngDiv = constConvRad/(GsnBm.avgPhotEn*GsnBm.sigX) #RMS angular divergence [rad]
-print('RMS Source Size:', round(GsnBm.sigX*1.e+06, 3), 'um; RMS Divergence:', round(rmsAngDiv*1.e+06, 3), 'urad')
-
-GsnBm.sigT = 10e-15 #Pulse duration [fs] (not used?)
-GsnBm.mx = 0 #Transverse Gauss-Hermite Mode Orders
-GsnBm.my = 0
-
 #***********Initial Wavefront
 wfrs = srwl_uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName))[:2]
 print('{} coherent modes loaded'.format(len(wfrs)))
@@ -96,8 +74,8 @@ matDelta = 4.773e-05 #Refractive Index Decrement
 matAttenLen = 2.48644e-06 #Attenuation Length [m]
 
 #***********Detector
-nxDet = 2048 #Detector Number of Pixels in Horizontal direction
-nyDet = 2048 #Detector Number of Pixels in Vertical direction
+nxDet = 1030 #Detector Number of Pixels in Horizontal direction
+nyDet = 1065 #Detector Number of Pixels in Vertical direction
 pSize = 75e-06 #Detector Pixel Size
 xrDet = nxDet*pSize
 yrDet = nyDet*pSize
@@ -124,7 +102,7 @@ opSmp_Det = SRWLOptD(distSmp_Det)
 #[10]: New Horizontal wavefront Center position after Shift
 #[11]: New Vertical wavefront Center position after Shift
 #           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
-ppSmp =     [0, 0, 1., 0, 0, 1., 55., 1., 55.,  0, 0, 0]
+ppSmp =     [0, 0, 1., 0, 0, 1., 55, 1., 55,  0, 0, 0]
 ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 #***********Wavefront Propagation / Scattering calculation for different instances of Sample created by Brownnian motion
@@ -185,15 +163,14 @@ for it in range(len(listObjBrownian)):
 
         print('   Propagating Wavefront ... ', end='')
         t = time.time()
-        srwl.PropagElecField(wfrP, opBL, None, 0)
-        print('done in', round(time.time() - t, 3), 's')
-        print (wfrP.arMomX)
-        print (wfrP.arMomY)
+        srwl.PropagElecField(wfrP, opBL, None)
         if wfrP_base is None:
             wfrP_base = wfrP
         else:
-            wfrP_base.addE(wfrP)
-            wfrP.delE()
+            #wfrP_base.addE(wfrP)
+            #wfrP.delE()
+            pass
+        print('done in', round(time.time() - t, 3), 's')
 
     print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
     t = time.time()
@@ -208,7 +185,7 @@ for it in range(len(listObjBrownian)):
     #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
     #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
-    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose().get()
     print('done in', round(time.time() - t, 3), 's')
 
     #Plotting the Results (requires 3rd party graphics package)

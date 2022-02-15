@@ -119,14 +119,7 @@ public:
 #endif
 	}
 
-	virtual int PropagateRadiation(srTSRWRadStructAccessData*, srTParPrecWfrPropag&, srTRadResizeVect&, gpuUsageArg_t* pGpuUsage = 0) { return 0;}
-	virtual int PropagateRadiationBatch(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfr, srTRadResizeVect* pResAfter, int nWfr, gpuUsageArg_t* pGpuUsage = 0) 
-	{
-		int res = 0;
-		for (int i = 0; i < nWfr; i++)
-			if (res = PropagateRadiation(pRadAccessData + i, ParPrecWfr, *(pResAfter + i), pGpuUsage)) return res;
-		return 0;
-	}
+	virtual int PropagateRadiation(srTSRWRadStructAccessData*, srTParPrecWfrPropag&, srTRadResizeVect&, gpuUsageArg_t* pGpuUsage = 0) { printf("Using default impl!!!\n"); return 0;}
 
 	virtual int PropagateRadMoments(srTSRWRadStructAccessData*, srTMomentsRatios*) { return 0;}
 	virtual int PropagateWaveFrontRadius(srTSRWRadStructAccessData*) { return 0;}
@@ -140,14 +133,7 @@ public:
 	
 	//virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData, void* pBuf=0) { return 0;} //OC06092019
 	//OC01102019 (restored)
-	virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData, gpuUsageArg_t* pGpuUsage = 0) { return 0;}
-	virtual int PropagateRadiationSingleE_Meth_0_Batch(srTSRWRadStructAccessData** pRadAccessData, srTSRWRadStructAccessData** pPrevRadData, int nWfr, gpuUsageArg_t* pGpuUsage = 0) 
-	{ 
-		int result = 0; 
-		for (int i = 0; i < nWfr; i++)
-			if (result = PropagateRadiationSingleE_Meth_0(pRadAccessData[i], pPrevRadData[i], pGpuUsage)) return result;
-		return result; 
-	}
+	virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData, gpuUsageArg_t* pGpuUsage = 0) { printf("Using default impl2!!!\n"); return 0;}
 
 	virtual int RangeShouldBeAdjustedAtPropag() { return 1;}
 	virtual int ResolutionShouldBeAdjustedAtPropag() { return 1;}
@@ -197,7 +183,6 @@ public:
 	//virtual int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData, void* pBuf=0); //OC06092019
 	//OC01102019 (restored)
 	virtual int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData); //moved from derived classes: loops over E, calls derived PropagateRadiationSingleE_Meth_0
-	virtual int PropagateRadiationMeth_0_Batch(srTSRWRadStructAccessData* pRadAccessData, int nWfr, gpuUsageArg_t* pGpuUsage = 0);
 
 	void FindWidestWfrMeshParam(vector<srTSRWRadStructAccessData>& vRadSlices, srTSRWRadStructAccessData* pRad, bool keepConstNumPoints);
 	int ReInterpolateWfrDataOnNewTransvMesh(vector<srTSRWRadStructAccessData>& vRadSlices, srTSRWRadStructAccessData* pAuxRadSingleE, srTSRWRadStructAccessData* pRadRes);
@@ -252,7 +237,6 @@ public:
 	int FillOutRadFromInRad(srTSRWRadStructAccessData*, srTSRWRadStructAccessData*);
 
 	int TraverseRadZXE(srTSRWRadStructAccessData*, void* pBufVars=0); //OC29082019
-	int TraverseRadZXE_Batch(srTSRWRadStructAccessData**, int, void* pBufVars = 0);
 	//int TraverseRadZXE(srTSRWRadStructAccessData*);
 	int TraverseRad1D(srTRadSect1D*, void* pBufVars=0); //OC29082019
 	//int TraverseRad1D(srTRadSect1D*);

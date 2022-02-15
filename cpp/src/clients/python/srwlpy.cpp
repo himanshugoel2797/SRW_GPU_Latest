@@ -4990,6 +4990,7 @@ static PyObject* srwlpy_PropagElecField(PyObject *self, PyObject *args)
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//double start;
 		//get_walltime(&start);
+		
 		ParseSructSRWLWfr(&wfr, oWfr, &vBuf, gmWfrPyPtr);
 		
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:

@@ -172,27 +172,27 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 		//long long iTotTest = 0; //OCTEST
 
 		//int result = 0;
-		for (int iz = 0; iz < pRadAccessData->nz; iz++)
+		for(int iz=0; iz<pRadAccessData->nz; iz++)
 		{
 			//if(result = srYield.Check()) return result;
 
-			float* pEx_StartForX = pEx0 + izPerZ;
-			float* pEz_StartForX = pEz0 + izPerZ;
+			float *pEx_StartForX = pEx0 + izPerZ;
+			float *pEz_StartForX = pEz0 + izPerZ;
 			EXZ.x = pRadAccessData->xStart;
 			//long ixPerX = 0;
 			long long ixPerX = 0;
 
-			for (int ix = 0; ix < pRadAccessData->nx; ix++)
+			for(int ix=0; ix<pRadAccessData->nx; ix++)
 			{
-				float* pEx_StartForE = pEx_StartForX + ixPerX;
-				float* pEz_StartForE = pEz_StartForX + ixPerX;
+				float *pEx_StartForE = pEx_StartForX + ixPerX;
+				float *pEz_StartForE = pEz_StartForX + ixPerX;
 				EXZ.e = pRadAccessData->eStart;
 				//long iePerE = 0;
 				long long iePerE = 0;
 
-				for (int ie = 0; ie < pRadAccessData->ne; ie++)
+				for(int ie=0; ie<pRadAccessData->ne; ie++)
 				{
-					if (pEx0 != 0)
+					if(pEx0 != 0)
 					{
 						EFieldPtrs.pExRe = pEx_StartForE + iePerE;
 						EFieldPtrs.pExIm = EFieldPtrs.pExRe + 1;
@@ -202,7 +202,7 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 						EFieldPtrs.pExRe = 0;
 						EFieldPtrs.pExIm = 0;
 					}
-					if (pEz0 != 0)
+					if(pEz0 != 0)
 					{
 						EFieldPtrs.pEzRe = pEz_StartForE + iePerE;
 						EFieldPtrs.pEzIm = EFieldPtrs.pEzRe + 1;
@@ -295,17 +295,6 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 		}
 	}
 #endif
-
-	return 0;
-}
-
-//*************************************************************************
-
-int srTGenOptElem::TraverseRadZXE_Batch(srTSRWRadStructAccessData** pRadAccessData, int nWfr, void* pBufVars) //OC29082019
-//int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData)
-{
-	for (int i = 0; i < nWfr; i++)
-		TraverseRadZXE(pRadAccessData[i], pBufVars);
 
 	return 0;
 }

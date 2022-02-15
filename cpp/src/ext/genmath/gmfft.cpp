@@ -292,6 +292,8 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 	SetupLimitsTr(FFT2DInfo);
 
+	if (FFT2DInfo.howMany < 1) FFT2DInfo.howMany = 1;
+
 	double xStepNx = FFT2DInfo.Nx * FFT2DInfo.xStep;
 	double yStepNy = FFT2DInfo.Ny * FFT2DInfo.yStep;
 

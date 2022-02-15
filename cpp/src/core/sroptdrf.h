@@ -394,7 +394,6 @@ public:
 	int PropagateRadiationSimple_PropToWaistBeyondParax(srTSRWRadStructAccessData* pRadAccessData); //OC10112019
 
 	int PropagateRadiationSimple_PropFromWaist(srTSRWRadStructAccessData* pRadAccessData, gpuUsageArg_t* pGpuUsage = 0);
-	int PropagateRadiationSimple_PropFromWaist_Batch(srTSRWRadStructAccessData* pRadAccessData, int nWfr, gpuUsageArg_t* pGpuUsage = 0);
 	int PropagateRadiationSimple_AnalytTreatQuadPhaseTerm(srTSRWRadStructAccessData* pRadAccessData);
 	//OC06092019
 	//int PropagateRadiationSimple_PropToWaist(srTSRWRadStructAccessData* pRadAccessData, srTDriftPropBufVars* pBufVars=0);
