@@ -193,10 +193,32 @@ void CGenMathFFT::NextCorrectNumberForFFT(long& n)
 	}
 	else
 	{
+		//OC23072020: sorted multiplies by ratios of power of first prime numbers bw 1 and 2
+		const double arTestMults[] = { 10. / 9., 9. / 8., 6. / 5., 5. / 4., 4. / 3., 3. / 2., 8. / 5., 5. / 3., 16. / 9., 15. / 8. };
+		const int nTestMults = 10;
+
 		//long k = 16384;
-		long k = 65536;
+		//long k = 65536;
+		long k = 99000; //OC23072020 (make sure this number is < 100001, and divides by 9,8,5)
+
 		for (int j = 0; j < 100; j++)
 		{
+			//OC23072020 (added tests of intermed numbers obtained by multiplying k by a factor bw 1 and 2)
+			bool intermedNumFound = false;
+			for (int m = 0; m < nTestMults; m++)
+			{
+				double dkTest = k * arTestMults[m];
+				long kTest = (long)dkTest;
+				if ((dkTest - (double)kTest) >= 0.5) kTest++;
+				if (n <= kTest)
+				{
+					n = kTest;
+					intermedNumFound = true;
+					break;
+				}
+			}
+			if (intermedNumFound) break;
+
 			k <<= 1;
 			if (n <= k)
 			{
@@ -1092,6 +1114,12 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 			else if (dOutDataFFT != 0) TreatShift(dOutDataFFT, FFT1DInfo.HowMany);
 #endif
 		}
+	}
+
+	if (FFT1DInfo.TreatSharpEdges)
+	{
+		int result = ProcessSharpEdges(FFT1DInfo);
+		if (result) return result;
 	}
 
 	if (!GPU_ENABLED(pGpuUsage))
