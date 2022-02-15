@@ -76,6 +76,7 @@ listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d( #Initial list of 3D objec
     _dist = 'uniform', #Type (and eventual parameters) of distributions of 3D objects
     _obj_shape = ['S', 'uniform', 25.e-09, 250.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
     _allow_overlap = False, #Allow or not the 3D objects to overlap
+    _seed = 0,
     _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName%(0)))
     
 #Generate timesteps of Brownian motion of the 3D nano-objects (spheres) simulating particles suspended in water at room temperature
@@ -88,7 +89,7 @@ listObjBrownian = srwl_uti_smp_rnd_obj3d.brownian_motion3d(
     _timestep = timeStep, #[s]
     _duration = timeInterv, #[s]
     _seed = 0,
-    _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName))
+    _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName))[:1]
 
 #Sample Material Characteristics (Au at 8 keV)
 matDelta = 4.773e-05 #Refractive Index Decrement
@@ -175,16 +176,16 @@ for it in range(len(listObjBrownian)):
         #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Intensity'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
         #Plot the Initial Wavefront (without showing it yet)
-        #plotMesh0x = [mesh0.xStart, mesh0.xFin, mesh0.nx]
-        #plotMesh0y = [mesh0.yStart, mesh0.yFin, mesh0.ny]
-        #uti_plot2d1d(arI0, plotMesh0x, plotMesh0y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Intensity at Sample'], ['m', 'm', 'ph/s/.1%bw/mm^2'])
+        plotMesh0x = [mesh0.xStart, mesh0.xFin, mesh0.nx]
+        plotMesh0y = [mesh0.yStart, mesh0.yFin, mesh0.ny]
+        uti_plot2d1d(arI0, plotMesh0x, plotMesh0y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Intensity at Sample'], ['m', 'm', 'ph/s/.1%bw/mm^2'])
 
         #Duplicating Initial Wavefront to perform its Propagaton
         wfrP = deepcopy(wfr)
 
         print('   Propagating Wavefront ... ', end='')
         t = time.time()
-        srwl.PropagElecField(wfrP, opBL, None, 1)
+        srwl.PropagElecField(wfrP, opBL, None, 0)
         print('done in', round(time.time() - t, 3), 's')
         print (wfrP.arMomX)
         print (wfrP.arMomY)
