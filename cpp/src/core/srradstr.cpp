@@ -2610,7 +2610,7 @@ void srTSRWRadStructAccessData::AddStokesAtPoint(srTEXZ& EXZ, float* pStokesVal)
 
 //*************************************************************************
 
-void srTSRWRadStructAccessData::CheckAndSubtractPhaseTermsLin(double newXc, double newZc)
+void srTSRWRadStructAccessData::CheckAndSubtractPhaseTermsLin(double newXc, double newZc, gpuUsageArg_t* pGpuUsage)
 {
 	const double ratAllowSubtract = 0.2;
 	const double minNumOptCycles = 10;
@@ -2669,7 +2669,7 @@ void srTSRWRadStructAccessData::CheckAndSubtractPhaseTermsLin(double newXc, doub
 
 	if((xMult == 0) && (zMult == 0)) return;
 	
-	MultiplyElFieldByPhaseLin(xMult, zMult);
+	MultiplyElFieldByPhaseLin(xMult, zMult, pGpuUsage);
 }
 
 //*************************************************************************

@@ -17,6 +17,7 @@
 #include <stdlib.h> //required by some (buggy?) version of GCC
 #include <cstdlib> //required?
 
+#include "utidev.h"
 #include "gmtrans.h"
 #include "gmvect.h"
 
@@ -119,7 +120,7 @@ public:
 #endif
 	}
 
-	virtual int PropagateRadiation(srTSRWRadStructAccessData*, srTParPrecWfrPropag&, srTRadResizeVect&, gpuUsageArg_t* pGpuUsage = 0) { printf("Using default impl!!!\n"); return 0;}
+	virtual int PropagateRadiation(srTSRWRadStructAccessData*, srTParPrecWfrPropag&, srTRadResizeVect&, gpuUsageArg_t* pGpuUsage = 0) { printf("Using empty PropagateRadiation implementation.\n"); return 0; }
 
 	virtual int PropagateRadMoments(srTSRWRadStructAccessData*, srTMomentsRatios*) { return 0;}
 	virtual int PropagateWaveFrontRadius(srTSRWRadStructAccessData*) { return 0;}
@@ -128,12 +129,12 @@ public:
 
 	//virtual int PropagateRadiationSimple(srTSRWRadStructAccessData*, void* pBuf=0) { return 0;} //OC06092019
 	//OC01102019 (restored)
-	virtual int PropagateRadiationSimple(srTSRWRadStructAccessData*) { return 0;}
+	virtual int PropagateRadiationSimple(srTSRWRadStructAccessData*, gpuUsageArg_t* pGpuUsage=0) { return 0;}
 	virtual int PropagateRadiationSimple1D(srTRadSect1D*) { return 0;}
 	
 	//virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData, void* pBuf=0) { return 0;} //OC06092019
 	//OC01102019 (restored)
-	virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData, gpuUsageArg_t* pGpuUsage = 0) { printf("Using default impl2!!!\n"); return 0;}
+	virtual int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadData, gpuUsageArg_t* pGpuUsage=0) { printf("Using empty PropagateRadiationSingleE_Meth_0 implementation.\n"); return 0;}
 
 	virtual int RangeShouldBeAdjustedAtPropag() { return 1;}
 	virtual int ResolutionShouldBeAdjustedAtPropag() { return 1;}
@@ -182,7 +183,7 @@ public:
 
 	//virtual int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData, void* pBuf=0); //OC06092019
 	//OC01102019 (restored)
-	virtual int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData); //moved from derived classes: loops over E, calls derived PropagateRadiationSingleE_Meth_0
+	virtual int PropagateRadiationMeth_0(srTSRWRadStructAccessData* pRadAccessData, gpuUsageArg_t* pGpuUsage=0); //moved from derived classes: loops over E, calls derived PropagateRadiationSingleE_Meth_0
 
 	void FindWidestWfrMeshParam(vector<srTSRWRadStructAccessData>& vRadSlices, srTSRWRadStructAccessData* pRad, bool keepConstNumPoints);
 	int ReInterpolateWfrDataOnNewTransvMesh(vector<srTSRWRadStructAccessData>& vRadSlices, srTSRWRadStructAccessData* pAuxRadSingleE, srTSRWRadStructAccessData* pRadRes);
@@ -236,7 +237,7 @@ public:
 
 	int FillOutRadFromInRad(srTSRWRadStructAccessData*, srTSRWRadStructAccessData*);
 
-	int TraverseRadZXE(srTSRWRadStructAccessData*, void* pBufVars=0); //OC29082019
+	int TraverseRadZXE(srTSRWRadStructAccessData*, void* pBufVars=0, gpuUsageArg_t* pGpuUsage = 0); //OC29082019
 	//int TraverseRadZXE(srTSRWRadStructAccessData*);
 	int TraverseRad1D(srTRadSect1D*, void* pBufVars=0); //OC29082019
 	//int TraverseRad1D(srTRadSect1D*);
@@ -261,19 +262,19 @@ public:
 	int SetRadRepres(srTSRWRadStructAccessData*, char, double* ar_xStartInSlicesE=0, double* ar_zStartInSlicesE=0);
 	int SetRadRepres1D(srTRadSect1D*, char);
 
-	int SetupWfrEdgeCorrData(srTSRWRadStructAccessData*, float*, float*, srTDataPtrsForWfrEdgeCorr&, gpuUsageArg_t* pGpuUsage = 0);
+	int SetupWfrEdgeCorrData(srTSRWRadStructAccessData*, float*, float*, srTDataPtrsForWfrEdgeCorr&, gpuUsageArg_t* =0);
 	//inline void SetupExpCorrArray(float*, long, double, double, double);
 	inline void SetupExpCorrArray(float*, long long, double, double, double);
-	void MakeWfrEdgeCorrection(srTSRWRadStructAccessData*, float*, float*, srTDataPtrsForWfrEdgeCorr&);
+	void MakeWfrEdgeCorrection(srTSRWRadStructAccessData*, float*, float*, srTDataPtrsForWfrEdgeCorr&, gpuUsageArg_t* = 0);
 
 	int SetupWfrEdgeCorrData1D(srTRadSect1D*, float*, float*, srTDataPtrsForWfrEdgeCorr1D&);
 	void MakeWfrEdgeCorrection1D(srTRadSect1D*, float*, float*, srTDataPtrsForWfrEdgeCorr1D&);
 
 	int ComputeRadMoments(srTSRWRadStructAccessData*);
 
-	int RadResizeGen(srTSRWRadStructAccessData&, srTRadResize&);
+	int RadResizeGen(srTSRWRadStructAccessData&, srTRadResize&, gpuUsageArg_t* =0);
 	int RadResizeGenE(srTSRWRadStructAccessData&, srTRadResize&);
-	int RadResizeCore(srTSRWRadStructAccessData&, srTSRWRadStructAccessData&, srTRadResize&, char =0);
+	int RadResizeCore(srTSRWRadStructAccessData&, srTSRWRadStructAccessData&, srTRadResize&, char =0, gpuUsageArg_t* =0);
 	int RadResizeCoreE(srTSRWRadStructAccessData&, srTSRWRadStructAccessData&, srTRadResize&, char =0);
 	int RadResizeCore_OnlyLargerRange(srTSRWRadStructAccessData& OldRadAccessData, srTSRWRadStructAccessData& NewRadAccessData, srTRadResize& RadResizeStruct, char PolComp);
 	int RadResizeCore_OnlyLargerRangeE(srTSRWRadStructAccessData& OldRadAccessData, srTSRWRadStructAccessData& NewRadAccessData, srTRadResize& RadResizeStruct, char PolComp);
@@ -287,7 +288,7 @@ public:
 	//char WaveFrontTermCanBeTreated(srTSRWRadStructAccessData&, bool checkBenefit=false); //OC05012017 (changed to checkBenefit=false to resolve problem of resizing in near field at strong under-sampling)
 	char WaveFrontTermCanBeTreated(srTSRWRadStructAccessData&, bool checkBenefit=false); //OC29032017 (changed again to checkBenefit=false to resolve problem of resizing of wiggler radiation at strong under-sampling, the ELETTRA SCW case)
 
-	void TreatStronglyOscillatingTerm(srTSRWRadStructAccessData&, char, char =0, int ieOnly =-1);
+	void TreatStronglyOscillatingTerm(srTSRWRadStructAccessData&, char, char =0, int ieOnly =-1, gpuUsageArg_t* =0);
 	//void TreatStronglyOscillatingTermIrregMesh(srTSRWRadStructAccessData&, float*, float, float, float, float, char, char =0, int =-1);
 	void TreatStronglyOscillatingTermIrregMesh(srTSRWRadStructAccessData&, double*, double, double, double, double, char, char =0, int =-1); //OC260114
 	//void TreatStronglyOscillatingTermIrregMesh(srTSRWRadStructAccessData&, double*, double, double, double, double, char, char =0, int =-1, double =1, double =1); //OC220214

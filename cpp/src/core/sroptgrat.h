@@ -96,12 +96,12 @@ public:
 		m_PropWfrInPlace = true; //OC151008 //previous electric field is NOT necessary for the propagation
 	}
 
-	int PropagateRadiation(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect& ResBeforeAndAfterVect)
+	int PropagateRadiation(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect& ResBeforeAndAfterVect, gpuUsageArg_t* pGpuUsage)
 	{
 		//char &MethNo = ParPrecWfrPropag.MethNo;
 		SetupPropBufVars_Gen(pRadAccessData);
 
-		return PropagateRadiationMeth_0(pRadAccessData);
+		return PropagateRadiationMeth_0(pRadAccessData, pGpuUsage);
 
 		//to program all methods later!
 
@@ -136,7 +136,7 @@ public:
 
 	//int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pWfr, srTSRWRadStructAccessData* pPrevWfr, void* pBuf=0) //OC06092019
 	//OC01102019 (restored)
-	int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pWfr, srTSRWRadStructAccessData* pPrevWfr)
+	int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pWfr, srTSRWRadStructAccessData* pPrevWfr, gpuUsageArg_t* pGpuUsage)
 	{//this version doesn't use pPrevWfr
 	 //however, it may modify me
 
@@ -151,7 +151,7 @@ public:
 		SetupPropBufVars_SingleE(pWfr->eStart); //check if all these buf. var. are necessary
 		AdjustWfrMeshParamToTreatAnamorphMagn(pWfr);
 
-		if(result = TraverseRadZXE(pWfr)) return result;
+		if(result = TraverseRadZXE(pWfr, pGpuUsage)) return result;
 
 		//To simulate anamorphic magnification in the functions:
 		//if(result = PropagateRadMoments(pRadAccessData, 0)) return result;

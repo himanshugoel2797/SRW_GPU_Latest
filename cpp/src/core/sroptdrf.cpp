@@ -602,7 +602,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropFromWaist(srTSRWRadStructAccessD
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 	//OC01102019 (restored)
 	BufVars.PassNo = 1;
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars)) return result;
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, pGpuUsage)) return result;
 	//OC06092019
 	//pBufVars->PassNo = 1;
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result;
@@ -662,7 +662,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropFromWaist(srTSRWRadStructAccessD
 	//OC01102019 (uncommented)
 	if(DataPtrsForWfrEdgeCorr.WasSetup)
 	{
-		MakeWfrEdgeCorrection(pRadAccessData, pRadAccessData->pBaseRadX, pRadAccessData->pBaseRadZ, DataPtrsForWfrEdgeCorr);
+		MakeWfrEdgeCorrection(pRadAccessData, pRadAccessData->pBaseRadX, pRadAccessData->pBaseRadZ, DataPtrsForWfrEdgeCorr, pGpuUsage);
 		DataPtrsForWfrEdgeCorr.DisposeData();
 	}
 
@@ -676,7 +676,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropFromWaist(srTSRWRadStructAccessD
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 	//OC01102019 (restored)
 	BufVars.PassNo = 2;
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars)) return result;
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, pGpuUsage)) return result;
 	//OC06092019
 	//pBufVars->PassNo = 2;
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result;

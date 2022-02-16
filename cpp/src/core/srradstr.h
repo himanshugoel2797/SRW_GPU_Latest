@@ -26,6 +26,8 @@
 //#endif
 //#endif
 
+#include "utidev.h"
+
 #ifdef __IGOR_PRO__
 #include "XOPStandardHeaders.h"			// Include ANSI headers, Mac headers, IgorXOP.h, XOP.h and XOPSupport.h
 #else
@@ -239,7 +241,7 @@ public:
 	int FindAverageDistanceToSource(srTTrjDat& TrjDat, double& Robs, double& RobsAbsErr, double& xElAtYsrc, double& zElAtYsrc, double* precPar);
 	void AddStokesAtPoint(srTEXZ& EXZ, float* pStokesVal);
 	
-	void CheckAndSubtractPhaseTermsLin(double newXc, double newZc);
+	void CheckAndSubtractPhaseTermsLin(double newXc, double newZc, gpuUsageArg_t* pGpuUsage=0);
 	void CheckAndResetPhaseTermsLin();
 	void EstimateOversamplingFactors(double& estimOverSampX, double& estimOverSampZ);
 	void MirrorFieldData(int sx, int sz);
@@ -491,7 +493,7 @@ public:
 		}
 	}
 
-	void MultiplyElFieldByPhaseLin(double xMult, double zMult)
+	void MultiplyElFieldByPhaseLin(double xMult, double zMult, gpuUsageArg_t* pGpuUsage =0)
 	{
 		bool RadXisDefined = (pBaseRadX != 0);
 		bool RadZisDefined = (pBaseRadZ != 0);

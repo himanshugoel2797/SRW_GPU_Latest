@@ -90,7 +90,7 @@ public:
 		
 		int result = 0;
 
-		if(MethNo == 0) result = PropagateRadiationMeth_0(pRadAccessData);
+		if(MethNo == 0) result = PropagateRadiationMeth_0(pRadAccessData, pGpuUsage);
 		else result = PropagateRadiationMeth_2(pRadAccessData, ParPrecWfrPropag, ResBeforeAndAfterArr);
 		
 		//if(ParPrecWfrPropag.AnalTreatment == 1)
@@ -111,18 +111,18 @@ public:
 		if(result = PropagateWaveFrontRadius(pRadAccessData)) return result;
 		//if(result = PropagateRadiationSimple(pRadAccessData, pBuf)) return result; //OC06092019
 		//OC01102019 (restored)
-		if(result = PropagateRadiationSimple(pRadAccessData)) return result;
+		if(result = PropagateRadiationSimple(pRadAccessData, pGpuUsage)) return result;
 		if(result = Propagate4x4PropMatr(pRadAccessData)) return result;
 		return 0;
 	}
 
 	//int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData, void* pBuf=0) //OC06092019
 	//OC01102019 (restored)
-	int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData)
+	int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData, gpuUsageArg_t* pGpuUsage)
 	{
 		int result;
 		if(pRadAccessData->Pres != 0) if(result = SetRadRepres(pRadAccessData, 0)) return result;
-		return TraverseRadZXE(pRadAccessData);
+		return TraverseRadZXE(pRadAccessData, pGpuUsage);
 	}
   	int PropagateRadiationSimple1D(srTRadSect1D* pSect1D)
 	{
