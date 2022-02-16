@@ -59,12 +59,20 @@ GsnBm.mx = 0 #Transverse Gauss-Hermite Mode Orders
 GsnBm.my = 0
 
 #***********Initial Wavefront
+wfrs_summed = []
 def sum_wavefronts(wfr):
+    global wfrs_summed
     nTot = wfr.mesh.nx * wfr.mesh.ny * wfr.mesh.ne * 2
     arExS = cp.zeros(nTot, dtype=cp.float32)
     arEyS = cp.zeros(nTot, dtype=cp.float32)
 
     for i in range(wfr.nWfr):
+        wfrC = deepcopy(wfr)
+        wfrC.nWfr = 1
+        wfrC.arEx = wfr.arEx[i*nTot: (i+1)*nTot]
+        wfrC.arEy = wfr.arEy[i*nTot: (i+1)*nTot]
+        wfrs_summed.append(wfrC)
+
         arExS += wfr.arEx[i*nTot: (i+1)*nTot]
         arEyS += wfr.arEy[i*nTot: (i+1)*nTot]
 
@@ -85,8 +93,10 @@ def check_wavefronts(wfr):
             arEyS += wfr.arEy[i*nTot: (i+1)*nTot]
         if i >= 1:
             if not cp.array_equal(arExS, wfr.arEx[i*nTot: (i+1)*nTot]):
+                print(cp.mean( (arExS - wfr.arEx[i*nTot: (i+1)*nTot]) ** 2 ))
                 print("arEx Not equal")
             if not cp.array_equal(arEyS, wfr.arEy[i*nTot: (i+1)*nTot]):
+                print(cp.mean( (arEyS - wfr.arEy[i*nTot: (i+1)*nTot]) ** 2 ))
                 print("arEy Not equal")
 
 
@@ -160,12 +170,14 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True): #OC11042020
     arExH5 = hf.get('arEx')
     if(arExH5 is not None):
         arEx = np.array(arExH5)[:2]#.reshape(-1)
+        #arEx = [arEx[1], arEx[0]]
         #arEx = [arEx, arEx]
 
     arEy = None
     arEyH5 = hf.get('arEy')
     if(arEyH5 is not None):
         arEy = np.array(arEyH5)[:2]#.reshape(-1)
+        #arEy = [arEy[1], arEy[0]]
         #arEy = [arEy, arEy]
 
     nWfr = 0
@@ -231,15 +243,15 @@ listObjBrownian = srwl_uti_smp_rnd_obj3d.brownian_motion3d(
     _timestep = timeStep, #[s]
     _duration = timeInterv, #[s]
     _seed = 0,
-    _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName))
+    _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName))[:1]
 
 #Sample Material Characteristics (Au at 8 keV)
 matDelta = 4.773e-05 #Refractive Index Decrement
 matAttenLen = 2.48644e-06 #Attenuation Length [m]
 
 #***********Detector
-nxDet = 2048 #Detector Number of Pixels in Horizontal direction
-nyDet = 2048 #Detector Number of Pixels in Vertical direction
+nxDet = 1024 #Detector Number of Pixels in Horizontal direction
+nyDet = 1024 #Detector Number of Pixels in Vertical direction
 pSize = 75e-06 #Detector Pixel Size
 xrDet = nxDet*pSize
 yrDet = nyDet*pSize
@@ -344,66 +356,69 @@ for it in range(len(listObjBrownian)):
             wfrP_base.addE(wfrP)
             wfrP.delE()
     
-    print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
-    t = time.time()
-    mesh1 = deepcopy(wfrP_base.mesh)
-    arI1 = array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
-    srwl.CalcIntFromElecField(arI1, wfrP_base, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
-    stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
-    mesh1 = stkDet.mesh
-    arI1 = stkDet.arS
-    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
-    print('done in', round(time.time() - t, 3), 's')
+    idx = 0
+    for wfrP in wfrs_summed:
+        print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
+        t = time.time()
+        mesh1 = deepcopy(wfrP.mesh)
+        arI1 = array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
+        srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
+        stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
+        mesh1 = stkDet.mesh
+        arI1 = stkDet.arS
+        if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+        print('done in', round(time.time() - t, 3), 's')
 
-    #for wfrP in wfrP_list:
-    #    print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
-    #    t = time.time()
-    #    mesh1 = deepcopy(wfrP.mesh)
-    #    arI1 = array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
-    #    srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
+        #for wfrP in wfrP_list:
+        #    print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
+        #    t = time.time()
+        #    mesh1 = deepcopy(wfrP.mesh)
+        #    arI1 = array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
+        #    srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
 
-    #    stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
-    #    mesh1 = stkDet.mesh
-    #    arI1 = stkDet.arS
-        #srwl_uti_save_intens_ascii(
-        #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
-        #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
+        #    stkDet = det.treat_int(arI1, _mesh = mesh1) #"Projecting" intensity on detector (by interpolation)
+        #    mesh1 = stkDet.mesh
+        #    arI1 = stkDet.arS
+            #srwl_uti_save_intens_ascii(
+            #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
+            #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
-    #    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
-    #    print('done in', round(time.time() - t, 3), 's')
+        #    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+        #    print('done in', round(time.time() - t, 3), 's')
 
-    #    if arI1_CM is None:
-    #        arI1_CM = copy(arI1)
-    #    else:
-    #        arI1_CM += arI1
+        #    if arI1_CM is None:
+        #        arI1_CM = copy(arI1)
+        #    else:
+        #        arI1_CM += arI1
 
-    #    wfrP.delE()
+        #    wfrP.delE()
 
-    #Plotting the Results (requires 3rd party graphics package)
-    print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
+        #Plotting the Results (requires 3rd party graphics package)
+        print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
 
-    #Sample Optical Path Diff.
-    meshS = opSmp.mesh
-    plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
-    plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
-    uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
-        
-    #Scattered Radiation Intensity Distribution in Log Scale
-    plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
-    plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
-    arLogI1 = copy(arI1_CM)
-    nTot = mesh1.ne*mesh1.nx*mesh1.ny
+        #Sample Optical Path Diff.
+        meshS = opSmp.mesh
+        plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
+        plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
+        #uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
+            
+        #Scattered Radiation Intensity Distribution in Log Scale
+        plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
+        plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
+        arLogI1 = copy(arI1_CM)
+        nTot = mesh1.ne*mesh1.nx*mesh1.ny
 
-    arLogI1 = np.clip(arI1, 0, None, arLogI1)
-    arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0).get()
-    #for i in range(nTot):
-    #    curI = arI1[i]
-    #    if(curI <= 0.): arLogI1[i] = 0 #?
-    #    else: arLogI1[i] = log(curI, 10)
+        arLogI1 = np.clip(arI1, 0, None, arLogI1)
+        arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0).get()
+        #for i in range(nTot):
+        #    curI = arI1[i]
+        #    if(curI <= 0.): arLogI1[i] = 0 #?
+        #    else: arLogI1[i] = log(curI, 10)
 
-    uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
+        uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s, %d)' % (it*timeStep, idx)], ['m', 'm', ''])
+        idx += 1
 
-    print('done')
+        print('done')
 
     #if(arDetFrames is not None): #Saving simulated Detector data file
     #    print('   Saving all Detector data to another file (that can be used in subsequent processing) ... ', end='')
