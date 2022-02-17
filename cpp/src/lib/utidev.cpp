@@ -76,7 +76,6 @@ void UtiDev::Fini() {
 	//deviceOffloadInitialized = false;
 }
 
-/*
 void* operator new[](std::size_t sz) // no inline, required by [replacement.functions]/3
 {
 	if (sz == 0)
@@ -99,4 +98,3 @@ void operator delete[](void* ptr) noexcept
 	else
 		std::free(ptr);
 }
-*/

@@ -360,7 +360,7 @@ void NormalizeDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, double Mu
 }
 
 
-__global__ void StokesAvgUpdateInterp_Kernel(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr)
+__global__ void StokesAvgUpdateInterp_Kernel(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr, bool sum)
 {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //xNpMeshRes range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //yNpMeshRes range
@@ -381,45 +381,91 @@ __global__ void StokesAvgUpdateInterp_Kernel(float* pStokesArS, float* pMoreStok
     int loc_ix_ofst = iOfstSt + ie;
     auto nx_ix_per = xNpWfr * eNpWfr;
 
-    int ix0 = (int) trunc((xMeshRes - xStartWfr) / xStepWfr + 1e-09);
-    if ((ix0 < 0) | (ix0 >= xNpWfr - 1)) {
-        pStokesArS[ir] = pStokesArS[ir] * nIters / (nIters + 1);
-        return;
+    switch (nOrder) {
+    case 1:
+        {
+            int ix0 = (int)trunc((xMeshRes - xStartWfr) / xStepWfr + 1e-09);
+            if ((ix0 < 0) | (ix0 >= xNpWfr - 1)) {
+                pStokesArS[ir] = pStokesArS[ir] * nIters / (nIters + 1);
+                return;
+            }
+            int ix1 = ix0 + 1;
+            auto tx = (xMeshRes - (xStartWfr + xStepWfr * ix0)) / xStepWfr;
+            int iy0 = (int)trunc((yMeshRes - yStartWfr) / yStepWfr + 1e-09);
+            if ((iy0 < 0) | (iy0 >= yNpWfr - 1)) {
+                pStokesArS[ir] = pStokesArS[ir] * nIters / (nIters + 1);
+                return;
+            }
+
+
+            int iy1 = iy0 + 1;
+            auto ty = (yMeshRes - (yStartWfr + yStepWfr * iy0)) / yStepWfr;
+            auto iy0_nx_ix_per = iy0 * nx_ix_per;
+            auto iy1_nx_ix_per = iy1 * nx_ix_per;
+            auto ix0_ix_per_p_ix_ofst = ix0 * eNpWfr + loc_ix_ofst;
+            auto ix1_ix_per_p_ix_ofst = ix1 * eNpWfr + loc_ix_ofst;
+            auto a00 = pMoreStokesArS[iy0_nx_ix_per + ix0_ix_per_p_ix_ofst];
+            auto f10 = pMoreStokesArS[iy0_nx_ix_per + ix1_ix_per_p_ix_ofst];
+            auto f01 = pMoreStokesArS[iy1_nx_ix_per + ix0_ix_per_p_ix_ofst];
+            auto f11 = pMoreStokesArS[iy1_nx_ix_per + ix1_ix_per_p_ix_ofst];
+            auto a10 = f10 - a00;
+            auto a01 = f01 - a00;
+            auto a11 = a00 - f01 - f10 + f11;
+            fInterp = a00 + tx * (a10 + ty * a11) + ty * a01;
+        }
+        break;
+    case 2:
+        {
+            int ix0 = int(round((xMeshRes - xStartWfr) / xStepWfr));
+            if ((ix0 < 0) || (ix0 >= xNpWfr - 1)) {
+                pStokesArS[ir] = pStokesArS[ir] * nIters / (float)(nIters + 1);
+                ir += 1;
+                continue;
+            }
+            int ixm1 = ix0 - 1;
+            int ix1 = ix0 + 1;
+            auto tx = (xMeshRes - (xStartWfr + xStepWfr * ix0)) / xStepWfr;
+            int iy0 = int(round((yMeshRes - yStartWfr) / yStepWfr));
+            if ((iy0 < 0) || (iy0 >= yNpWfr - 1)) {
+                pStokesArS[ir] = pStokesArS[ir] * nIters / (nIters + 1);
+                ir += 1;
+                continue;
+            }
+            int iym1 = iy0 - 1;
+            int iy1 = iy0 + 1;
+            auto ty = (yMeshRes - (yStartWfr + yStepWfr * iy0)) / yStepWfr;
+            auto iym1_nx_ix_per = iym1 * nx_ix_per;
+            auto iy0_nx_ix_per = iy0 * nx_ix_per;
+            auto iy1_nx_ix_per = iy1 * nx_ix_per;
+            auto ixm1_ix_per_p_ix_ofst = ixm1 * eNpWfr + loc_ix_ofst;
+            auto ix0_ix_per_p_ix_ofst = ix0 * eNpWfr + loc_ix_ofst;
+            auto ix1_ix_per_p_ix_ofst = ix1 * eNpWfr + loc_ix_ofst;
+            auto fm10 = pMoreStokesArS[iy0_nx_ix_per + ixm1_ix_per_p_ix_ofst];
+            auto a00 = pMoreStokesArS[iy0_nx_ix_per + ix0_ix_per_p_ix_ofst];
+            auto f10 = pMoreStokesArS[iy0_nx_ix_per + ix1_ix_per_p_ix_ofst];
+            auto f0m1 = pMoreStokesArS[iym1_nx_ix_per + ix0_ix_per_p_ix_ofst];
+            auto f01 = pMoreStokesArS[iy1_nx_ix_per + ix0_ix_per_p_ix_ofst];
+            auto f11 = pMoreStokesArS[iy1_nx_ix_per + ix1_ix_per_p_ix_ofst];
+            auto a10 = 0.5 * (f10 - fm10);
+            auto a01 = 0.5 * (f01 - f0m1);
+            auto a11 = a00 - f01 - f10 + f11;
+            auto a20 = 0.5 * (f10 + fm10) - a00;
+            auto a02 = 0.5 * (f01 + f0m1) - a00;
+            fInterp = a00 + tx * (a10 + tx * a20 + ty * a11) + ty * (a01 + ty * a02);
+        }
+        break;
     }
-    int ix1 = ix0 + 1;
-    auto tx = (xMeshRes - (xStartWfr + xStepWfr * ix0)) / xStepWfr;
-    int iy0 = (int)trunc((yMeshRes - yStartWfr) / yStepWfr + 1e-09);
-    if ((iy0 < 0) | (iy0 >= yNpWfr - 1)) {
-        pStokesArS[ir] = pStokesArS[ir] * nIters / (nIters + 1);
-        return;
-    }
 
-
-    int iy1 = iy0 + 1;
-    auto ty = (yMeshRes - (yStartWfr + yStepWfr * iy0)) / yStepWfr;
-    auto iy0_nx_ix_per = iy0 * nx_ix_per;
-    auto iy1_nx_ix_per = iy1 * nx_ix_per;
-    auto ix0_ix_per_p_ix_ofst = ix0 * eNpWfr + loc_ix_ofst;
-    auto ix1_ix_per_p_ix_ofst = ix1 * eNpWfr + loc_ix_ofst;
-    auto a00 = pMoreStokesArS[iy0_nx_ix_per + ix0_ix_per_p_ix_ofst];
-    auto f10 = pMoreStokesArS[iy0_nx_ix_per + ix1_ix_per_p_ix_ofst];
-    auto f01 = pMoreStokesArS[iy1_nx_ix_per + ix0_ix_per_p_ix_ofst];
-    auto f11 = pMoreStokesArS[iy1_nx_ix_per + ix1_ix_per_p_ix_ofst];
-    auto a10 = f10 - a00;
-    auto a01 = f01 - a00;
-    auto a11 = a00 - f01 - f10 + f11;
-    fInterp = a00 + tx * (a10 + ty * a11) + ty * a01;
-
-
-    pStokesArS[ir] = (pStokesArS[ir] * nIters + mult * fInterp) / (nIters + 1);
+    if (sum) pStokesArS[ir] += mult * fInterp;
+    else pStokesArS[ir] = (pStokesArS[ir] * nIters + mult * fInterp) / (nIters + 1);
     return;
 }
 
-void StokesAvgUpdateInterp(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr)
+void StokesAvgUpdateInterp(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr, bool sum)
 {
     const int bs = 8;
     dim3 threads(xNpMeshRes / bs + ((xNpMeshRes & (bs - 1)) != 0), yNpMeshRes / bs + ((yNpMeshRes & (bs - 1)) != 0), eNpMeshRes);
     dim3 blocks(bs, bs, 1);
-    StokesAvgUpdateInterp_Kernel << <threads, blocks >> > (pStokesArS, pMoreStokesArS, nIters, nOrder, nStokesComp, mult, iSt, xNpMeshRes, yNpMeshRes, eNpMeshRes, yStartMeshRes, yStepMeshRes, yStartWfr, yStepWfr, xStartMeshRes, xStepMeshRes, xStartWfr, xStepWfr, iOfstSt, xNpWfr, yNpWfr, eNpWfr);
+    StokesAvgUpdateInterp_Kernel << <threads, blocks >> > (pStokesArS, pMoreStokesArS, nIters, nOrder, nStokesComp, mult, iSt, xNpMeshRes, yNpMeshRes, eNpMeshRes, yStartMeshRes, yStepMeshRes, yStartWfr, yStepWfr, xStartMeshRes, xStepMeshRes, xStartWfr, xStepWfr, iOfstSt, xNpWfr, yNpWfr, eNpWfr, sum);
 }
 #endif

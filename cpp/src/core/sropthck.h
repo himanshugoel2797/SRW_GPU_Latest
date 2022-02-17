@@ -167,7 +167,7 @@ public:
 		//return true;
 	}
 
-	int PropagateRadiation(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect& ResBeforeAndAfterVect) //virtual in srTGenOptElem
+	int PropagateRadiation(srTSRWRadStructAccessData* pRadAccessData, srTParPrecWfrPropag& ParPrecWfrPropag, srTRadResizeVect& ResBeforeAndAfterVect, gpuUsageArg_t* pGpuUsage) //virtual in srTGenOptElem
 	{
 		m_ParPrecWfrPropag = ParPrecWfrPropag; //store for use in a composite prapagator (through drif space, etc.)
 		
@@ -183,7 +183,7 @@ public:
 		char &MethNo = ParPrecWfrPropag.MethNo;
 		int result = 0;
 
-		if(MethNo == 0) result = PropagateRadiationMeth_0(pRadAccessData); //int srTGenOptElem::PropagateRadiationMeth_0
+		if(MethNo == 0) result = PropagateRadiationMeth_0(pRadAccessData, pGpuUsage); //int srTGenOptElem::PropagateRadiationMeth_0
 		//else if(MethNo == 1) result = PropagateRadiationMeth_1(pRadAccessData);
 		//else if(MethNo == 2) result = PropagateRadiationMeth_2(pRadAccessData, ParPrecWfrPropag, ResBeforeAndAfterVect);
 		return result;
@@ -191,13 +191,13 @@ public:
 
 	//int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadDataSingleE, void* pBuf=0) //OC06092019
 	//OC01102019 (restored)
-	int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadDataSingleE) //virtual in srTGenOptElem
+	int PropagateRadiationSingleE_Meth_0(srTSRWRadStructAccessData* pRadAccessData, srTSRWRadStructAccessData* pPrevRadDataSingleE, gpuUsageArg_t* pGpuUsage) //virtual in srTGenOptElem
 	{
 		int result = 0;
 		m_wfrRadWasProp = false;
 		//if(result = PropagateRadiationSimple(pRadAccessData, pBuf)) return result; //OC06092019
 		//OC01102019 (restored)
-		if(result = PropagateRadiationSimple(pRadAccessData)) return result; //in first place because previous wavefront radius may be required for some derived classes
+		if(result = PropagateRadiationSimple(pRadAccessData, pGpuUsage)) return result; //in first place because previous wavefront radius may be required for some derived classes
 		if(result = PropagateRadMoments(pRadAccessData, 0)) return result;
 		if(!m_wfrRadWasProp) { if(result = PropagateWaveFrontRadius(pRadAccessData)) return result;} //already propagated
 		if(result = Propagate4x4PropMatr(pRadAccessData)) return result;
@@ -206,7 +206,7 @@ public:
 
 	//int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData, void* pBuf=0) //OC06092019
 	//OC01102019 (restored)
-	int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData)
+	int PropagateRadiationSimple(srTSRWRadStructAccessData* pRadAccessData, gpuUsageArg_t* pGpuUsage)
 	{
 		if(m_propMeth == 1) return PropagateRadiationSimple_ThinElem(pRadAccessData);
 		else if(m_propMeth == 2) return PropagateRadiationSimple_LocRayTracing(pRadAccessData);

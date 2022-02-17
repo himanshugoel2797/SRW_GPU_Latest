@@ -1500,10 +1500,10 @@ EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* 
 }
 
 #ifdef _OFFLOAD_GPU
-void StokesAvgUpdateInterp(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr);
+void StokesAvgUpdateInterp(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr, bool sum);
 #endif
 
-EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMoreStokes, int nIters, int nOrder, int nStokesComp, double mult) {
+EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMoreStokes, int nIters, int nOrder, int nStokesComp, double mult, bool sum) {
 	auto eNpMeshRes = pStokes->mesh.ne;
 	auto xNpMeshRes = pStokes->mesh.nx;
 	auto xStartMeshRes = pStokes->mesh.xStart;
@@ -1545,7 +1545,7 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 	for (int iSt = 0; iSt < nStokesComp; iSt++) {
 
 		GPU_COND(nullptr, {
-			StokesAvgUpdateInterp(pStokesArS, pMoreStokesArS, nIters, nOrder, nStokesComp, mult, iSt, xNpMeshRes, yNpMeshRes, eNpMeshRes, yStartMeshRes, yStepMeshRes, yStartWfr, yStepWfr, xStartMeshRes, xStepMeshRes, xStartWfr, xStepWfr, iOfstSt, xNpWfr, yNpWfr, eNpWfr);
+			StokesAvgUpdateInterp(pStokesArS, pMoreStokesArS, nIters, nOrder, nStokesComp, mult, iSt, xNpMeshRes, yNpMeshRes, eNpMeshRes, yStartMeshRes, yStepMeshRes, yStartWfr, yStepWfr, xStartMeshRes, xStepMeshRes, xStartWfr, xStepWfr, iOfstSt, xNpWfr, yNpWfr, eNpWfr, sum);
 		})
 		else{
 			for (long iy = 0; iy < yNpMeshRes; iy++) {
@@ -1593,12 +1593,52 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 
 						}
 							break;
+						case 2:
+						{
+							int ix0 = int(round((xMeshRes - xStartWfr) / xStepWfr));
+							if ((ix0 < 0) || (ix0 >= xNpWfr - 1)) {
+								pStokesArS[ir] = pStokesArS[ir] * nIters / (float)(nIters + 1);
+								ir += 1;
+								continue;
+							}
+							int ixm1 = ix0 - 1;
+							int ix1 = ix0 + 1;
+							auto tx = (xMeshRes - (xStartWfr + xStepWfr * ix0)) / xStepWfr;
+							int iy0 = int(round((yMeshRes - yStartWfr) / yStepWfr));
+							if ((iy0 < 0) || (iy0 >= yNpWfr - 1)) {
+								pStokesArS[ir] = pStokesArS[ir] * nIters / (nIters + 1);
+								ir += 1;
+								continue;
+							}
+							int iym1 = iy0 - 1;
+							int iy1 = iy0 + 1;
+							auto ty = (yMeshRes - (yStartWfr + yStepWfr * iy0)) / yStepWfr;
+							auto iym1_nx_ix_per = iym1 * nx_ix_per;
+							auto iy0_nx_ix_per = iy0 * nx_ix_per;
+							auto iy1_nx_ix_per = iy1 * nx_ix_per;
+							auto ixm1_ix_per_p_ix_ofst = ixm1 * eNpWfr + loc_ix_ofst;
+							auto ix0_ix_per_p_ix_ofst = ix0 * eNpWfr + loc_ix_ofst;
+							auto ix1_ix_per_p_ix_ofst = ix1 * eNpWfr + loc_ix_ofst;
+							auto fm10 = pMoreStokesArS[iy0_nx_ix_per + ixm1_ix_per_p_ix_ofst];
+							auto a00 = pMoreStokesArS[iy0_nx_ix_per + ix0_ix_per_p_ix_ofst];
+							auto f10 = pMoreStokesArS[iy0_nx_ix_per + ix1_ix_per_p_ix_ofst];
+							auto f0m1 = pMoreStokesArS[iym1_nx_ix_per + ix0_ix_per_p_ix_ofst];
+							auto f01 = pMoreStokesArS[iy1_nx_ix_per + ix0_ix_per_p_ix_ofst];
+							auto f11 = pMoreStokesArS[iy1_nx_ix_per + ix1_ix_per_p_ix_ofst];
+							auto a10 = 0.5 * (f10 - fm10);
+							auto a01 = 0.5 * (f01 - f0m1);
+							auto a11 = a00 - f01 - f10 + f11;
+							auto a20 = 0.5 * (f10 + fm10) - a00;
+							auto a02 = 0.5 * (f01 + f0m1) - a00;
+							fInterp = a00 + tx * (a10 + tx * a20 + ty * a11) + ty * (a01 + ty * a02);
+						}
 						default:
 							printf("Unknown interpolation order %d\n", nOrder);
 							return -1;
 						}
 
-						pStokesArS[ir] = (pStokesArS[ir] * nIters + mult * fInterp) / (float)(nIters + 1); 
+						if (sum) pStokesArS[ir] += mult * fInterp;
+						else pStokesArS[ir] = (pStokesArS[ir] * nIters + mult * fInterp) / (float)(nIters + 1); 
 						ir += 1;
 					}
 				}

@@ -23,10 +23,13 @@ import time
 from srwl_uti_cryst import *
 from uti_math_eigen import UtiMathEigen #OC21062021
 
+useCuPy = False
 try:
-    import cupy as cp
-    import cupy.cuda.memory
-    cp.cuda.set_allocator(cupy.cuda.MemoryPool(cupy.cuda.memory.malloc_managed).malloc)
+    if 'SRW_ENABLEGPU' in os.environ:
+        import cupy as cp
+        import cupy.cuda.memory
+        cp.cuda.set_allocator(cupy.cuda.MemoryPool(cupy.cuda.memory.malloc_managed).malloc)
+        useCuPy = True
 except:
     pass
 
@@ -1092,9 +1095,9 @@ class SRWLStokes(object):
         :param _mult: optional multiplier of the _more_stokes
         """
         #print (self.arS)
-        if _ord == 1 and not _sum:
+        if _ord == 1 or _ord == 2:
             srwl.UtiStokesAvgUpdateInterp(
-                self, _more_stokes, _iter, _n_stokes_comp, _mult)
+                self, _more_stokes, _iter, _n_stokes_comp, _mult, _sum)
             #print (self.arS)
             return
         
@@ -2295,9 +2298,10 @@ class SRWLWfr(object):
             wfr_arEx = _wfr.arEx
             wfr_arEy = _wfr.arEy
             
-            if isinstance(wfr_arEx, cp.ndarray) and isinstance(wfr_arEy, cp.ndarray) and isinstance(self.arEx, cp.ndarray) and isinstance(self.arEy, cp.ndarray):
-                self.arEx += wfr_arEx
-                self.arEy += wfr_arEy
+            if useCuPy:
+                if isinstance(wfr_arEx, cp.ndarray) and isinstance(wfr_arEy, cp.ndarray) and isinstance(self.arEx, cp.ndarray) and isinstance(self.arEy, cp.ndarray):
+                    self.arEx += wfr_arEx
+                    self.arEy += wfr_arEy
             else:
                 for i in range(nTot):
                     #for some reason, this increases memory requirements in Py:
@@ -2385,32 +2389,59 @@ class SRWLWfr(object):
 
             nTot2 = nTot*2
             nTot3 = nTot*3
-            if(_stokes.arS is not None):
-                if(len(_stokes.arS) < nTotSt):
-                    _stokes.arS = array('f', [0]*nTotSt)
-            else:
-                _stokes.arS = array('f', [0]*nTotSt)           
-            for i in range(nTot):
-                i2 = i*2
-                i2p1 = i2 + 1
-                reEx = self.arEx[i2]
-                imEx = self.arEx[i2p1]
-                reEy = self.arEy[i2]
-                imEy = self.arEy[i2p1]
-                intLinX = reEx*reEx + imEx*imEx
-                intLinY = reEy*reEy + imEy*imEy
-                _stokes.arS[i] = intLinX + intLinY
-                #_stokes.arS[i + nTot] = intLinX - intLinY
-                if(_n_stokes_comp > 1): _stokes.arS[i + nTot] = intLinX - intLinY #OC04052018
-                #_stokes.arS[i + nTot2] = -2*(reEx*reEy + imEx*imEy) #check sign
-                if(_n_stokes_comp > 2): _stokes.arS[i + nTot2] = 2*(reEx*reEy + imEx*imEy) #OC04052018 #check sign (in SRW for Igor: -2*(ReEX*ReEZ + ImEX*ImEZ))
-                #_stokes.arS[i + nTot3] = 2*(-reEx*reEy + imEx*imEy) #check sign
-                if(_n_stokes_comp > 3): _stokes.arS[i + nTot3] = 2*(reEx*imEy - imEx*reEy) #OC04052018 #check sign (in SRW for Igor: 2*(-ReEX*ImEZ + ImEX*ReEZ))
 
-                #DEBUG
-                #if(isnan(reEx) or isnan(imEx) or isnan(reEy) or isnan(imEy)):
-                #    print('reEx=', reEx, ' imEx=', imEx, ' reEy=', reEy, ' imEy=', imEy)
-                #END DEBUG
+            numpyAvail = False
+            try:
+                import numpy as np
+                numpyAvail = True
+            except:
+                pass
+
+            if numpyAvail:
+                np_arEx = np.array(self.arEx)
+                np_arEy = np.array(self.arEy)
+                reEx = np_arEx[::2]
+                imEx = np_arEx[1::2]
+
+                reEy = np_arEy[::2]
+                imEy = np_arEy[1::2]
+
+                intLinX = reEx**2 + imEx**2
+                intLinY = reEy**2 + imEy**2
+                
+                arS = [intLinX + intLinY]
+                if(_n_stokes_comp > 1): arS.append(intLinX - intLinY)
+                if(_n_stokes_comp > 2): arS.append(2*(reEx*reEy + imEx*imEy))
+                if(_n_stokes_comp > 3): arS.append(2*(reEx*imEy + imEx*reEy))
+                _stokes.arS = np.concatenate(arS)
+            else:
+                if(_stokes.arS is not None):
+                    if(len(_stokes.arS) < nTotSt):
+                        _stokes.arS = array('f', [0]*nTotSt)
+                else:
+                    _stokes.arS = array('f', [0]*nTotSt)           
+
+                for i in range(nTot):
+                    i2 = i*2
+                    i2p1 = i2 + 1
+                    reEx = self.arEx[i2]
+                    imEx = self.arEx[i2p1]
+                    reEy = self.arEy[i2]
+                    imEy = self.arEy[i2p1]
+                    intLinX = reEx*reEx + imEx*imEx
+                    intLinY = reEy*reEy + imEy*imEy
+                    _stokes.arS[i] = intLinX + intLinY
+                    #_stokes.arS[i + nTot] = intLinX - intLinY
+                    if(_n_stokes_comp > 1): _stokes.arS[i + nTot] = intLinX - intLinY #OC04052018
+                    #_stokes.arS[i + nTot2] = -2*(reEx*reEy + imEx*imEy) #check sign
+                    if(_n_stokes_comp > 2): _stokes.arS[i + nTot2] = 2*(reEx*reEy + imEx*imEy) #OC04052018 #check sign (in SRW for Igor: -2*(ReEX*ReEZ + ImEX*ImEZ))
+                    #_stokes.arS[i + nTot3] = 2*(-reEx*reEy + imEx*imEy) #check sign
+                    if(_n_stokes_comp > 3): _stokes.arS[i + nTot3] = 2*(reEx*imEy - imEx*reEy) #OC04052018 #check sign (in SRW for Igor: 2*(-ReEX*ImEZ + ImEX*ReEZ))
+
+                    #DEBUG
+                    #if(isnan(reEx) or isnan(imEx) or isnan(reEy) or isnan(imEy)):
+                    #    print('reEx=', reEx, ' imEx=', imEx, ' reEy=', reEy, ' imEy=', imEy)
+                    #END DEBUG
                 
             _stokes.mesh.set_from_other(self.mesh)
             #Why this is using self.mesh, whereas if(_stokes.mutual) uses _stokes.mesh? Consider correcting.
@@ -6164,7 +6195,7 @@ class SRWLDet(object):
 
         self.eStepEff = 0 if(ne <= 1) else (_eFin - _eStart)/ne
 
-    def treat_int(self, _stk, _mesh=None, _ord_interp=0):
+    def treat_int(self, _stk, _mesh=None, _ord_interp=0, _nwfr=1):
         """Treat Intensity of Input Radiation
         :param _stk: Stokes data structure or a simple Intensity array to be treated by detector
         :param _mesh: mesh structure (if it is defined, _stk should be treated as Intensity array of type f)
@@ -6175,46 +6206,47 @@ class SRWLDet(object):
         resInt = SRWLStokes(1, 'f', self.eStartEff, self.eFinEff, 1, self.xStart, self.xFin, self.nx, self.yStart, self.yFin, self.ny, _n_comp=1) #OC20082021 (?)
         #resInt = SRWLStokes(1, 'f', self.eStartEff, self.eFinEff, 1, self.xStart, self.xFin, self.nx, self.yStart, self.yFin, self.ny)
 
-        meshIn = None
-        sktIn = None
-        if(_mesh is not None) and (isinstance(_mesh, SRWLRadMesh)): 
-            meshIn = _mesh
-            arI = None
-            if(isinstance(_stk, array) and (_stk.itemsize == 4)): #array of type f
-                arI = _stk
-            else:
+        for iwfr in range(_nwfr):
+            meshIn = None
+            sktIn = None
+            if(_mesh is not None) and (isinstance(_mesh, SRWLRadMesh)): 
+                meshIn = _mesh
+                arI = None
                 nTot = meshIn.ne*meshIn.nx*meshIn.ny
-                arI = array('f', [0]*nTot)
-                for i in range(nTot): arI[i] = _stk[i]
+                if(isinstance(_stk, array) and (_stk.itemsize == 4)): #array of type f
+                    arI = _stk[iwfr*nTot:(iwfr+1)*nTot]
+                else:
+                    arI = array('f', [0]*nTot)
+                    for i in range(nTot): arI[i] = _stk[i + iwfr*nTot]
 
-            #DEBUG
-            #print('treat_int: meshIn.xStart=', meshIn.xStart, ' meshIn.xFin=', meshIn.xFin)
+                #DEBUG
+                #print('treat_int: meshIn.xStart=', meshIn.xStart, ' meshIn.xFin=', meshIn.xFin)
             
-            sktIn = SRWLStokes(arI, 'f', meshIn.eStart, meshIn.eFin, meshIn.ne, meshIn.xStart, meshIn.xFin, meshIn.nx, meshIn.yStart, meshIn.yFin, meshIn.ny, _n_comp=1) #OC20082021 (?)
-            #sktIn = SRWLStokes(arI, 'f', meshIn.eStart, meshIn.eFin, meshIn.ne, meshIn.xStart, meshIn.xFin, meshIn.nx, meshIn.yStart, meshIn.yFin, meshIn.ny)
+                sktIn = SRWLStokes(arI, 'f', meshIn.eStart, meshIn.eFin, meshIn.ne, meshIn.xStart, meshIn.xFin, meshIn.nx, meshIn.yStart, meshIn.yFin, meshIn.ny, _n_comp=1) #OC20082021 (?)
+                #sktIn = SRWLStokes(arI, 'f', meshIn.eStart, meshIn.eFin, meshIn.ne, meshIn.xStart, meshIn.xFin, meshIn.nx, meshIn.yStart, meshIn.yFin, meshIn.ny)
             
-        else: 
-            if(not isinstance(_stk, SRWLStokes)): raise Exception('An object of SRWLStokes class is expected')
-            meshIn = _stk.mesh
-            #extMeshIsDef = True
+            else: 
+                if(not isinstance(_stk, SRWLStokes)): raise Exception('An object of SRWLStokes class is expected')
+                meshIn = _stk.mesh
+                #extMeshIsDef = True
 
-        eRange = meshIn.eFin - meshIn.eStart
-        eStep = 0 if(meshIn.ne <= 1) else eRange/(meshIn.ne - 1)
-        bwMult = 1 if(eRange == 0) else 1./eRange
-        ePh = meshIn.eStart
-        for ie in range(meshIn.ne):
-            effMult = 1 #To treat Spectral Efficiency
-            if(self.specEff is not None):
-                if(isinstance(self.specEff, list) or isinstance(self.specEff, array)):
-                    effMult = interp_1d(ePh, self.eStartEff, self.eStepEff, self.neEff, self.specEff, _ord=2)
-                else: effMult = self.specEff
+            eRange = meshIn.eFin - meshIn.eStart
+            eStep = 0 if(meshIn.ne <= 1) else eRange/(meshIn.ne - 1)
+            bwMult = 1 if(eRange == 0) else 1./eRange
+            ePh = meshIn.eStart
+            for ie in range(meshIn.ne):
+                effMult = 1 #To treat Spectral Efficiency
+                if(self.specEff is not None):
+                    if(isinstance(self.specEff, list) or isinstance(self.specEff, array)):
+                        effMult = interp_1d(ePh, self.eStartEff, self.eStepEff, self.neEff, self.specEff, _ord=2)
+                    else: effMult = self.specEff
 
-            if((self.dx <= 0) or (self.dy <= 0)):
-                ordInterp = _ord_interp if(_ord_interp > 0) else self.ord_interp
-                resInt.avg_update_interp(sktIn, _iter=0, _ord=ordInterp, _n_stokes_comp=1, _mult=effMult*bwMult) #to treat all Stokes components / Polarization in the future
-            #else: 
-                #Program integration within pixels self.dx, self.dy here
-            ePh += eStep
+                if((self.dx <= 0) or (self.dy <= 0)):
+                    ordInterp = _ord_interp if(_ord_interp > 0) else self.ord_interp
+                    resInt.avg_update_interp(sktIn, _iter=0, _ord=ordInterp, _n_stokes_comp=1, _mult=effMult*bwMult, _sum = iwfr > 0) #to treat all Stokes components / Polarization in the future
+                #else: 
+                    #Program integration within pixels self.dx, self.dy here
+                ePh += eStep
 
         return resInt
 
@@ -6537,7 +6569,7 @@ def srwl_uti_save_intens_hdf5(_ar_intens, _mesh, _file_path, _n_stokes=1,
     nVal = nRadPt*nComp #_mesh.ne*_mesh.nx*_mesh.ny*nComp
     if(_cmplx != 0): nVal *= 2
 
-    if(isinstance(_ar_intens, cp.ndarray)):
+    if(useCuPy and isinstance(_ar_intens, cp.ndarray)):
         intensity_data = _ar_intens.get()
     elif(not (isinstance(_ar_intens, array) or isinstance(_ar_intens, np.ndarray))):
         intensity_data = np.array([0]*nVal, 'f')
@@ -7341,17 +7373,13 @@ def srwl_uti_array_alloc(_type, _n, _list_base=[0]): #OC14042019
     lenBase = len(_list_base) #OC14042019
     nTrue = _n*lenBase #OC14042019
     
-    if _type == 'f':
-        return cp.zeros(nTrue, dtype=cp.float32)
-    elif _type == 'd':
-        return cp.zeros(nTrue, dtype=cp.float64)
-
-    if(nTrue <= nPartMax):
-        if _type == 'f': 
-            retObj = cp.zeros(_n, dtype=cp.float32) #cp.array(array(_type, _list_base*_n))
+    if useCuPy:
+        if _type == 'f':
+            return cp.zeros(nTrue, dtype=cp.float32)
         elif _type == 'd':
-            retObj = cp.zeros(_n, dtype=cp.float64)
-        return retObj
+            return cp.zeros(nTrue, dtype=cp.float64)
+
+    if(nTrue <= nPartMax): return array(_type, _list_base*_n)
     #if(_n <= nPartMax): return array(_type, [0]*_n)
         #resAr = array(_type, [0]*_n)
         #print('Array requested:', _n, 'Allocated:', len(resAr))
@@ -7377,7 +7405,7 @@ def srwl_uti_array_alloc(_type, _n, _list_base=[0]): #OC14042019
         resAr.extend(auxAr)
 
     #print('Array requested:', _n, 'Allocated:', len(resAr))
-    return cp.array(resAr)
+    return resAr
 
 #**********************Auxiliary function to generate Halton sequence (to replace pseudo-random numbers)
 #Contribution from R. Lindberg, X. Shi (APS)
@@ -8541,7 +8569,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
             #sys.stdout.flush()
             #END DEBUG
 
-            srwl.PropagElecField(wfr, _opt_bl)
+            srwl.PropagElecField(wfr, _opt_bl, None, _exec_gpu_id)
 
         #DEBUG
         #print('completed (lasted', round(time.time() - t0, 6), 's)') #DEBUG
@@ -8919,7 +8947,8 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
             #Asumes that meshRes is already defined at this point for workers
             lenHalfArToSend = meshRes.ne*meshRes.nx*meshRes.ny*2 #for arEx and arEy (consider introducing some logic of arEx or arEy is not used)
             lenArToSend = 2*lenHalfArToSend
-            arElFldToSend = cp.array(array('f', [0]*lenArToSend))
+            arElFldToSend = array('f', [0]*lenArToSend)
+            if useCuPy: arElFldToSend = cp.asarray(arElFldToSend)
         
         for i in range(nPartPerProc): #loop over macro-electrons
 
@@ -9204,7 +9233,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                     #if(not (doPropCM and (iMode == 0) and (_det == 0))): #OC03022021
                     #if(not (doPropCM and (iMode == 0))): #OC19112020
                     #if(not (doPropCM and (i == 0))): #OC13112020
-                        srwl.PropagElecField(wfr, _opt_bl) #propagate Electric Field emitted by the electron
+                        srwl.PropagElecField(wfr, _opt_bl, None, _exec_gpu_id) #propagate Electric Field emitted by the electron
 
                         #DEBUG
                         #print('Rank #', rank, ': mode #', iMode, 'propagated')
@@ -9991,7 +10020,8 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
             #Asumes that meshRes is already defined at this point for workers
             lenHalfArToRecv = meshRes.ne*meshRes.nx*meshRes.ny*2 #for arEx and arEy (consider introducing some logic of arEx or arEy is not used)
             lenArToRecv = 2*lenHalfArToRecv
-            arElFldToRecv = cp.array(array('f', [0]*lenArToRecv))
+            arElFldToRecv = array('f', [0]*lenArToRecv)
+            if useCuPy: arElFldToRecv = cp.asarray(arElFldToRecv)
         
         #if(_char == 4): #OC30052017 #Cuts of Mutual Intensity vs X & Y
         if((_char == 4) or (_char == 5)): #OC15072019 #Cuts of Mutual Intensity and/or Degree of Coherence vs X & Y

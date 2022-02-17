@@ -408,6 +408,8 @@ env/work/srw_python/data_example_19/samples/ex19_smp_obj_list_5.dat
 env/work/srw_python/data_example_20/ex20_res_int_in.dat
 env/work/srw_python/data_example_20/ex20_res_cm.h5
 env/work/srw_python/data_example_20/ex20_res_mi.h5
+env/work/srw_python/sample_def
+
 ext_lib/libfftw.a
 ext_lib/libfftw3.a
 ext_lib/libfftw3f.a

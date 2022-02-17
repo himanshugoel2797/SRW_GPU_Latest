@@ -5442,18 +5442,18 @@ static PyObject* srwlpy_UtiStokesAvgUpdateInterp(PyObject* self, PyObject* args)
 	PyObject *oStokes, *oMoreStokes;
 	vector<Py_buffer> vBuf;
 	SRWLStokes pSelf, pMoreStokes;
-	int nIters, nStokesComp;
+	int nIters, nStokesComp, bSum;
 	double mult;
 
 	srwlUtiDevInit();
 	try {
-		if (!PyArg_ParseTuple(args, "OOiid:UtiStokesAvgUpdateInterp", &oStokes, &oMoreStokes, &nIters, &nStokesComp, &mult)) throw strEr_BadArg_UtiIntProc;
+		if (!PyArg_ParseTuple(args, "OOiidp:UtiStokesAvgUpdateInterp", &oStokes, &oMoreStokes, &nIters, &nStokesComp, &mult, &bSum)) throw strEr_BadArg_UtiIntProc;
 		if ((oStokes == 0) || (oMoreStokes == 0)) throw strEr_BadArg_UtiIntProc;
 		
 		ParseSructSRWLStokes(&pSelf, oStokes, &vBuf);
 		ParseSructSRWLStokes(&pMoreStokes, oMoreStokes, &vBuf);
 
-		ProcRes(srwlUtiStokesAvgUpdateInterp(&pSelf, &pMoreStokes, nIters, 1, nStokesComp, mult));
+		ProcRes(srwlUtiStokesAvgUpdateInterp(&pSelf, &pMoreStokes, nIters, 1, nStokesComp, mult, bSum));
 	}
 	catch (char* erText) {
 		PyErr_SetString(PyExc_RuntimeError, erText);
