@@ -1273,6 +1273,7 @@
     <ClInclude Include="..\src\core\sroptelmgpu.h" />
     <ClInclude Include="..\src\core\srradmnpgpu.cuh" />
     <ClInclude Include="..\src\core\srradmnpgpu.h" />
+    <ClInclude Include="..\src\core\srradstrgpu.h" />
     <ClInclude Include="..\src\ext\auxparse\auxparse.h" />
     <ClInclude Include="..\src\ext\genmath\cmplxd.h" />
     <ClInclude Include="..\src\ext\genmath\gmercode.h" />
@@ -1351,6 +1352,7 @@
   <ItemGroup>
     <CudaCompile Include="..\src\core\sroptelmgpu.cu" />
     <CudaCompile Include="..\src\core\srradmnpgpu.cu" />
+    <CudaCompile Include="..\src\core\srradstrgpu.cu" />
     <CudaCompile Include="..\src\ext\genmath\gmfftgpu0.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
