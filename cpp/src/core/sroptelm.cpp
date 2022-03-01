@@ -29,6 +29,8 @@
 #include "srinterf.h"
 #include "sropthck.h"
 #include "sroptgrat.h"
+#include "sroptelmgpu.h"
+#include "utidev.h"
 
 #ifdef _WITH_OMP //Pre-processor definition for compiling with OpenMP library
 #include "omp.h"
@@ -4680,103 +4682,110 @@ void srTGenOptElem::TreatStronglyOscillatingTerm(srTSRWRadStructAccessData& RadA
 	#pragma omp parallel for
 #endif
 
-	//for(int ie=0; ie<RadAccessData.ne; ie++)
-	for(int ie=ieStart; ie<ieBefEnd; ie++) //OC161008
+	GPU_COND(pGpuUsage,
+		{
+			TreatStronglyOscillatingTerm_CUDA(RadAccessData, TreatPolCompX, TreatPolCompZ, ieStart, ieBefEnd, ConstRx, ConstRz);
+		})
+	else
 	{
-		//OC31102018: moved by SY at parallelizing SRW via OpenMP
-		double Phase;
-		float CosPh, SinPh;
-		double ConstRxE, ConstRzE;
-		double x, z, zE2;
-
-		//SY: to have one-to-one with previous version (so that tests do no fail)
-		//double ePh = RadAccessData.eStart;
-		//for (int i = ieStart; i<ie; i++) ePh += RadAccessData.eStep;
-		//SY: can be replaced with this
-		double ePh = RadAccessData.eStart + RadAccessData.eStep*(ie - ieStart);
-
-		if(RadAccessData.PresT == 1)
+		//for(int ie=0; ie<RadAccessData.ne; ie++)
+		for (int ie = ieStart; ie < ieBefEnd; ie++) //OC161008
 		{
-			ePh = RadAccessData.avgPhotEn; //?? OC041108
-		}
+			//OC31102018: moved by SY at parallelizing SRW via OpenMP
+			double Phase;
+			float CosPh, SinPh;
+			double ConstRxE, ConstRzE;
+			double x, z, zE2;
 
-		//long Two_ie = ie << 1;
-		long long Two_ie = ie << 1;
+			//SY: to have one-to-one with previous version (so that tests do no fail)
+			//double ePh = RadAccessData.eStart;
+			//for (int i = ieStart; i<ie; i++) ePh += RadAccessData.eStep;
+			//SY: can be replaced with this
+			double ePh = RadAccessData.eStart + RadAccessData.eStep * (ie - ieStart);
 
-		ConstRxE = ConstRx*ePh;
-		ConstRzE = ConstRz*ePh;
-
-		if(RadAccessData.Pres == 1)
-		{
-			//double Lambda_m = 1.239854e-06/ePh;
-			double Lambda_m = 1.239842e-06/ePh;
-			if(RadAccessData.PhotEnergyUnit == 1) Lambda_m *= 0.001; // if keV
-
-			double Lambda_me2 = Lambda_m*Lambda_m;
-			ConstRxE *= Lambda_me2;
-			ConstRzE *= Lambda_me2;
-		}
-
-		z = RadAccessData.zStart - RadAccessData.zc; //To check: this is probably not correct in Angular representation?
-
-		zE2 = z*z;
-		double PhaseAddZ = 0.;
-		if(RadAccessData.WfrQuadTermCanBeTreatedAtResizeZ) PhaseAddZ = ConstRzE*zE2;
-
-		for(int iz=0; iz<RadAccessData.nz; iz++)
-		{
-			//long izPerZ = iz*PerZ;
-			long long izPerZ = iz*PerZ;
-			float *pEX_StartForX = pEX0 + izPerZ;
-			float *pEZ_StartForX = pEZ0 + izPerZ;
-
-			x = RadAccessData.xStart - RadAccessData.xc; //To check: this is probably not correct in Angular representation?
-
-			for(int ix=0; ix<RadAccessData.nx; ix++)
+			if (RadAccessData.PresT == 1)
 			{
-				//long ixPerX_p_Two_ie = ix*PerX + Two_ie;
-				long long ixPerX_p_Two_ie = ix*PerX + Two_ie;
-
-				//Phase = ConstRxE*x*x + ConstRzE*zE2;
-				Phase = PhaseAddZ;
-				if(RadAccessData.WfrQuadTermCanBeTreatedAtResizeX) Phase += ConstRxE*x*x;
-
-				//AuxFFT2D.CosAndSin(Phase, CosPh, SinPh);
-				CosAndSin(Phase, CosPh, SinPh);
-
-				float* pEX_StartForWfr = pEX_StartForX + ixPerX_p_Two_ie;
-				float* pEZ_StartForWfr = pEZ_StartForX + ixPerX_p_Two_ie;
-
-				for (int iwfr = 0; iwfr < RadAccessData.nWfr; iwfr++) 
-				{
-					long long iwfrPerWfr = iwfr*PerWfr;
-
-					if (TreatPolCompX)
-					{
-						float* pExRe = pEX_StartForWfr + iwfrPerWfr;
-						float* pExIm = pExRe + 1;
-						double ExReNew = (*pExRe) * CosPh - (*pExIm) * SinPh;
-						double ExImNew = (*pExRe) * SinPh + (*pExIm) * CosPh;
-						*pExRe = (float)ExReNew; *pExIm = (float)ExImNew;
-					}
-					if (TreatPolCompZ)
-					{
-						float* pEzRe = pEZ_StartForWfr + iwfrPerWfr;
-						float* pEzIm = pEzRe + 1;
-						double EzReNew = (*pEzRe) * CosPh - (*pEzIm) * SinPh;
-						double EzImNew = (*pEzRe) * SinPh + (*pEzIm) * CosPh;
-						*pEzRe = (float)EzReNew; *pEzIm = (float)EzImNew;
-					}
-				}
-				x += RadAccessData.xStep;
+				ePh = RadAccessData.avgPhotEn; //?? OC041108
 			}
-			z += RadAccessData.zStep;
-			zE2 = z*z;
-			PhaseAddZ = 0.;
-			if(RadAccessData.WfrQuadTermCanBeTreatedAtResizeZ) PhaseAddZ = ConstRzE*zE2;
+
+			//long Two_ie = ie << 1;
+			long long Two_ie = ie << 1;
+
+			ConstRxE = ConstRx * ePh;
+			ConstRzE = ConstRz * ePh;
+
+			if (RadAccessData.Pres == 1)
+			{
+				//double Lambda_m = 1.239854e-06/ePh;
+				double Lambda_m = 1.239842e-06 / ePh;
+				if (RadAccessData.PhotEnergyUnit == 1) Lambda_m *= 0.001; // if keV
+
+				double Lambda_me2 = Lambda_m * Lambda_m;
+				ConstRxE *= Lambda_me2;
+				ConstRzE *= Lambda_me2;
+			}
+
+			z = RadAccessData.zStart - RadAccessData.zc; //To check: this is probably not correct in Angular representation?
+
+			zE2 = z * z;
+			double PhaseAddZ = 0.;
+			if (RadAccessData.WfrQuadTermCanBeTreatedAtResizeZ) PhaseAddZ = ConstRzE * zE2;
+
+			for (int iz = 0; iz < RadAccessData.nz; iz++)
+			{
+				//long izPerZ = iz*PerZ;
+				long long izPerZ = iz * PerZ;
+				float* pEX_StartForX = pEX0 + izPerZ;
+				float* pEZ_StartForX = pEZ0 + izPerZ;
+
+				x = RadAccessData.xStart - RadAccessData.xc; //To check: this is probably not correct in Angular representation?
+
+				for (int ix = 0; ix < RadAccessData.nx; ix++)
+				{
+					//long ixPerX_p_Two_ie = ix*PerX + Two_ie;
+					long long ixPerX_p_Two_ie = ix * PerX + Two_ie;
+
+					//Phase = ConstRxE*x*x + ConstRzE*zE2;
+					Phase = PhaseAddZ;
+					if (RadAccessData.WfrQuadTermCanBeTreatedAtResizeX) Phase += ConstRxE * x * x;
+
+					//AuxFFT2D.CosAndSin(Phase, CosPh, SinPh);
+					CosAndSin(Phase, CosPh, SinPh);
+
+					float* pEX_StartForWfr = pEX_StartForX + ixPerX_p_Two_ie;
+					float* pEZ_StartForWfr = pEZ_StartForX + ixPerX_p_Two_ie;
+
+					for (int iwfr = 0; iwfr < RadAccessData.nWfr; iwfr++)
+					{
+						long long iwfrPerWfr = iwfr * PerWfr;
+
+						if (TreatPolCompX)
+						{
+							float* pExRe = pEX_StartForWfr + iwfrPerWfr;
+							float* pExIm = pExRe + 1;
+							double ExReNew = (*pExRe) * CosPh - (*pExIm) * SinPh;
+							double ExImNew = (*pExRe) * SinPh + (*pExIm) * CosPh;
+							*pExRe = (float)ExReNew; *pExIm = (float)ExImNew;
+						}
+						if (TreatPolCompZ)
+						{
+							float* pEzRe = pEZ_StartForWfr + iwfrPerWfr;
+							float* pEzIm = pEzRe + 1;
+							double EzReNew = (*pEzRe) * CosPh - (*pEzIm) * SinPh;
+							double EzImNew = (*pEzRe) * SinPh + (*pEzIm) * CosPh;
+							*pEzRe = (float)EzReNew; *pEzIm = (float)EzImNew;
+						}
+					}
+					x += RadAccessData.xStep;
+				}
+				z += RadAccessData.zStep;
+				zE2 = z * z;
+				PhaseAddZ = 0.;
+				if (RadAccessData.WfrQuadTermCanBeTreatedAtResizeZ) PhaseAddZ = ConstRzE * zE2;
+			}
+			//OC31102018: removed by SY at parallelizing SRW via OPenMP
+			//ePh += RadAccessData.eStep;
 		}
-		//OC31102018: removed by SY at parallelizing SRW via OPenMP
-		//ePh += RadAccessData.eStep;
 	}
 }
 

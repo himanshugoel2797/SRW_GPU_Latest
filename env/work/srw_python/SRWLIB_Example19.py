@@ -95,9 +95,9 @@ uti_plot2d1d(arI0, plotMesh0x, plotMesh0y, 0, 0, ['Horizontal Position', 'Vertic
 
 #************Defining Samples (lists of 3D objects (spheres))
 #Initial set of 3D objects
-rx = 20.e-06 #Range of Horizontal position [m] within which 3D Objects constituing Sample are defined
-ry = 20.e-06 #Range of Vertical position [m]
-rz = 20.e-06 #Range of Longitudinal position [m]
+rx = 40.e-06 #Range of Horizontal position [m] within which 3D Objects constituing Sample are defined
+ry = 40.e-06 #Range of Vertical position [m]
+rz = 40.e-06 #Range of Longitudinal position [m]
 xc = 0 #Horizontal Center position of the Sample
 yc = 0 #Vertical Center position of the Sample
 zc = 0 #Longitudinal Center position of the Sample
@@ -108,8 +108,9 @@ listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d( #Initial list of 3D objec
     #_ranges = [rx, ry, rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
     _cen = [xc, yc, zc], #Horizontal, Vertical and Longitudinal coordinates of center position around which the 3D objects are defined
     _dist = 'uniform', #Type (and eventual parameters) of distributions of 3D objects
-    _obj_shape = ['S', 'uniform', 25.e-09, 250.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
+    _obj_shape = ['S', 'uniform', 50.e-09, 500.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
     _allow_overlap = False, #Allow or not the 3D objects to overlap
+    _seed = 0,
     _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName%(0)))
     
 #Generate timesteps of Brownian motion of the 3D nano-objects (spheres) simulating particles suspended in water at room temperature
@@ -122,7 +123,7 @@ listObjBrownian = srwl_uti_smp_rnd_obj3d.brownian_motion3d(
     _timestep = timeStep, #[s]
     _duration = timeInterv, #[s]
     _seed = 0,
-    _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName))
+    _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName))[:1]
 
 #Sample Material Characteristics (Au at 8 keV)
 matDelta = 4.773e-05 #Refractive Index Decrement
@@ -216,7 +217,7 @@ for it in range(len(listObjBrownian)):
     #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
     #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
-    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+    if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose()
     print('done in', round(time.time() - t, 3), 's')
 
     #Plotting the Results (requires 3rd party graphics package)
@@ -231,11 +232,11 @@ for it in range(len(listObjBrownian)):
     #Scattered Radiation Intensity Distribution in Log Scale
     plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
     plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
-    arLogI1 = copy(arI1)
+    arLogI1 = np.array(copy(arI1))
     nTot = mesh1.ne*mesh1.nx*mesh1.ny
 
     arLogI1 = np.clip(arI1, 0, None, arLogI1)
-    arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0).get()
+    arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0)
     #for i in range(nTot):
     #    curI = arI1[i]
     #    if(curI <= 0.): arLogI1[i] = 0 #?

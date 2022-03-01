@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os
-
 from srwl_uti_smp import srwl_opt_setup_transm_from_obj3d
 try:
     __IPYTHON__
@@ -20,10 +19,10 @@ def set_optics(v, names=None, want_final_propagation=True):
     el = []
     pp = []
     if not names:
-        names = ['Aperture','Aperture_Sample','Sample','Sample_Detector','Detector']
+        names = ['Aperture', 'Aperture_Sample', 'Sample', 'Sample_Detector', 'Detector']
     for el_name in names:
         if el_name == 'Aperture':
-            # Aperture: aperture 0.5m
+            # Aperture: aperture 0.0m
             el.append(srwlib.SRWLOptA(
                 _shape=v.op_Aperture_shape,
                 _ap_or_ob='a',
@@ -56,7 +55,7 @@ def set_optics(v, names=None, want_final_propagation=True):
             ))
             pp.append(v.op_Sample_Detector_pp)
         elif el_name == 'Detector':
-            # Detector: watch 10.0m
+            # Detector: watch 10.5m
             pass
     if want_final_propagation:
         pp.append(v.op_fin_pp)
@@ -144,8 +143,8 @@ varParam = [
     ['ws_pl', 's', 'xy', 'plot the resulting intensity distributions in graph(s): ""- dont plot, "x"- vs horizontal position, "y"- vs vertical position, "xy"- vs horizontal and vertical position'],
 
     ['wm_nm', 'i', 10, 'number of macro-electrons (coherent wavefronts) for calculation of multi-electron wavefront propagation'],
-    ['wm_na', 'i', 5, 'number of macro-electrons (coherent wavefronts) to average on each node for parallel (MPI-based) calculation of multi-electron wavefront propagation'],
-    ['wm_ns', 'i', 5, 'saving periodicity (in terms of macro-electrons / coherent wavefronts) for intermediate intensity at multi-electron wavefront propagation calculation'],
+    ['wm_na', 'i', 10, 'number of macro-electrons (coherent wavefronts) to average on each node for parallel (MPI-based) calculation of multi-electron wavefront propagation'],
+    ['wm_ns', 'i', 10, 'saving periodicity (in terms of macro-electrons / coherent wavefronts) for intermediate intensity at multi-electron wavefront propagation calculation'],
     ['wm_ch', 'i', 0, 'type of a characteristic to be extracted after calculation of multi-electron wavefront propagation: #0- intensity (s0); 1- four Stokes components; 2- mutual intensity cut vs x; 3- mutual intensity cut vs y; 40- intensity(s0), mutual intensity cuts and degree of coherence vs X & Y'],
     ['wm_ap', 'i', 0, 'switch specifying representation of the resulting Stokes parameters: coordinate (0) or angular (1)'],
     ['wm_x0', 'f', 0.0, 'horizontal center position for mutual intensity cut calculation'],
@@ -174,13 +173,23 @@ varParam = [
 #---Beamline optics:
     # Aperture: aperture
     ['op_Aperture_shape', 's', 'r', 'shape'],
-    ['op_Aperture_Dx', 'f', 5e-06, 'horizontalSize'],
-    ['op_Aperture_Dy', 'f', 5e-06, 'verticalSize'],
+    #['op_Aperture_Dx', 'f', 3e-05, 'horizontalSize'],
+    ['op_Aperture_Dx', 'f', 3e-05, 'horizontalSize'],
+    #['op_Aperture_Dy', 'f', 1.67e-05, 'verticalSize'],
+    ['op_Aperture_Dy', 'f', 3e-04, 'verticalSize'],
+    #['op_Aperture_Dy', 'f', 3e-01, 'verticalSize'],
     ['op_Aperture_x', 'f', 0.0, 'horizontalOffset'],
     ['op_Aperture_y', 'f', 0.0, 'verticalOffset'],
 
     # Aperture_Sample: drift
     ['op_Aperture_Sample_L', 'f', 0.5, 'length'],
+
+    # Obstacle: obstacle
+    ['op_Obstacle_shape', 's', 'c', 'shape'],
+    ['op_Obstacle_Dx', 'f', 1e-05, 'horizontalSize'],
+    ['op_Obstacle_Dy', 'f', 1e-05, 'verticalSize'],
+    ['op_Obstacle_x', 'f', 0.0, 'horizontalOffset'],
+    ['op_Obstacle_y', 'f', 0.0, 'verticalOffset'],
 
     # Sample: sample
     ['op_Sample_file_path', 's', 'sample.tif', 'imageFile'],
@@ -191,22 +200,22 @@ varParam = [
     ['op_Sample_xc', 'f', 0.0, 'horizontalCenterCoordinate'],
     ['op_Sample_yc', 'f', 0.0, 'verticalCenterCoordinate'],
     ['op_Sample_zc', 'f', 0.0, 'depthCenterCoordinate'],
-    ['op_Sample_rx', 'f', 20.e-06, 'rx'],
-    ['op_Sample_ry', 'f', 20.e-06, 'ry'],
-    ['op_Sample_rz', 'f', 20.e-06, 'rz'],
-    ['op_Sample_obj_size_min', 'f', 25.e-09, 'obj_size_min'],
-    ['op_Sample_obj_size_max', 'f', 250.e-09, 'obj_size_max'],
+    ['op_Sample_rx', 'f', 100.e-06, 'rx'],
+    ['op_Sample_ry', 'f', 100.e-06, 'ry'],
+    ['op_Sample_rz', 'f', 100.e-06, 'rz'],
+    ['op_Sample_obj_size_min', 'f', 125.e-09, 'obj_size_min'],
+    ['op_Sample_obj_size_max', 'f', 1250.e-09, 'obj_size_max'],
     ['op_Sample_extTransm', 'i', 1, 'transmissionImage'],
     ['op_Sample_nx', 'i', 2000, 'nx'],
     ['op_Sample_ny', 'i', 2000, 'ny'],
-    
+
     # Sample_Detector: drift
     ['op_Sample_Detector_L', 'f', 10.0, 'length'],
 
 #---Propagation parameters
-    ['op_Aperture_pp', 'f',        [0, 0, 1.0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture'],
-    ['op_Aperture_Sample_pp', 'f', [0, 0, 1.0, 1, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture_Sample'],
-    ['op_Sample_pp', 'f',          [0, 0, 1.0, 0, 0, 1.0, 50.0, 1.0, 50.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Sample'],
+    ['op_Aperture_pp', 'f',        [0, 0, 1.0, 0, 0, 1.0, 55.0, 1.0, 55.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture'],
+    ['op_Aperture_Sample_pp', 'f', [0, 0, 1.0, 3, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture_Sample'],
+    ['op_Sample_pp', 'f',          [0, 0, 1.0, 0, 0, 1.0, 55.0 * 3, 1.0, 55.0 * 3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Sample'],
     ['op_Sample_Detector_pp', 'f', [0, 0, 1.0, 3, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Sample_Detector'],
     ['op_fin_pp', 'f',             [0, 0, 1.0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'final post-propagation (resize) parameters'],
 
@@ -235,9 +244,9 @@ def epilogue():
     pass
 
 
-def main(idx, per_proc = 1):
+def main(idx, per_proc = 5):
     v = srwl_bl.srwl_uti_parse_options(srwl_bl.srwl_uti_ext_options(varParam), use_sys_argv=True)
-
+    
     listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d(
         _n = 100, #Number of 3D nano-objects
         _ranges = [0.95*v.op_Sample_rx, 0.95*v.op_Sample_ry, v.op_Sample_rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
@@ -251,7 +260,7 @@ def main(idx, per_proc = 1):
     )
 
     timeStep = 0.1 #Time step between different Sample "snapshots" / scattering patterns
-    timeInterv = 3 #Total time interval covered by the "snapshots"
+    timeInterv = 20 #Total time interval covered by the "snapshots"
     listObjBrownian = srwl_uti_smp_rnd_obj3d.brownian_motion3d(
         _obj_crd = listObjInit, #Initial list of 3D objects
         _viscosity = 1.e-3, #[Pa*s]
@@ -260,17 +269,19 @@ def main(idx, per_proc = 1):
         _duration = timeInterv, #[s]
         _seed = 0,
         _fp = os.path.join(os.getcwd(), 'sample_def', 'bm_%d.def'))
-
+        
+    #names = ['Aperture','Aperture_Sample','Sample','Sample_Detector','Detector']
     names = ['Sample','Sample_Detector','Detector']
+    #names = ['Aperture','Sample_Detector','Detector']
     for i in range(idx * per_proc, (idx + 1) * per_proc):
         if i >= len(listObjBrownian): break
         v.op_Sample_Objects = listObjBrownian[i]
-        v.wm_fni = 'res_int_pr_me_old_%d.dat' % i
+        v.wm_fni = 'res_int_pr_me_%d.dat' % i
         op = set_optics(v, names, True)
         srwl_bl.SRWLBeamline(_name=v.name).calc_all(v, op)
 
 if __name__ == '__main__':
-    main(0)
-    #with Pool(30) as p:
-    #    p.map(main, range(30))
+    main(0, 1)
+    #with Pool(20) as p:
+    #    p.map(main, range(40))
     epilogue()

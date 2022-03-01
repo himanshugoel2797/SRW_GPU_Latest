@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9a08cea0-3ae7-4a0c-a34b-6b461ac728d8}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>SRWLIB_Example19_CMD_Batched.py</StartupFile>
+    <StartupFile>NSLS-II-CHX_SampleDefinitionBase.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -37,6 +37,7 @@
     <Content Include="srwlpy.pyd" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="NSLS-II-CHX_SampleDefinitionBase.py" />
     <Compile Include="srwlib.py" />
     <Compile Include="SRWLIB_Example01.py" />
     <Compile Include="SRWLIB_Example01_kick_matr.py" />

@@ -626,12 +626,18 @@
     <ClInclude Include="..\src\core\srradmnpgpu.cuh">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\core\sroptelmgpu.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\src\ext\genmath\gmfftgpu0.cu">
       <Filter>core</Filter>
     </CudaCompile>
     <CudaCompile Include="..\src\core\srradmnpgpu.cu">
+      <Filter>core</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\core\sroptelmgpu.cu">
       <Filter>core</Filter>
     </CudaCompile>
   </ItemGroup>
