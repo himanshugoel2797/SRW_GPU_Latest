@@ -1846,7 +1846,7 @@ class SRWLBeamline(object):
     #def calc_wfr_emit_prop_me(self, _mesh, _sr_samp_fact=1, _sr_meth=2, _sr_rel_prec=0.01, _in_wr=0., _in_wre=0., _mag_type=1, _n_part_tot=100000, _n_part_avg_proc=10, _n_save_per=50, _pres_ang=0, _char=0, _x0=0, _y0=0, _e_ph_integ=0, _rand_meth=1, _fname=None, _det=None, _me_approx=0): #OC05042017
     #def calc_wfr_emit_prop_me(self, _mesh, _sr_samp_fact=1, _sr_meth=2, _sr_rel_prec=0.01, _in_wr=0., _in_wre=0., _mag_type=1, _n_part_tot=100000, _n_part_avg_proc=10, _n_save_per=50, _pres_ang=0, _char=0, _x0=0, _y0=0, _e_ph_integ=0, _rand_meth=1, _fname=None, _det=None, _me_approx=0, _fbk=False): #OC14082018
     def calc_wfr_emit_prop_me(self, _mesh, _sr_samp_fact=1, _sr_meth=2, _sr_rel_prec=0.01, _in_wr=0., _in_wre=0., _mag_type=1, _n_part_tot=100000, _n_part_avg_proc=10, _n_save_per=50,
-                              _pres_ang=0, _char=0, _x0=0, _y0=0, _e_ph_integ=0, _rand_meth=1, _fname=None, _det=None, _me_approx=0, _fbk=False, _op_rnd=False, _fform='ascii', _no_opt=False, _nmm=1, _ncm=100, _cm_wfr=None): #OC02072021
+                              _pres_ang=0, _char=0, _x0=0, _y0=0, _e_ph_integ=0, _rand_meth=1, _fname=None, _det=None, _me_approx=0, _fbk=False, _op_rnd=False, _fform='ascii', _no_opt=False, _nmm=1, _ncm=100, _cm_wfr=None, _gpu=None): #OC02072021
                               #_pres_ang=0, _char=0, _x0=0, _y0=0, _e_ph_integ=0, _rand_meth=1, _fname=None, _det=None, _me_approx=0, _fbk=False, _op_rnd=False, _fform='ascii', _nmm=1, _ncm=1000): #OC27062021
                               #_pres_ang=0, _char=0, _x0=0, _y0=0, _e_ph_integ=0, _rand_meth=1, _fname=None, _det=None, _me_approx=0, _fbk=False, _op_rnd=False, _fform='ascii', _nmm=1): #OC16042021
                               #_pres_ang=0, _char=0, _x0=0, _y0=0, _e_ph_integ=0, _rand_meth=1, _fname=None, _det=None, _me_approx=0, _fbk=False, _op_rnd=False, _fform='ascii'): #OC25022021
@@ -1948,7 +1948,8 @@ class SRWLBeamline(object):
             #_file_bkp = _fbk, _rand_opt = _op_rnd) #OC24042020
             #_file_bkp = _fbk, _rand_opt = _op_rnd, _file_form = _fform) #OC25022021
             #_file_bkp = _fbk, _rand_opt = _op_rnd, _file_form = _fform, _n_mpi=_nmm) #OC16042021
-            _file_bkp = _fbk, _rand_opt = _op_rnd, _file_form = _fform, _n_mpi=_nmm, _n_cm=_ncm) #OC27062021
+            _file_bkp = _fbk, _rand_opt = _op_rnd, _file_form = _fform, _n_mpi=_nmm, _n_cm=_ncm,#OC27062021
+            _gpu=_gpu) #HG03012022 
 
     #------------------------------------------------------------------------
     def cost_func_aux_int_distr(self, _x, *_aux):
@@ -2382,7 +2383,7 @@ class SRWLBeamline(object):
         return _v
 
     #------------------------------------------------------------------------
-    def calc_all(self, _v, _op=None): #16122018
+    def calc_all(self, _v, _op=None, _gpu=None): #16122018
     #def calc_all(self, _v, _op):
         """Performs setup of electron beam, magnetic field, and performs calculations according to options specified in _v
         :param _v: an object containing set of variables / options defining SR source and required calculations
@@ -3170,7 +3171,8 @@ class SRWLBeamline(object):
                         _no_opt = _v.wm_nop, #OC03072021
                         _nmm = _v.wm_nmm, #) #OC16042021
                         _ncm = _v.wm_ncm, #) #OC27062021
-                        _cm_wfr = lstWfrCM) #OC02072021
+                        _cm_wfr = lstWfrCM, #) #OC02072021
+                        _gpu=_gpu) #HG03012022
 
         #---plot results of all calculatiopns here (because the plotting "from the middle of the script" may hang up script execution)
         #uti_plot_init('TkAgg') #make the backend name an input option or move this to uti_plot ?

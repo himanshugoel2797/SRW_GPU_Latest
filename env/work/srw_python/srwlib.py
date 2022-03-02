@@ -2398,8 +2398,15 @@ class SRWLWfr(object):
                 pass
 
             if numpyAvail:
-                np_arEx = np.array(self.arEx)
-                np_arEy = np.array(self.arEy)
+                if useCuPy and isinstance(self.arEx, cupy.ndarray):
+                    np_arEx = np.array(self.arEx.get())
+                else:
+                    np_arEx = np.array(self.arEx)
+                    
+                if useCuPy and isinstance(self.arEy, cupy.ndarray):
+                    np_arEy = np.array(self.arEy.get())
+                else:
+                    np_arEy = np.array(self.arEy)
                 reEx = np_arEx[::2]
                 imEx = np_arEx[1::2]
 
