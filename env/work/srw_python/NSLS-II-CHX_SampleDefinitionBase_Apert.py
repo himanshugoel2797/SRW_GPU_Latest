@@ -276,9 +276,9 @@ def main(idx, per_proc = 5):
     for i in range(idx * per_proc, (idx + 1) * per_proc):
         if i >= len(listObjBrownian): break
         v.op_Sample_Objects = listObjBrownian[i]
-        v.wm_fni = 'res_int_pr_me_%d.dat' % i
+        v.wm_fni = 'res_int_pr_me_%d_nogpu.dat' % i
         op = set_optics(v, names, True)
-        srwl_bl.SRWLBeamline(_name=v.name).calc_all(v, op)
+        srwl_bl.SRWLBeamline(_name=v.name).calc_all(v, op, _gpu=0)
 
 if __name__ == '__main__':
     main(0, 1)

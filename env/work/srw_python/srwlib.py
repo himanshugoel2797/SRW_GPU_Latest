@@ -9609,7 +9609,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                     if(not (doPropCM and (iMode == 0))): #OC19112020
                     #if(not (doPropCM and (i == 0))): #OC13112020
                         
-                        resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult, _sum=doPropCM, _gpu=_gpu) #OC04112020
+                        resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult, _sum=doPropCM, _gpu=None) #OC04112020
                         #resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult)
 
                         if((resStokes2 is not None) and (workStokes2 is not None)):
@@ -9637,7 +9637,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
 
                         if(not (doPropCM and (iMode == 0))): #OC19112020
                         #if(not (doPropCM and (i == 0))): #OC13112020
-                            resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult, _sum=doPropCM, _gpu=_gpu) #OC04112020
+                            resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult, _sum=doPropCM, _gpu=None) #OC04112020
                         #resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult) #OC16012017 #to treat all Stokes components / Polarization in the future
                         
                     else:
@@ -9649,7 +9649,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                             resStokes2.avg_update_interp_mutual(workStokes2, iAvgProc, 1, ePhIntegMult)
 
                 if((resStokesA is not None) and (workStokesA is not None)): #OC24122018
-                    resStokesA.avg_update_interp(workStokesA, iAvgProc, 1, numComp, ePhIntegMult, _gpu=_gpu)
+                    resStokesA.avg_update_interp(workStokesA, iAvgProc, 1, numComp, ePhIntegMult, _gpu=None)
 
                 #DEBUG
                 #srwl_uti_save_intens_ascii(resStokesA.arS, resStokesA.mesh, copy(_file_path) + '.ang_res.debug', 1)
