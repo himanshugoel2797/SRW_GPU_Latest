@@ -1085,7 +1085,7 @@ class SRWLStokes(object):
                 for ir in range(nStPt):
                     self.arS[ir] = (self.arS[ir]*_iter + _mult*_more_stokes.arS[ir])/(_iter + 1)
 
-    def avg_update_interp(self, _more_stokes, _iter, _ord, _n_stokes_comp=4, _mult=1., _sum=False): #OC04112020
+    def avg_update_interp(self, _more_stokes, _iter, _ord, _n_stokes_comp=4, _mult=1., _sum=False, _gpu = None): #OC04112020
     #def avg_update_interp(self, _more_stokes, _iter, _ord, _n_stokes_comp=4, _mult=1.):
         """ Update this Stokes data structure with new data, contained in the _more_stokes structure, calculated on a different 2D mesh, so that it would represent estimation of average of (_iter + 1) structures
         :param _more_stokes: Stokes data structure to "add" to the estimation of average
@@ -1097,7 +1097,7 @@ class SRWLStokes(object):
         #print (self.arS)
         if _ord == 1 or _ord == 2:
             srwl.UtiStokesAvgUpdateInterp(
-                self, _more_stokes, _iter, _n_stokes_comp, _mult, _sum)
+                self, _more_stokes, _iter, _n_stokes_comp, _mult, _sum, _gpu)
             #print (self.arS)
             return
         
@@ -6195,7 +6195,7 @@ class SRWLDet(object):
 
         self.eStepEff = 0 if(ne <= 1) else (_eFin - _eStart)/ne
 
-    def treat_int(self, _stk, _mesh=None, _ord_interp=0, _nwfr=1):
+    def treat_int(self, _stk, _mesh=None, _ord_interp=0, _nwfr=1, _gpu=None):
         """Treat Intensity of Input Radiation
         :param _stk: Stokes data structure or a simple Intensity array to be treated by detector
         :param _mesh: mesh structure (if it is defined, _stk should be treated as Intensity array of type f)
@@ -6243,7 +6243,7 @@ class SRWLDet(object):
 
                 if((self.dx <= 0) or (self.dy <= 0)):
                     ordInterp = _ord_interp if(_ord_interp > 0) else self.ord_interp
-                    resInt.avg_update_interp(sktIn, _iter=0, _ord=ordInterp, _n_stokes_comp=1, _mult=effMult*bwMult, _sum = iwfr > 0) #to treat all Stokes components / Polarization in the future
+                    resInt.avg_update_interp(sktIn, _iter=0, _ord=ordInterp, _n_stokes_comp=1, _mult=effMult*bwMult, _sum = iwfr > 0, _gpu=_gpu) #to treat all Stokes components / Polarization in the future
                 #else: 
                     #Program integration within pixels self.dx, self.dy here
                 ePh += eStep
@@ -7952,7 +7952,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                                #_rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _com_mpi=None, _n_mpi=1): #OC01032021
                                #_rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _n_mpi=1): #OC02032021
                                #_rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _n_mpi=1, _del_aux_files=False): #OC02032021
-                               _rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _n_mpi=1, _n_cm=1000, _del_aux_files=False, _exec_gpu_id=0): #OC27062021 #HG10102021
+                               _rand_meth=1, _tryToUseMPI=True, _wr=0., _wre=0., _det=None, _me_approx=0, _file_bkp=False, _rand_opt=False, _file_form='ascii', _n_mpi=1, _n_cm=1000, _del_aux_files=False, _gpu=None): #OC27062021 #HG10102021
     """
     Calculate Stokes Parameters of Emitted (and Propagated, if beamline is defined) Partially-Coherent SR.
     :param _e_beam: Finite-Emittance e-beam (SRWLPartBeam type)
@@ -8569,7 +8569,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
             #sys.stdout.flush()
             #END DEBUG
 
-            srwl.PropagElecField(wfr, _opt_bl, None, _exec_gpu_id)
+            srwl.PropagElecField(wfr, _opt_bl, None, _gpu)
 
         #DEBUG
         #print('completed (lasted', round(time.time() - t0, 6), 's)') #DEBUG
@@ -9233,7 +9233,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                     #if(not (doPropCM and (iMode == 0) and (_det == 0))): #OC03022021
                     #if(not (doPropCM and (iMode == 0))): #OC19112020
                     #if(not (doPropCM and (i == 0))): #OC13112020
-                        srwl.PropagElecField(wfr, _opt_bl, None, _exec_gpu_id) #propagate Electric Field emitted by the electron
+                        srwl.PropagElecField(wfr, _opt_bl, None, _gpu) #propagate Electric Field emitted by the electron
 
                         #DEBUG
                         #print('Rank #', rank, ': mode #', iMode, 'propagated')
@@ -9602,7 +9602,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                     if(not (doPropCM and (iMode == 0))): #OC19112020
                     #if(not (doPropCM and (i == 0))): #OC13112020
                         
-                        resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult, _sum=doPropCM) #OC04112020
+                        resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult, _sum=doPropCM, _gpu=_gpu) #OC04112020
                         #resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult)
 
                         if((resStokes2 is not None) and (workStokes2 is not None)):
@@ -9630,7 +9630,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
 
                         if(not (doPropCM and (iMode == 0))): #OC19112020
                         #if(not (doPropCM and (i == 0))): #OC13112020
-                            resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult, _sum=doPropCM) #OC04112020
+                            resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult, _sum=doPropCM, _gpu=_gpu) #OC04112020
                         #resStokes.avg_update_interp(workStokes, iAvgProc, 1, numComp, ePhIntegMult) #OC16012017 #to treat all Stokes components / Polarization in the future
                         
                     else:
@@ -9642,7 +9642,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                             resStokes2.avg_update_interp_mutual(workStokes2, iAvgProc, 1, ePhIntegMult)
 
                 if((resStokesA is not None) and (workStokesA is not None)): #OC24122018
-                    resStokesA.avg_update_interp(workStokesA, iAvgProc, 1, numComp, ePhIntegMult)
+                    resStokesA.avg_update_interp(workStokesA, iAvgProc, 1, numComp, ePhIntegMult, _gpu=_gpu)
 
                 #DEBUG
                 #srwl_uti_save_intens_ascii(resStokesA.arS, resStokesA.mesh, copy(_file_path) + '.ang_res.debug', 1)

@@ -940,7 +940,7 @@ EXP int CALL srwlUtiIntInf(double* arInf, char* pcData, char typeData, SRWLRadMe
 EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* pcI2, char typeI2, SRWLRadMesh* pMesh2, double* arPar, int nPar);
 //EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* pcI2, char typeI2, SRWLRadMesh* pMesh2, double* arPar);
 
-EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMoreStokes, int nIters, int nOrder, int nStokesComp, double mult, bool sum);
+EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMoreStokes, int nIters, int nOrder, int nStokesComp, double mult, bool sum, gpuUsageArg_t *pGpuUsage = 0);
 
 /** 
  * Attempts to deduce parameters of peridic undulator magnetic field from tabulated field and set up Undulator structure

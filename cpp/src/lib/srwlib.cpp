@@ -1503,7 +1503,7 @@ EXP int CALL srwlUtiIntProc(char* pcI1, char typeI1, SRWLRadMesh* pMesh1, char* 
 void StokesAvgUpdateInterp(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr, bool sum);
 #endif
 
-EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMoreStokes, int nIters, int nOrder, int nStokesComp, double mult, bool sum) {
+EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMoreStokes, int nIters, int nOrder, int nStokesComp, double mult, bool sum, gpuUsageArg_t *pGpuUsage) {
 	auto eNpMeshRes = pStokes->mesh.ne;
 	auto xNpMeshRes = pStokes->mesh.nx;
 	auto xStartMeshRes = pStokes->mesh.xStart;
@@ -1544,7 +1544,7 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 
 	for (int iSt = 0; iSt < nStokesComp; iSt++) {
 
-		GPU_COND(nullptr, {
+		GPU_COND(pGpuUsage, {
 			StokesAvgUpdateInterp(pStokesArS, pMoreStokesArS, nIters, nOrder, nStokesComp, mult, iSt, xNpMeshRes, yNpMeshRes, eNpMeshRes, yStartMeshRes, yStepMeshRes, yStartWfr, yStepWfr, xStartMeshRes, xStepMeshRes, xStartWfr, xStepWfr, iOfstSt, xNpWfr, yNpWfr, eNpWfr, sum);
 		})
 		else{

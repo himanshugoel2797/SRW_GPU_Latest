@@ -5432,21 +5432,23 @@ static PyObject* srwlpy_UtiIntProc(PyObject *self, PyObject *args)
 
 static PyObject* srwlpy_UtiStokesAvgUpdateInterp(PyObject* self, PyObject* args)
 {
-	PyObject *oStokes, *oMoreStokes;
+	PyObject *oStokes, *oMoreStokes, *oDev;
 	vector<Py_buffer> vBuf;
 	SRWLStokes pSelf, pMoreStokes;
 	int nIters, nStokesComp, bSum;
 	double mult;
+	gpuUsageArg_t gpuArgs;
 
 	srwlUtiDevInit();
 	try {
-		if (!PyArg_ParseTuple(args, "OOiidp:UtiStokesAvgUpdateInterp", &oStokes, &oMoreStokes, &nIters, &nStokesComp, &mult, &bSum)) throw strEr_BadArg_UtiIntProc;
+		if (!PyArg_ParseTuple(args, "OOiidp|O:UtiStokesAvgUpdateInterp", &oStokes, &oMoreStokes, &nIters, &nStokesComp, &mult, &bSum, &oDev)) throw strEr_BadArg_UtiIntProc;
 		if ((oStokes == 0) || (oMoreStokes == 0)) throw strEr_BadArg_UtiIntProc;
 		
 		ParseSructSRWLStokes(&pSelf, oStokes, &vBuf);
 		ParseSructSRWLStokes(&pMoreStokes, oMoreStokes, &vBuf);
-
-		ProcRes(srwlUtiStokesAvgUpdateInterp(&pSelf, &pMoreStokes, nIters, 1, nStokesComp, mult, bSum));
+		ParseDeviceParam(oDev, &gpuArgs);
+		ProcRes(srwlUtiStokesAvgUpdateInterp(&pSelf, &pMoreStokes, nIters, 1, nStokesComp, mult, bSum, &gpuArgs));
+		CleanDeviceParam();
 	}
 	catch (char* erText) {
 		PyErr_SetString(PyExc_RuntimeError, erText);

@@ -344,9 +344,9 @@ for it in range(len(listObjBrownian)):
         
         t = time.time()
         mesh1 = deepcopy(wfrP.mesh)
-        arI1 = array('f', [0]*mesh1.nx*mesh1.ny*wfrP.nWfr) #"flat" array to take 2D intensity data
+        arI1 = cp.zeros(mesh1.nx*mesh1.ny*wfrP.nWfr, dtype=np.float32)#array('f', [0]*mesh1.nx*mesh1.ny*wfrP.nWfr) #"flat" array to take 2D intensity data
         srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
-        stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr) #"Projecting" intensity on detector (by interpolation)
+        stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr, _gpu=0) #"Projecting" intensity on detector (by interpolation)
         mesh1 = stkDet.mesh
         arI1 = stkDet.arS
         cmFrames.append(arI1.get())

@@ -101,8 +101,7 @@ template <class T> __global__ void FillArrayShift_Kernel(double t0, double tStep
 
 template <class T> __global__ void TreatShift_Kernel(T* pData, long HowMany, long Nx2, T* tShiftX) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //Nx range
-    int k = threadIdx.y; //HowMany range
-
+    
     if (ix < Nx2) {
         T MultX_Re = tShiftX[ix];
         T MultX_Im = tShiftX[ix + 1];
