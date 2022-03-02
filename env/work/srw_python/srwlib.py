@@ -6213,7 +6213,7 @@ class SRWLDet(object):
                 meshIn = _mesh
                 arI = None
                 nTot = meshIn.ne*meshIn.nx*meshIn.ny
-                if(isinstance(_stk, array) and (_stk.itemsize == 4)): #array of type f
+                if (isinstance(_stk, array) and (_stk.itemsize == 4)) or (useCuPy and isinstance(_stk, cp.ndarray)): #array of type f
                     arI = _stk[iwfr*nTot:(iwfr+1)*nTot]
                 else:
                     arI = array('f', [0]*nTot)
