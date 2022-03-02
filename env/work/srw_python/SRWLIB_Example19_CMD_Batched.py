@@ -172,14 +172,14 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True, _wfrs_per_grp = 100): #OC11042
     arEx = None
     arExH5 = hf.get('arEx')
     if(arExH5 is not None):
-        arEx = np.array(arExH5)[:1]#.reshape(-1)
+        arEx = np.array(arExH5)[:10]#.reshape(-1)
         #arEx = [arEx[1], arEx[0]]
         #arEx = [arEx, arEx]
 
     arEy = None
     arEyH5 = hf.get('arEy')
     if(arEyH5 is not None):
-        arEy = np.array(arEyH5)[:1]#.reshape(-1)
+        arEy = np.array(arEyH5)[:10]#.reshape(-1)
         #arEy = [arEy[1], arEy[0]]
         #arEy = [arEy, arEy]
 
@@ -227,9 +227,9 @@ print('{} groups of coherent modes with {} per group loaded'.format(len(wfr_list
 
 #************Defining Samples (lists of 3D objects (spheres))
 #Initial set of 3D objects
-rx = 20.e-06 #Range of Horizontal position [m] within which 3D Objects constituing Sample are defined
-ry = 20.e-06 #Range of Vertical position [m]
-rz = 20.e-06 #Range of Longitudinal position [m]
+rx = 100.e-06 #Range of Horizontal position [m] within which 3D Objects constituing Sample are defined
+ry = 100.e-06 #Range of Vertical position [m]
+rz = 100.e-06 #Range of Longitudinal position [m]
 xc = 0 #Horizontal Center position of the Sample
 yc = 0 #Vertical Center position of the Sample
 zc = 0 #Longitudinal Center position of the Sample
@@ -240,7 +240,7 @@ listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d( #Initial list of 3D objec
     #_ranges = [rx, ry, rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
     _cen = [xc, yc, zc], #Horizontal, Vertical and Longitudinal coordinates of center position around which the 3D objects are defined
     _dist = 'uniform', #Type (and eventual parameters) of distributions of 3D objects
-    _obj_shape = ['S', 'uniform', 25.e-09, 250.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
+    _obj_shape = ['S', 'uniform', 125.e-09, 1250.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
     _allow_overlap = False, #Allow or not the 3D objects to overlap
     _seed = 0,
     _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName%(0)))
@@ -332,6 +332,7 @@ for it in range(len(listObjBrownian)):
 
     idx = 0
     wfrP_list = deepcopy(wfr_list)
+    cmFrames = []
     for wfrP in wfrP_list:
         print('   Propagating Wavefront Group #%d... '%(idx), end='')
         t = time.time()
@@ -348,12 +349,15 @@ for it in range(len(listObjBrownian)):
         stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr) #"Projecting" intensity on detector (by interpolation)
         mesh1 = stkDet.mesh
         arI1 = stkDet.arS
-        if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose()
+        cmFrames.append(arI1.get())
         
         print('done in', round(time.time() - t, 3), 's')
 
     #Plotting the Results (requires 3rd party graphics package)
     print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
+    
+    cmArI1 = np.sum(cmFrames, axis=0)
+    if(arDetFrames is not None): arDetFrames[it] = np.reshape(cmArI1, (mesh1.ny, mesh1.nx)).transpose()
 
     #Sample Optical Path Diff.
     meshS = opSmp.mesh
@@ -364,10 +368,10 @@ for it in range(len(listObjBrownian)):
     #Scattered Radiation Intensity Distribution in Log Scale
     plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
     plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
-    arLogI1 = copy(arI1_CM)
     nTot = mesh1.ne*mesh1.nx*mesh1.ny
 
-    arLogI1 = np.clip(arI1, 0, None, arLogI1)
+    arLogI1 = copy(cmArI1)
+    arLogI1 = np.clip(cmArI1, 0, None, arLogI1)
     arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0)
     #for i in range(nTot):
     #    curI = arI1[i]

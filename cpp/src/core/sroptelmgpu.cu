@@ -44,7 +44,7 @@ __global__ void TreatStronglyOscillatingTerm_Kernel(srTSRWRadStructAccessData Ra
         if (RadAccessData.WfrQuadTermCanBeTreatedAtResizeX) Phase += ConstRxE * x * x;
 
         float SinPh, CosPh;
-        sincosf(Phase, SinPh, CosPh);
+        sincosf(Phase, &SinPh, &CosPh);
 
         long long PerX = RadAccessData.ne << 1;
         long long PerZ = PerX * RadAccessData.nx;

@@ -14,10 +14,10 @@ void NormalizeDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx, doub
 void FillArrayShift_CUDA(double t0, double tStep, long Nx, double* tShiftX);
 void TreatShift_CUDA(double* pData, long HowMany, long Nx, double* tShiftX);
 
-void RepairSignAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny);
-void RotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny);
-void NormalizeDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, double Mult);
+void RepairSignAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany);
+void RotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany);
+void NormalizeDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany, double Mult);
 
-void RepairSignAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny);
-void RotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny);
-void NormalizeDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, double Mult);
+void RepairSignAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany);
+void RotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany);
+void NormalizeDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany, double Mult);

@@ -144,6 +144,7 @@ for it in range(len(listObjBrownian)):
     arI1_CM = None
     wfrP_base = None
     cm_idx = 0
+    cmFrames = []
     for wfr in wfrs:
         print('   Propogating Coherent mode # {} ... '.format(cm_idx))
         cm_idx+=1
@@ -165,7 +166,7 @@ for it in range(len(listObjBrownian)):
 
         print('   Propagating Wavefront ... ', end='')
         t = time.time()
-        srwl.PropagElecField(wfrP, opBL, None)
+        srwl.PropagElecField(wfrP, opBL, None, 1)
         if wfrP_base is None:
             wfrP_base = wfrP
         else:
@@ -186,33 +187,35 @@ for it in range(len(listObjBrownian)):
         #srwl_uti_save_intens_ascii(
         #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
         #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
-
-        if(arDetFrames is not None): arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose()
+        cmFrames.append(arI1.get())
         print('done in', round(time.time() - t, 3), 's')
 
-        #Plotting the Results (requires 3rd party graphics package)
-        print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
+    cmArI1 = np.sum(cmFrames, axis=0)
+    if(arDetFrames is not None): arDetFrames[it] = np.reshape(cmArI1, (mesh1.ny, mesh1.nx)).transpose()
 
-        #Sample Optical Path Diff.
-        meshS = opSmp.mesh
-        plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
-        plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
-        #uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
-            
-        #Scattered Radiation Intensity Distribution in Log Scale
-        plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
-        plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
-        arLogI1 = copy(arI1_CM)
-        nTot = mesh1.ne*mesh1.nx*mesh1.ny
+    #Plotting the Results (requires 3rd party graphics package)
+    print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
 
-        arLogI1 = np.clip(arI1, 0, None, arLogI1)
-        arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0)
-        #for i in range(nTot):
-        #    curI = arI1[i]
-        #    if(curI <= 0.): arLogI1[i] = 0 #?
-        #    else: arLogI1[i] = log(curI, 10)
+    #Sample Optical Path Diff.
+    meshS = opSmp.mesh
+    plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
+    plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
+    #uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
+        
+    #Scattered Radiation Intensity Distribution in Log Scale
+    plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
+    plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
+    nTot = mesh1.ne*mesh1.nx*mesh1.ny
 
-        uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
+    arLogI1 = copy(cmArI1)
+    arLogI1 = np.clip(cmArI1, 0, None, arLogI1)
+    arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0)
+    #for i in range(nTot):
+    #    curI = arI1[i]
+    #    if(curI <= 0.): arLogI1[i] = 0 #?
+    #    else: arLogI1[i] = log(curI, 10)
+
+    uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
 
     print('done')
 

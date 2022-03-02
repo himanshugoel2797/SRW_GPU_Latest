@@ -21,7 +21,8 @@ __global__ void MultiplyElFieldByPhaseLin_Kernel(double xMult, double zMult, flo
 		double x = xStart + ix * xStep;
 		double dPhZ = zMult * z;
 		double dPh = dPhZ + xMult * x;
-		double cosPh = cos(dPh), sinPh = sin(dPh);
+		double cosPh, sinPh;
+		sincos(dPh, &sinPh, &cosPh);
 
 		long long offset = iwfr * nz * nx * ne * 2 + iz * nx * ne * 2 + ix * ne * 2;
 		float* tEx = pBaseRadX + offset;
