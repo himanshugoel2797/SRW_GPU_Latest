@@ -262,9 +262,9 @@ matDelta = 4.773e-05 #Refractive Index Decrement
 matAttenLen = 2.48644e-06 #Attenuation Length [m]
 
 #***********Detector
-nxDet = 5500 #Detector Number of Pixels in Horizontal direction
-nyDet = 5500 #Detector Number of Pixels in Vertical direction
-pSize = 9.68e-06 #Detector Pixel Size
+nxDet = 2048 #Detector Number of Pixels in Horizontal direction
+nyDet = 2048 #Detector Number of Pixels in Vertical direction
+pSize = 75e-06#9.68e-06 #Detector Pixel Size
 xrDet = nxDet*pSize
 yrDet = nyDet*pSize
 det = SRWLDet(_xStart = -0.5*xrDet, _xFin = 0.5*xrDet, _nx = nxDet, _yStart = -0.5*yrDet, _yFin = 0.5*yrDet, _ny = nyDet)
