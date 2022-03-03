@@ -37,29 +37,7 @@ strSampOptPathDifOutFileName = 'ex19_smp_opt_path_dif_%d.dat' #optical path diff
 strIntInitOutFileName = 'ex19_res_int_in.dat' #initial wavefront intensity distribution output file name
 strIntPropOutFileName = 'ex19_res_int_prop_%d.dat' #propagated wavefront intensity distribution output file name
 strIntPropOutFileNameDet = 'ex19_res_int_det.h5' #intensity distribution regisgtered by detector output file name
-strCmDataFileName = 'chx_res_pr_dir_100k_cm.h5' #file name for loading coherent modes from
-
-#***********Gaussian Beam Source
-GsnBm = SRWLGsnBm() #Gaussian Beam structure (just parameters)
-GsnBm.x = 0 #Transverse Positions of Gaussian Beam Center at Waist [m]
-GsnBm.y = 0
-GsnBm.z = 0 #Longitudinal Position of Waist [m]
-GsnBm.xp = 0 #Average Angles of Gaussian Beam at Waist [rad]
-GsnBm.yp = 0
-GsnBm.avgPhotEn = 8000 #Photon Energy [eV]
-GsnBm.pulseEn = 0.001 #Energy per Pulse [J] - to be corrected
-GsnBm.repRate = 1 #Rep. Rate [Hz] - to be corrected
-GsnBm.polar = 1 #1- linear horizontal
-GsnBm.sigX = 7.e-06/2.35 #Horiz. RMS size at Waist [m]
-GsnBm.sigY = GsnBm.sigX #Vert. RMS size at Waist [m]
-
-constConvRad = 1.23984186e-06/(4*3.1415926536)
-rmsAngDiv = constConvRad/(GsnBm.avgPhotEn*GsnBm.sigX) #RMS angular divergence [rad]
-print('RMS Source Size:', round(GsnBm.sigX*1.e+06, 3), 'um; RMS Divergence:', round(rmsAngDiv*1.e+06, 3), 'urad')
-
-GsnBm.sigT = 10e-15 #Pulse duration [fs] (not used?)
-GsnBm.mx = 0 #Transverse Gauss-Hermite Mode Orders
-GsnBm.my = 0
+strCmDataFileName = 'chx_res_pr_dir_100k_cm.h5' #file name for loading coherent modes from file
 
 #***********Initial Wavefront
 wfrs_summed = []
@@ -172,14 +150,14 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True, _wfrs_per_grp = 100): #OC11042
     arEx = None
     arExH5 = hf.get('arEx')
     if(arExH5 is not None):
-        arEx = np.array(arExH5)[:10]#.reshape(-1)
+        arEx = np.array(arExH5)[:1] #.reshape(-1)
         #arEx = [arEx[1], arEx[0]]
         #arEx = [arEx, arEx]
 
     arEy = None
     arEyH5 = hf.get('arEy')
     if(arEyH5 is not None):
-        arEy = np.array(arEyH5)[:10]#.reshape(-1)
+        arEy = np.array(arEyH5)[:1] #.reshape(-1)
         #arEy = [arEy[1], arEy[0]]
         #arEy = [arEy, arEy]
 
@@ -222,25 +200,25 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True, _wfrs_per_grp = 100): #OC11042
 
     return wfrs
 
-wfr_list = uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName))
+wfr_list = uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName), _wfrs_per_grp=10)
 print('{} groups of coherent modes with {} per group loaded'.format(len(wfr_list), wfr_list[0].nWfr))
 
 #************Defining Samples (lists of 3D objects (spheres))
 #Initial set of 3D objects
-rx = 100.e-06 #Range of Horizontal position [m] within which 3D Objects constituing Sample are defined
-ry = 100.e-06 #Range of Vertical position [m]
-rz = 100.e-06 #Range of Longitudinal position [m]
+rx = 40.e-06 #Range of Horizontal position [m] within which 3D Objects constituing Sample are defined
+ry = 40.e-06 #Range of Vertical position [m]
+rz = 40.e-06 #Range of Longitudinal position [m]
 xc = 0 #Horizontal Center position of the Sample
 yc = 0 #Vertical Center position of the Sample
 zc = 0 #Longitudinal Center position of the Sample
 
 listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d( #Initial list of 3D object (sphere) parameters
-    _n = 100, #Number of 3D nano-objects
+    _n = 500, #Number of 3D nano-objects
     _ranges = [0.95*rx, 0.95*ry, rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
     #_ranges = [rx, ry, rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
     _cen = [xc, yc, zc], #Horizontal, Vertical and Longitudinal coordinates of center position around which the 3D objects are defined
     _dist = 'uniform', #Type (and eventual parameters) of distributions of 3D objects
-    _obj_shape = ['S', 'uniform', 125.e-09, 1250.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
+    _obj_shape = ['S', 'uniform', 50.e-09, 500.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
     _allow_overlap = False, #Allow or not the 3D objects to overlap
     _seed = 0,
     _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName%(0)))
@@ -262,9 +240,9 @@ matDelta = 4.773e-05 #Refractive Index Decrement
 matAttenLen = 2.48644e-06 #Attenuation Length [m]
 
 #***********Detector
-nxDet = 2048 #Detector Number of Pixels in Horizontal direction
-nyDet = 2048 #Detector Number of Pixels in Vertical direction
-pSize = 75e-06#9.68e-06 #Detector Pixel Size
+nxDet = 2070 #Detector Number of Pixels in Horizontal direction
+nyDet = 2167 #Detector Number of Pixels in Vertical direction
+pSize = 75e-06 #Detector Pixel Size
 xrDet = nxDet*pSize
 yrDet = nyDet*pSize
 det = SRWLDet(_xStart = -0.5*xrDet, _xFin = 0.5*xrDet, _nx = nxDet, _yStart = -0.5*yrDet, _yFin = 0.5*yrDet, _ny = nyDet)
@@ -290,7 +268,7 @@ opSmp_Det = SRWLOptD(distSmp_Det)
 #[10]: New Horizontal wavefront Center position after Shift
 #[11]: New Vertical wavefront Center position after Shift
 #           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
-ppSmp =     [0, 0, 1., 0, 0, 1., 55., 1., 55.,  0, 0, 0]
+ppSmp =     [0, 0, 1., 0, 0, 1., 165., 1., 165.,  0, 0, 0]
 ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 
@@ -306,7 +284,7 @@ for it in range(len(listObjBrownian)):
         shape_defs = listObjBrownian[it], #List of 3D Nano-Object params for the current step
         delta = matDelta, atten_len = matAttenLen, #3D Nano-Object Material params
         rx = rx, ry = ry, #Range of Horizontal and Vertical position [m] within which Nano-Objects constituing the Sample are defined
-        nx = 2000, ny = 2000, #Numbers of points vs Horizontal and Vertical position for the Transmission
+        nx = 4000, ny = 4000, #Numbers of points vs Horizontal and Vertical position for the Transmission
         xc = xc, yc = yc, #Horizontal and Vertical Center positions of the Sample
         extTr = 1) #Transmission outside the grid/mesh is zero (0), or the same as on boundary (1)
     print('done in', round(time.time() - t, 3), 's')
@@ -333,9 +311,11 @@ for it in range(len(listObjBrownian)):
     idx = 0
     wfrP_list = deepcopy(wfr_list)
     cmFrames = []
+    arI1 = None
     for wfrP in wfrP_list:
         print('   Propagating Wavefront Group #%d... '%(idx), end='')
         t = time.time()
+
         srwl.PropagElecField(wfrP, opBL, None, 1)    
         print('done in', round(time.time() - t, 3), 's')
         idx+=1
@@ -344,12 +324,16 @@ for it in range(len(listObjBrownian)):
         
         t = time.time()
         mesh1 = deepcopy(wfrP.mesh)
-        arI1 = cp.zeros(mesh1.nx*mesh1.ny*wfrP.nWfr, dtype=np.float32)#array('f', [0]*mesh1.nx*mesh1.ny*wfrP.nWfr) #"flat" array to take 2D intensity data
+        if arI1 is None:
+            arI1 = cp.zeros(mesh1.nx*mesh1.ny*wfrP.nWfr, dtype=np.float32)#array('f', [0]*mesh1.nx*mesh1.ny*wfrP.nWfr) #"flat" array to take 2D intensity data
         srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
         stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr, _gpu=1) #"Projecting" intensity on detector (by interpolation)
-        mesh1 = stkDet.mesh
-        arI1 = stkDet.arS
-        cmFrames.append(arI1.get())
+        mesh1 = deepcopy(stkDet.mesh)
+        cmFrames.append(stkDet.arS.get())
+        
+        del stkDet.arS
+        del wfrP.arEx
+        del wfrP.arEy
         
         print('done in', round(time.time() - t, 3), 's')
 
