@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{9a08cea0-3ae7-4a0c-a34b-6b461ac728d8}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>NSLS-II-CHX_SampleDefinitionBase.py</StartupFile>
+    <StartupFile>SRWLIB_Example19_CMD_Batched.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>

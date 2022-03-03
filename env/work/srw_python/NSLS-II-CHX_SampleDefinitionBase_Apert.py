@@ -213,8 +213,8 @@ varParam = [
     ['op_Sample_Detector_L', 'f', 10.0, 'length'],
 
 #---Propagation parameters
-    ['op_Aperture_pp', 'f',        [0, 0, 1.0, 0, 0, 1.0, 55.0, 1.0, 55.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture'],
-    ['op_Aperture_Sample_pp', 'f', [0, 0, 1.0, 3, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture_Sample'],
+    #['op_Aperture_pp', 'f',        [0, 0, 1.0, 0, 0, 1.0, 55.0, 1.0, 55.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture'],
+    #['op_Aperture_Sample_pp', 'f', [0, 0, 1.0, 3, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture_Sample'],
     ['op_Sample_pp', 'f',          [0, 0, 1.0, 0, 0, 1.0, 55.0, 1.0, 55.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Sample'],
     ['op_Sample_Detector_pp', 'f', [0, 0, 1.0, 3, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Sample_Detector'],
     ['op_fin_pp', 'f',             [0, 0, 1.0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'final post-propagation (resize) parameters'],
@@ -276,7 +276,7 @@ def main(idx, per_proc = 5):
     for i in range(idx * per_proc, (idx + 1) * per_proc):
         if i >= len(listObjBrownian): break
         v.op_Sample_Objects = listObjBrownian[i]
-        v.wm_fni = 'res_int_pr_me_%d_nogpu.dat' % i
+        v.wm_fni = 'res_int_pr_me_%d.dat' % i
         op = set_optics(v, names, True)
         srwl_bl.SRWLBeamline(_name=v.name).calc_all(v, op, _gpu=0)
 
