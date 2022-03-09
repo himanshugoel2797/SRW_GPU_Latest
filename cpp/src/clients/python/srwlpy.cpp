@@ -178,6 +178,11 @@ char* GetPyArrayBuf(PyObject* obj, vector<Py_buffer>* pvBuf, Py_ssize_t* pSizeBu
 		PyObject* obj_strides = PyObject_GetAttrString(obj, "strides");
 		PyObject* obj_itemsz = PyTuple_GetItem(obj_strides, 0);
 
+		Py_DECREF(obj_data);
+		Py_DECREF(obj_data_ptr);
+		Py_DECREF(obj_len);
+		Py_DECREF(obj_strides);
+
 		if(pSizeBuf != 0) *pSizeBuf = PyLong_AsLong(obj_len) * PyLong_AsLong(obj_itemsz);
 		return (char*)PyLong_AsLongLong(obj_data_ptr);
 	}
