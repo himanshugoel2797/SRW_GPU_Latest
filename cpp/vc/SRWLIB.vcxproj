@@ -995,16 +995,18 @@
       <MkTypLibCompatible>true</MkTypLibCompatible>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TargetEnvironment>X64</TargetEnvironment>
-      <TypeLibraryName>.\Release/SRWLIB.tlb</TypeLibraryName>
+      <TypeLibraryName>.\Debug/SRWLIB.tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <Optimization>MaxSpeed</Optimization>
+      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
+      <FloatingPointModel>Precise</FloatingPointModel>
       <AdditionalIncludeDirectories>$(CUDA_PATH)\include;..\src\core;..\src\lib;..\src\ext\genmath;..\src\ext\auxparse;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;WIN32;_WINDOWS;_USRDLL;__VC__;SRWLIB_STATIC;_GM_WITHOUT_BASE;_CRT_SECURE_NO_WARNINGS;NON_UNIX_STDIO;_FFTW3;_OFFLOAD_GPU;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <StringPooling>true</StringPooling>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <StructMemberAlignment>Default</StructMemberAlignment>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
@@ -1012,15 +1014,12 @@
       </AssemblerListingLocation>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ProgramDataBaseFileName>$(IntDir)vc90.pdb</ProgramDataBaseFileName>
+      <BrowseInformation>true</BrowseInformation>
       <WarningLevel>Level3</WarningLevel>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <DebugInformationFormat>
-      </DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>Default</CompileAs>
-      <OmitFramePointers>true</OmitFramePointers>
-      <Optimization>MaxSpeed</Optimization>
-      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <FloatingPointModel>Precise</FloatingPointModel>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -1029,12 +1028,11 @@
     <Lib>
       <AdditionalDependencies>cudart_static.lib;cufft.lib;cudadevrt.lib;..\..\ext_lib\fftw3_64.lib;..\..\ext_lib\fftw3f_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>srw_x64.lib</OutputFile>
-      <AdditionalOptions>
-      </AdditionalOptions>
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\x64</AdditionalLibraryDirectories>
     </Lib>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)$(TargetName)$(TargetExt) "$(SolutionDir)..\..\env\work\srw_python\lib\"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
     <CudaCompile>
       <ExtensibleWholeProgramCompilation>true</ExtensibleWholeProgramCompilation>
@@ -1042,6 +1040,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <Defines>_OFFLOAD_GPU;_USE_CUDA;</Defines>
+      <GenerateRelocatableDeviceCode>false</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_omp|x64'">
@@ -1351,6 +1350,7 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\src\core\sroptelmgpu.cu" />
+    <CudaCompile Include="..\src\core\sroptgtrgpu.cu" />
     <CudaCompile Include="..\src\core\srradmnpgpu.cu" />
     <CudaCompile Include="..\src\core\srradstrgpu.cu" />
     <CudaCompile Include="..\src\ext\genmath\gmfftgpu0.cu" />

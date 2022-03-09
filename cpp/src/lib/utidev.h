@@ -26,9 +26,11 @@ typedef int gpuUsageArg_t;
 #ifdef _OFFLOAD_GPU
 #define GPU_ENABLED(arg) UtiDev::GPUEnabled(arg)
 #define GPU_COND(arg, code) if (GPU_ENABLED(arg)) { code }
+#define GPU_PORTABLE __device__ __host__
 #else
 #define GPU_COND(arg, code) if(0) { }
 #define GPU_ENABLED(arg) 0
+#define GPU_PORTABLE 
 #endif
 
  //*************************************************************************
@@ -40,6 +42,7 @@ public:
 	static bool GPUAvailable(); //CheckGPUAvailable etc
 	static bool GPUEnabled(gpuUsageArg_t *arg);
 	static void SetGPUStatus(bool enabled);
+	static int GetDevice(gpuUsageArg_t* arg);
 	template<typename T> static inline void malloc(T** ptr, size_t sz) {
 #ifdef _OFFLOAD_GPU
 			auto err = cudaMallocManaged<T>(ptr, sz);

@@ -53,13 +53,26 @@ bool UtiDev::GPUEnabled(gpuUsageArg_t *arg)
 {
 	if (arg == NULL)
 		return false;
-	if (*arg == 1) return GPUAvailable();
+	if (*arg > 0) {
+		if (cudaSetDevice(*arg - 1) != cudaSuccess) return false;
+		return GPUAvailable();
+	}
 	return false;
 }
 
 void UtiDev::SetGPUStatus(bool enabled)
 {
 	isGPUEnabled = enabled && GPUAvailable();
+}
+
+int UtiDev::GetDevice(gpuUsageArg_t* arg)
+{
+	if (arg == NULL)
+		return cudaCpuDeviceId;
+
+	int curDevice = 0;
+	cudaGetDevice(&curDevice);
+	return curDevice;
 }
 
 void UtiDev::Init() {

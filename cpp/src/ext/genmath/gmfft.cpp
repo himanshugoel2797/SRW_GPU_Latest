@@ -371,9 +371,11 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	GPU_COND(pGpuUsage, {
 		if (FFT2DInfo.pData != 0) {
 			DataToFFT = (fftwf_complex*)(FFT2DInfo.pData);
+			cudaMemPrefetchAsync(DataToFFT, FFT2DInfo.Nx * FFT2DInfo.Ny * FFT2DInfo.howMany * 2 * sizeof(float), UtiDev::GetDevice(pGpuUsage), 0);
 		}
 		else if (FFT2DInfo.pdData != 0) {
 			dDataToFFT = (fftw_complex*)(FFT2DInfo.pdData); //OC02022019
+			cudaMemPrefetchAsync(dDataToFFT, FFT2DInfo.Nx * FFT2DInfo.Ny * FFT2DInfo.howMany * 2 * sizeof(double), UtiDev::GetDevice(pGpuUsage), 0);
 		}
 	})
 	else {
@@ -760,11 +762,13 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 		{
 			DataToFFT = (fftwf_complex*)FFT1DInfo.pInData;
 			OutDataFFT = (fftwf_complex*)FFT1DInfo.pOutData;
+			cudaMemPrefetchAsync(DataToFFT, FFT1DInfo.Nx * FFT1DInfo.HowMany * 2 * sizeof(float), UtiDev::GetDevice(pGpuUsage), 0);
 		}
 		else if ((FFT1DInfo.pdInData != 0) && (FFT1DInfo.pdOutData != 0))
 		{
 			dDataToFFT = (fftw_complex*)FFT1DInfo.pdInData;
 			dOutDataFFT = (fftw_complex*)FFT1DInfo.pdOutData;
+			cudaMemPrefetchAsync(dDataToFFT, FFT1DInfo.Nx * FFT1DInfo.HowMany * 2 * sizeof(double), UtiDev::GetDevice(pGpuUsage), 0);
 		}
 	})
 	else {

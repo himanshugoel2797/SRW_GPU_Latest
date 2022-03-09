@@ -131,7 +131,12 @@ public:
 		return TraverseRad1D(pSect1D);
 	}
 
-	void RadPointModifier(srTEXZ& EXZ, srTEFieldPtrs& EPtrs, void* pBuf=0); //OC29082019
+#ifdef _OFFLOAD_GPU
+	//__device__ __host__ void RadPointModifierParallel_Kernel(srTSRWRadStructAccessData RadAccessData, void* pBufVars);
+	int RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars) { return RadPointModifierParallelImpl<srTGenTransmission>(pRadAccessData, pBufVars); } //HG03092022
+#endif
+	GPU_PORTABLE void RadPointModifierPortable(srTEXZ& EXZ, srTEFieldPtrs& EPtrs, void* pBuf=0);
+	void RadPointModifier(srTEXZ& EXZ, srTEFieldPtrs& EPtrs, void* pBuf=0) { RadPointModifierPortable(EXZ, EPtrs, pBuf); } //OC29082019
 	//void RadPointModifier(srTEXZ& EXZ, srTEFieldPtrs& EPtrs);
   	void RadPointModifier1D(srTEXZ& EXZ, srTEFieldPtrs& EPtrs, void* pBuf=0); //OC06092019
   	//void RadPointModifier1D(srTEXZ& EXZ, srTEFieldPtrs& EPtrs);

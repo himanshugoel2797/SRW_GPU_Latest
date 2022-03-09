@@ -157,44 +157,123 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 	long long PerZ = PerX*pRadAccessData->nx;
 	long long PerWfr = PerZ * pRadAccessData->nz;
 
+	GPU_COND(pGpuUsage,
+	{
+		if (RadPointModifierParallel(pRadAccessData, pBufVars) == -1)
+		{
+			return TraverseRadZXE(pRadAccessData, pBufVars, 0);	//If element does not support gpu, force the cpu version
+		}
+	})
+	else
+	{
 #ifndef _WITH_OMP //OC28102018
 
-	srTEFieldPtrs EFieldPtrs;
-	srTEXZ EXZ;
+		srTEFieldPtrs EFieldPtrs;
+		srTEXZ EXZ;
 
-	for (int iwfr = 0; iwfr < pRadAccessData->nWfr; iwfr++)
-	{
-		float* pEx0 = pRadAccessData->pBaseRadX + iwfr*PerWfr;
-		float* pEz0 = pRadAccessData->pBaseRadZ + iwfr*PerWfr;
-
-		EXZ.z = pRadAccessData->zStart;
-		//long izPerZ = 0;
-		//long iTotTest = 0; //OCTEST
-		long long izPerZ = 0;
-		//long long iTotTest = 0; //OCTEST
-
-		//int result = 0;
-		for(int iz=0; iz<pRadAccessData->nz; iz++)
+		for (int iwfr = 0; iwfr < pRadAccessData->nWfr; iwfr++)
 		{
-			//if(result = srYield.Check()) return result;
+			float* pEx0 = pRadAccessData->pBaseRadX + iwfr * PerWfr;
+			float* pEz0 = pRadAccessData->pBaseRadZ + iwfr * PerWfr;
 
-			float *pEx_StartForX = pEx0 + izPerZ;
-			float *pEz_StartForX = pEz0 + izPerZ;
+			EXZ.z = pRadAccessData->zStart;
+			//long izPerZ = 0;
+			//long iTotTest = 0; //OCTEST
+			long long izPerZ = 0;
+			//long long iTotTest = 0; //OCTEST
+
+			//int result = 0;
+			for (int iz = 0; iz < pRadAccessData->nz; iz++)
+			{
+				//if(result = srYield.Check()) return result;
+
+				float* pEx_StartForX = pEx0 + izPerZ;
+				float* pEz_StartForX = pEz0 + izPerZ;
+				EXZ.x = pRadAccessData->xStart;
+				//long ixPerX = 0;
+				long long ixPerX = 0;
+
+				for (int ix = 0; ix < pRadAccessData->nx; ix++)
+				{
+					float* pEx_StartForE = pEx_StartForX + ixPerX;
+					float* pEz_StartForE = pEz_StartForX + ixPerX;
+					EXZ.e = pRadAccessData->eStart;
+					//long iePerE = 0;
+					long long iePerE = 0;
+
+					for (int ie = 0; ie < pRadAccessData->ne; ie++)
+					{
+						if (pEx0 != 0)
+						{
+							EFieldPtrs.pExRe = pEx_StartForE + iePerE;
+							EFieldPtrs.pExIm = EFieldPtrs.pExRe + 1;
+						}
+						else
+						{
+							EFieldPtrs.pExRe = 0;
+							EFieldPtrs.pExIm = 0;
+						}
+						if (pEz0 != 0)
+						{
+							EFieldPtrs.pEzRe = pEz_StartForE + iePerE;
+							EFieldPtrs.pEzIm = EFieldPtrs.pEzRe + 1;
+						}
+						else
+						{
+							EFieldPtrs.pEzRe = 0;
+							EFieldPtrs.pEzIm = 0;
+						}
+
+						EXZ.aux_offset = izPerZ + ixPerX + iePerE;
+						RadPointModifier(EXZ, EFieldPtrs, pBufVars); //OC29082019
+						//RadPointModifier(EXZ, EFieldPtrs);
+
+						//iTotTest++; //OCTEST
+
+						iePerE += 2;
+						EXZ.e += pRadAccessData->eStep;
+					}
+					ixPerX += PerX;
+					EXZ.x += pRadAccessData->xStep;
+				}
+				izPerZ += PerZ;
+				EXZ.z += pRadAccessData->zStep;
+			}
+		}
+
+#else //OC28102018 (does this really need to be parallelized for OpenMP?)
+		//SY: adapted for OpenMP
+
+		#pragma omp parallel for if (omp_get_num_threads()==1) // to avoid nested multi-threading
+		for (int iz = 0; iz < pRadAccessData->nz; iz++)
+		{
+			srTEFieldPtrs EFieldPtrs;
+			long long izPerZ = iz * PerZ;
+			srTEXZ EXZ;
+
+			//SY: to have one-to-one with previous version (so that tests do no fail)
+			//EXZ.z = pRadAccessData->zStart;
+			//for(int i=0; i<iz; i++) EXZ.z += pRadAccessData->zStep;
+			//SY: can be replaced with this
+			EXZ.z = (pRadAccessData->zStart) + iz * (pRadAccessData->zStep);
+
+			float* pEx_StartForX = pEx0 + izPerZ;
+			float* pEz_StartForX = pEz0 + izPerZ;
 			EXZ.x = pRadAccessData->xStart;
 			//long ixPerX = 0;
 			long long ixPerX = 0;
 
-			for(int ix=0; ix<pRadAccessData->nx; ix++)
+			for (int ix = 0; ix < pRadAccessData->nx; ix++)
 			{
-				float *pEx_StartForE = pEx_StartForX + ixPerX;
-				float *pEz_StartForE = pEz_StartForX + ixPerX;
+				float* pEx_StartForE = pEx_StartForX + ixPerX;
+				float* pEz_StartForE = pEz_StartForX + ixPerX;
 				EXZ.e = pRadAccessData->eStart;
 				//long iePerE = 0;
 				long long iePerE = 0;
 
-				for(int ie=0; ie<pRadAccessData->ne; ie++)
+				for (int ie = 0; ie < pRadAccessData->ne; ie++)
 				{
-					if(pEx0 != 0)
+					if (pEx0 != 0)
 					{
 						EFieldPtrs.pExRe = pEx_StartForE + iePerE;
 						EFieldPtrs.pExIm = EFieldPtrs.pExRe + 1;
@@ -204,7 +283,7 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 						EFieldPtrs.pExRe = 0;
 						EFieldPtrs.pExIm = 0;
 					}
-					if(pEz0 != 0)
+					if (pEz0 != 0)
 					{
 						EFieldPtrs.pEzRe = pEz_StartForE + iePerE;
 						EFieldPtrs.pEzIm = EFieldPtrs.pEzRe + 1;
@@ -219,85 +298,15 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 					RadPointModifier(EXZ, EFieldPtrs, pBufVars); //OC29082019
 					//RadPointModifier(EXZ, EFieldPtrs);
 
-					//iTotTest++; //OCTEST
-
 					iePerE += 2;
 					EXZ.e += pRadAccessData->eStep;
 				}
 				ixPerX += PerX;
 				EXZ.x += pRadAccessData->xStep;
 			}
-			izPerZ += PerZ;
-			EXZ.z += pRadAccessData->zStep;
 		}
-	}
-
-#else //OC28102018 (does this really need to be parallelized for OpenMP?)
-	//SY: adapted for OpenMP
-	
-	#pragma omp parallel for if (omp_get_num_threads()==1) // to avoid nested multi-threading
-	for(int iz=0; iz<pRadAccessData->nz; iz++)
-	{
-		srTEFieldPtrs EFieldPtrs;
-		long long izPerZ = iz*PerZ;
-		srTEXZ EXZ;
-
-		//SY: to have one-to-one with previous version (so that tests do no fail)
-		//EXZ.z = pRadAccessData->zStart;
-		//for(int i=0; i<iz; i++) EXZ.z += pRadAccessData->zStep;
-		//SY: can be replaced with this
-		EXZ.z = (pRadAccessData->zStart) + iz*(pRadAccessData->zStep);
-
-		float *pEx_StartForX = pEx0 + izPerZ;
-		float *pEz_StartForX = pEz0 + izPerZ;
-		EXZ.x = pRadAccessData->xStart;
-		//long ixPerX = 0;
-		long long ixPerX = 0;
-
-		for(int ix=0; ix<pRadAccessData->nx; ix++)
-		{
-			float *pEx_StartForE = pEx_StartForX + ixPerX;
-			float *pEz_StartForE = pEz_StartForX + ixPerX;
-			EXZ.e = pRadAccessData->eStart;
-			//long iePerE = 0;
-			long long iePerE = 0;
-
-			for(int ie=0; ie<pRadAccessData->ne; ie++)
-			{
-				if(pEx0 != 0)
-				{
-					EFieldPtrs.pExRe = pEx_StartForE + iePerE;
-					EFieldPtrs.pExIm = EFieldPtrs.pExRe + 1;
-				}
-				else
-				{
-					EFieldPtrs.pExRe = 0;
-					EFieldPtrs.pExIm = 0;
-				}
-				if(pEz0 != 0)
-				{
-					EFieldPtrs.pEzRe = pEz_StartForE + iePerE;
-					EFieldPtrs.pEzIm = EFieldPtrs.pEzRe + 1;
-				}
-				else
-				{
-					EFieldPtrs.pEzRe = 0;
-					EFieldPtrs.pEzIm = 0;
-				}
-
-				EXZ.aux_offset = izPerZ + ixPerX + iePerE;
-				RadPointModifier(EXZ, EFieldPtrs, pBufVars); //OC29082019
-				//RadPointModifier(EXZ, EFieldPtrs);
-
-				iePerE += 2;
-				EXZ.e += pRadAccessData->eStep;
-			}
-			ixPerX += PerX;
-			EXZ.x += pRadAccessData->xStep;
-		}
-	}
 #endif
-
+	}
 	return 0;
 }
 

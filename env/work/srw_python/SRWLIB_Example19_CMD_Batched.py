@@ -150,14 +150,14 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True, _wfrs_per_grp = 100): #OC11042
     arEx = None
     arExH5 = hf.get('arEx')
     if(arExH5 is not None):
-        arEx = np.array(arExH5)[:1] #.reshape(-1)
+        arEx = np.array(arExH5)[:10] #.reshape(-1)
         #arEx = [arEx[1], arEx[0]]
         #arEx = [arEx, arEx]
 
     arEy = None
     arEyH5 = hf.get('arEy')
     if(arEyH5 is not None):
-        arEy = np.array(arEyH5)[:1] #.reshape(-1)
+        arEy = np.array(arEyH5)[:10] #.reshape(-1)
         #arEy = [arEy[1], arEy[0]]
         #arEy = [arEy, arEy]
 
@@ -213,12 +213,12 @@ yc = 0 #Vertical Center position of the Sample
 zc = 0 #Longitudinal Center position of the Sample
 
 listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d( #Initial list of 3D object (sphere) parameters
-    _n = 500, #Number of 3D nano-objects
+    _n = 5000, #Number of 3D nano-objects
     _ranges = [0.95*rx, 0.95*ry, rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
     #_ranges = [rx, ry, rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
     _cen = [xc, yc, zc], #Horizontal, Vertical and Longitudinal coordinates of center position around which the 3D objects are defined
     _dist = 'uniform', #Type (and eventual parameters) of distributions of 3D objects
-    _obj_shape = ['S', 'uniform', 50.e-09, 500.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
+    _obj_shape = ['S', 'uniform', 150.e-09, 500.e-09], #Type of 3D objects, their distribution type and parameters (min. and max. diameter for the 'uniform' distribution)
     _allow_overlap = False, #Allow or not the 3D objects to overlap
     _seed = 0,
     _fp = os.path.join(os.getcwd(), strDataFolderName, strSampleSubFolderName, strListSampObjFileName%(0)))
@@ -268,7 +268,7 @@ opSmp_Det = SRWLOptD(distSmp_Det)
 #[10]: New Horizontal wavefront Center position after Shift
 #[11]: New Vertical wavefront Center position after Shift
 #           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
-ppSmp =     [0, 0, 1., 0, 0, 1., 165., 1., 165.,  0, 0, 0]
+ppSmp =     [0, 0, 1., 0, 0, 1., 55. * 3, 1., 55. * 3,  0, 0, 0]
 ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 
@@ -316,7 +316,7 @@ for it in range(len(listObjBrownian)):
         print('   Propagating Wavefront Group #%d... '%(idx), end='')
         t = time.time()
 
-        srwl.PropagElecField(wfrP, opBL, None, 1)    
+        srwl.PropagElecField(wfrP, opBL, None, 0)    
         print('done in', round(time.time() - t, 3), 's')
         idx+=1
 
@@ -327,11 +327,11 @@ for it in range(len(listObjBrownian)):
         if arI1 is None:
             arI1 = cp.zeros(mesh1.nx*mesh1.ny*wfrP.nWfr, dtype=np.float32)#array('f', [0]*mesh1.nx*mesh1.ny*wfrP.nWfr) #"flat" array to take 2D intensity data
         srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
-        stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr, _gpu=1) #"Projecting" intensity on detector (by interpolation)
+        stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr, _gpu=0) #"Projecting" intensity on detector (by interpolation)
         mesh1 = deepcopy(stkDet.mesh)
-        cmFrames.append(stkDet.arS.get())
+        cmFrames.append(stkDet.arS)
         
-        del stkDet.arS
+        #del stkDet.arS
         del wfrP.arEx
         del wfrP.arEy
         
@@ -347,7 +347,7 @@ for it in range(len(listObjBrownian)):
     meshS = opSmp.mesh
     plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
     plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
-    #uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
+    uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
         
     #Scattered Radiation Intensity Distribution in Log Scale
     plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
