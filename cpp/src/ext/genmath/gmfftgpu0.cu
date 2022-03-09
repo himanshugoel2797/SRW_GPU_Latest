@@ -328,6 +328,57 @@ template <class T> __global__ void NormalizeDataAfter2DFFT_Kernel(T* pAfterFFT, 
     }
 }
 
+template <class T> __global__ void TreatShift2D_Kernel(T* pData, long HowMany, long Nx2, long Ny, T* tShiftX, T* tShiftY, bool NeedsShiftX, bool NeedsShiftY) {
+    int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //Nx range
+    int iy = (blockIdx.y * blockDim.y + threadIdx.y); //Ny range
+
+    if (ix < Nx2 && iy < Ny) {
+        T MultRe = 1;
+        T MultIm = 0;
+
+        T MultX_Re = 1; 
+        T MultX_Im = 0;
+
+        T MultY_Re = 1;
+        T MultY_Im = 0;
+
+        if (NeedsShiftY)
+        {
+            MultY_Re = tShiftY[iy * 2];
+            MultY_Im = tShiftY[iy * 2 + 1];
+        }
+        if (NeedsShiftX)
+        {
+            MultX_Re = tShiftX[ix];
+            MultX_Im = tShiftX[ix + 1];
+
+            if (NeedsShiftY) 
+            {
+                MultRe = MultX_Re * MultY_Re - MultX_Im * MultY_Im;
+                MultIm = MultX_Re * MultY_Im + MultX_Im * MultY_Re;
+            }
+            else 
+            {
+                MultRe = MultX_Re;
+                MultIm = MultX_Im;
+            }
+        }
+        else 
+        {
+            MultRe = MultY_Re;
+            MultIm = MultY_Im;
+        }
+
+        for (long k = 0; k < HowMany; k++)
+        {
+            long offset = k * Nx2 * Ny + iy * Nx2 + ix;
+            T NewRe = pData[offset] * MultRe - pData[offset + 1] * MultIm;
+            T NewIm = pData[offset] * MultIm + pData[offset + 1] * MultRe;
+            pData[offset] = NewRe;
+            pData[offset + 1] = NewIm;
+        }
+    }
+}
 
 void RepairSignAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany) {
     const int bs = 256;
@@ -350,6 +401,13 @@ void NormalizeDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMa
     NormalizeDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany, Mult);
 }
 
+void TreatShifts2D_CUDA(float* pData, long Nx, long Ny, long howMany, bool NeedsShiftX, bool NeedsShiftY, float* m_ArrayShiftX, float* m_ArrayShiftY) {
+    const int bs = 256;
+    dim3 blocks((Nx) / bs + (((Nx) & (bs - 1)) != 0), Ny);
+    dim3 threads(bs, 1);
+    TreatShift2D_Kernel<float> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY, NeedsShiftX, NeedsShiftY);
+}
+
 void RepairSignAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany) {
     const int bs = 256;
     dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), Ny);
@@ -369,6 +427,13 @@ void NormalizeDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howM
     dim3 blocks((Nx * Ny) / bs + (((Nx * Ny) & (bs - 1)) != 0), 1);
     dim3 threads(bs, 1);
     NormalizeDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany, Mult);
+}
+
+void TreatShifts2D_CUDA(double* pData, long Nx, long Ny, long howMany, bool NeedsShiftX, bool NeedsShiftY, double* m_ArrayShiftX, double* m_ArrayShiftY) {
+    const int bs = 256;
+    dim3 blocks((Nx) / bs + (((Nx) & (bs - 1)) != 0), Ny);
+    dim3 threads(bs, 1);
+    TreatShift2D_Kernel<double> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY, NeedsShiftX, NeedsShiftY);
 }
 
 

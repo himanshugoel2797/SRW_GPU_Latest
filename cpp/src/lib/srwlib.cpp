@@ -1533,15 +1533,6 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 	long ir = 0;
 
 	float *pStokesArS = (float*)pStokes->arS0, *pMoreStokesArS = (float*)pMoreStokes->arS0;
-
-	GPU_COND(nullptr, {
-		cudaMallocManaged((void**)&pStokesArS, sizeof(float) * xNpMeshRes * yNpMeshRes * eNpMeshRes * nStokesComp);
-		cudaMallocManaged((void**)&pMoreStokesArS, sizeof(float) * xNpWfr * yNpWfr * eNpWfr * nStokesComp);
-		if (nIters > 0)
-			cudaMemcpy(pStokesArS, pStokes->arS0, sizeof(float) * xNpMeshRes * yNpMeshRes * eNpMeshRes * nStokesComp, cudaMemcpyHostToDevice);
-		cudaMemcpy(pMoreStokesArS, pMoreStokes->arS0, sizeof(float) * xNpWfr * yNpWfr * eNpWfr * nStokesComp, cudaMemcpyHostToDevice);
-	})
-
 	for (int iSt = 0; iSt < nStokesComp; iSt++) {
 
 		GPU_COND(pGpuUsage, {
@@ -1647,12 +1638,6 @@ EXP int CALL srwlUtiStokesAvgUpdateInterp(SRWLStokes* pStokes, SRWLStokes* pMore
 
 		iOfstSt += nRawWfr; 
 	}
-
-	GPU_COND(nullptr, {
-		cudaMemcpy(pStokes->arS0, pStokesArS, sizeof(float) * xNpMeshRes * yNpMeshRes * eNpMeshRes * nStokesComp, cudaMemcpyDeviceToHost);
-		cudaFree(pStokesArS);
-		cudaFree(pMoreStokesArS);
-	})
 
 	return 0;
 }

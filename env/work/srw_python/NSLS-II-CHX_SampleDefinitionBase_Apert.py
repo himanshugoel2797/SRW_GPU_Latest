@@ -203,8 +203,8 @@ varParam = [
     ['op_Sample_rx', 'f', 100.e-06, 'rx'],
     ['op_Sample_ry', 'f', 100.e-06, 'ry'],
     ['op_Sample_rz', 'f', 100.e-06, 'rz'],
-    ['op_Sample_obj_size_min', 'f', 125.e-09, 'obj_size_min'],
-    ['op_Sample_obj_size_max', 'f', 1250.e-09, 'obj_size_max'],
+    ['op_Sample_obj_size_min', 'f', 100.e-09, 'obj_size_min'],
+    ['op_Sample_obj_size_max', 'f', 500.e-09, 'obj_size_max'],
     ['op_Sample_extTransm', 'i', 1, 'transmissionImage'],
     ['op_Sample_nx', 'i', 2000, 'nx'],
     ['op_Sample_ny', 'i', 2000, 'ny'],
@@ -215,7 +215,7 @@ varParam = [
 #---Propagation parameters
     #['op_Aperture_pp', 'f',        [0, 0, 1.0, 0, 0, 1.0, 55.0, 1.0, 55.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture'],
     #['op_Aperture_Sample_pp', 'f', [0, 0, 1.0, 3, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Aperture_Sample'],
-    ['op_Sample_pp', 'f',          [0, 0, 1.0, 0, 0, 1.0, 55.0, 1.0, 55.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Sample'],
+    ['op_Sample_pp', 'f',          [0, 0, 1.0, 0, 0, 1.0, 165.0, 1.0, 165.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Sample'],
     ['op_Sample_Detector_pp', 'f', [0, 0, 1.0, 3, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'Sample_Detector'],
     ['op_fin_pp', 'f',             [0, 0, 1.0, 0, 0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 'final post-propagation (resize) parameters'],
 
@@ -248,7 +248,7 @@ def main(idx, per_proc = 5):
     v = srwl_bl.srwl_uti_parse_options(srwl_bl.srwl_uti_ext_options(varParam), use_sys_argv=True)
     
     listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d(
-        _n = 100, #Number of 3D nano-objects
+        _n = 3000, #Number of 3D nano-objects
         _ranges = [0.95*v.op_Sample_rx, 0.95*v.op_Sample_ry, v.op_Sample_rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
         #_ranges = [rx, ry, rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
         _cen = [v.op_Sample_xc, v.op_Sample_yc, v.op_Sample_zc], #Horizontal, Vertical and Longitudinal coordinates of center position around which the 3D objects are defined

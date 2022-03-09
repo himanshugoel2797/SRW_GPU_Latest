@@ -232,20 +232,30 @@ void CGenMathFFT::NextCorrectNumberForFFT(long& n)
 
 int CGenMathFFT1D::Make1DFFT_InPlace(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t* pGpuUsage)
 {
-	//long TotAmOfPo = (FFT1DInfo.Nx << 1)*FFT1DInfo.HowMany;
-	long long TotAmOfPo = ((long long)(FFT1DInfo.Nx << 1)) * ((long long)FFT1DInfo.HowMany);
+	GPU_COND(pGpuUsage,
+	{
+		//HG03082022 GPU can do an inplace fft without being given a temporary buffer
+		FFT1DInfo.pOutData = FFT1DInfo.pInData;
+		int result;
+		if (result = Make1DFFT(FFT1DInfo, pGpuUsage)) return result;
+	})
+	else 
+	{
+		//long TotAmOfPo = (FFT1DInfo.Nx << 1)*FFT1DInfo.HowMany;
+		long long TotAmOfPo = ((long long)(FFT1DInfo.Nx << 1)) * ((long long)FFT1DInfo.HowMany);
 
-	float* AuxDataCont = new float[TotAmOfPo];
-	if (AuxDataCont == 0) return MEMORY_ALLOCATION_FAILURE;
-	FFT1DInfo.pOutData = AuxDataCont;
+		float* AuxDataCont = new float[TotAmOfPo];
+		if (AuxDataCont == 0) return MEMORY_ALLOCATION_FAILURE;
+		FFT1DInfo.pOutData = AuxDataCont;
 
-	int result;
-	if (result = Make1DFFT(FFT1DInfo, pGpuUsage)) return result;
+		int result;
+		if (result = Make1DFFT(FFT1DInfo, pGpuUsage)) return result;
 
-	float* tOut = FFT1DInfo.pInData, * t = AuxDataCont;
-	for (int ix = 0; ix < TotAmOfPo; ix++) *(tOut++) = *(t++);
+		float* tOut = FFT1DInfo.pInData, * t = AuxDataCont;
+		for (int ix = 0; ix < TotAmOfPo; ix++) *(tOut++) = *(t++);
 
-	if (AuxDataCont != 0) delete[] AuxDataCont;
+		if (AuxDataCont != 0) delete[] AuxDataCont;
+	}
 	return 0;
 }
 
@@ -395,10 +405,10 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	{
 		GPU_COND(pGpuUsage, {
 			if (DataToFFT != 0) {
-				TreatShifts(DataToFFT, FFT2DInfo.howMany);
+				TreatShifts2D_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany, NeedsShiftBeforeX, NeedsShiftBeforeY, m_ArrayShiftX, m_ArrayShiftY);
 			}
 			else if (dDataToFFT != 0) {
-				TreatShifts((fftw_complex*)dDataToFFT, FFT2DInfo.howMany); //OC02022019
+				TreatShifts2D_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany, NeedsShiftBeforeX, NeedsShiftBeforeY, m_dArrayShiftX, m_dArrayShiftY);
 			}
 		})
 		else {
@@ -643,10 +653,10 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	{
 		GPU_COND(pGpuUsage, {
 			if (DataToFFT != 0) {
-				TreatShifts((fftwf_complex*)DataToFFT, FFT2DInfo.howMany);
+				TreatShifts2D_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany, NeedsShiftAfterX, NeedsShiftAfterY, m_ArrayShiftX, m_ArrayShiftY);
 			}
 			else if (dDataToFFT != 0) {
-				TreatShifts((fftw_complex*)dDataToFFT, FFT2DInfo.howMany); //OC02022019
+				TreatShifts2D_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany, NeedsShiftAfterX, NeedsShiftAfterY, m_dArrayShiftX, m_dArrayShiftY);
 			}
 		})
 		else {
@@ -725,29 +735,15 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 	m_dArrayShiftX = 0;
 	if (NeedsShiftBeforeX || NeedsShiftAfterX)
 	{
-		GPU_COND(pGpuUsage, {
-			if (FFT1DInfo.pInData != 0)
-			{
-				cudaMallocManaged((void**)&m_ArrayShiftX, sizeof(float) * Nx * 2);
-				if (m_ArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
-			}
-			else if (FFT1DInfo.pdInData != 0)
-			{
-				cudaMallocManaged((void**)&m_dArrayShiftX, sizeof(double) * Nx * 2);
-				if (m_dArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
-			}
-		})
-		else {
-			if (FFT1DInfo.pInData != 0)
-			{
-				m_ArrayShiftX = new float[Nx << 1];
-				if (m_ArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
-			}
-			else if (FFT1DInfo.pdInData != 0)
-			{
-				m_dArrayShiftX = new double[Nx << 1];
-				if (m_dArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
-			}
+		if (FFT1DInfo.pInData != 0)
+		{
+			m_ArrayShiftX = new float[Nx << 1];
+			if (m_ArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
+		}
+		else if (FFT1DInfo.pdInData != 0)
+		{
+			m_dArrayShiftX = new double[Nx << 1];
+			if (m_dArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
 		}
 	}
 
