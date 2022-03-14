@@ -60,7 +60,7 @@ template<class T> int RadPointModifierParallelImpl(srTSRWRadStructAccessData* pR
 
     T* local_copy = NULL;
     cudaMallocManaged(&local_copy, sizeof(T));
-    *local_copy = *tgt_obj;
+    memcpy(local_copy, tgt_obj, sizeof(T));
 	RadPointModifierParallel_Kernel<T> << <blocks, threads >> > (*pRadAccessData, pBufVars, local_copy);
     cudaDeviceSynchronize();
     cudaFree(local_copy);

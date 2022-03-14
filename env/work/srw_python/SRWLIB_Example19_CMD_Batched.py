@@ -351,7 +351,7 @@ for it in range(len(listObjBrownian)):
     meshS = opSmp.mesh
     plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
     plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
-    uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
+    uti_plot2d(opPathDif.get(), plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
         
     #Scattered Radiation Intensity Distribution in Log Scale
     plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
