@@ -247,7 +247,7 @@ void MakeWfrEdgeCorrection_CUDA(srTSRWRadStructAccessData& RadAccessData, float*
 #endif
 }
 
-template<class T> __global__ void RadPointModifierParallel_Kernel(srTSRWRadStructAccessData RadAccessData, void* pBufVars, T* tgt_obj)
+template<class T> __global__ void RadPointModifierParallel_Kernel(srTSRWRadStructAccessData RadAccessData, void* pBufVars, T tgt_obj)
 {
 	int iz = (blockIdx.x * blockDim.x + threadIdx.x); //nz range
 	int ix = (blockIdx.y * blockDim.y + threadIdx.y); //nx range
@@ -284,7 +284,7 @@ template<class T> __global__ void RadPointModifierParallel_Kernel(srTSRWRadStruc
 					EPtrs.pEzIm = 0;
 				}
 
-				tgt_obj->RadPointModifierPortable(EXZ, EPtrs, pBufVars);
+				tgt_obj.RadPointModifierPortable(EXZ, EPtrs, pBufVars);
 			}
 	}
 }
@@ -294,7 +294,8 @@ template<class T> int srTGenOptElem::RadPointModifierParallelImpl(srTSRWRadStruc
 	const int bs = 256;
 	dim3 blocks(pRadAccessData->nz / bs + ((pRadAccessData->nz & (bs - 1)) != 0), pRadAccessData->nx);
 	dim3 threads(bs, 1);
-	RadPointModifierParallel_Kernel<T> << <blocks, threads >> > (*pRadAccessData, pBufVars, static_cast<T*>(this));
+
+	RadPointModifierParallel_Kernel<T> << <blocks, threads >> > (*pRadAccessData, pBufVars, *this);
 
 #ifdef _DEBUG
 	auto err = cudaGetLastError();

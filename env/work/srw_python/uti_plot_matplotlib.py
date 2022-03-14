@@ -69,7 +69,7 @@ class Backend(object):
         self._plot_2D(ar2d,x_range,y_range,labels,fig)
         return self._maybe_savefig(fig)
 
-    def uti_plot2d1d(self, data, x_range, y_range, xc, yc, labels, _graphs_joined=True):
+    def uti_plot2d1d(self, data, x_range, y_range, xc, yc, labels, _graphs_joined=True, _diagonals=False):
         x0 = x_range[0]; x1 = x_range[1]; nx = x_range[2]
         #y0 = x_range[0]; y1 = y_range[1]; ny = y_range[2]
         y0 = y_range[0]; y1 = y_range[1]; ny = y_range[2] #OC090714
@@ -90,22 +90,36 @@ class Backend(object):
         if ny > 1: yStep = (y1 - y0)/(ny - 1)
         inperpOrd = 1 #interpolation order to use (1 to 3)
 
+        if _diagonals:
+            x0_sign = np.sign(x0)
+            x1_sign = np.sign(x1)
+            y0_sign = np.sign(y0)
+            y1_sign = np.sign(y1)
+            x_range = (uti_math.num_round(x0_sign * (x0 ** 2 + y0 ** 2) ** 0.5), uti_math.num_round(x1_sign * (x1 ** 2 + y1 ** 2) ** 0.5), nx)
+            y_range = (uti_math.num_round(y0_sign * (y0 ** 2 + x0 ** 2) ** 0.5), uti_math.num_round(y1_sign * (y1 ** 2 + x1 ** 2) ** 0.5), ny)
+
         #_plot_1D(data[iy,:],range_x,label1H,fig,132)
         arCutX = array('d', [0]*nx)
         xx = x0
+        yx = y0 if _diagonals else yc
         for ix in range(nx):
-            arCutX[ix] = uti_math.interp_2d(xx, yc, x0, xStep, nx, y0, yStep, ny, data, inperpOrd, 1, 0)
+            arCutX[ix] = uti_math.interp_2d(xx, yx, x0, xStep, nx, y0, yStep, ny, data, inperpOrd, 1, 0)
             xx += xStep
+            if _diagonals:
+                yx += yStep
         if _graphs_joined: self._plot_1D(arCutX, x_range, label1H, fig, 132) #OC150814
         else: self.uti_plot1d(arCutX, x_range, label1H)
 
         #_plot_1D(data[:,ix],range_y,label1V,fig,133)
         arCutY = array('d', [0]*ny)
         yy = y0
+        xx = x1 if _diagonals else xc
         for iy in range(ny):
             #arCutY[iy] = _interp_2d(xc, yy, x0, xStep, nx, y0, yStep, ny, data, inperpOrd, 1, 0)
-            arCutY[iy] = uti_math.interp_2d(xc, yy, x0, xStep, nx, y0, yStep, ny, data, inperpOrd, 1, 0)
+            arCutY[iy] = uti_math.interp_2d(xx, yy, x0, xStep, nx, y0, yStep, ny, data, inperpOrd, 1, 0)
             yy += yStep
+            if _diagonals:
+                xx -= xStep
         if _graphs_joined: self._plot_1D(arCutY, y_range, label1V, fig, 133)
         else: self.uti_plot1d(arCutY, y_range, label1V)
 
@@ -119,7 +133,7 @@ class Backend(object):
     #def uti_data_file_plot(self, _fname, _read_labels=1, _e=0, _x=0, _y=0, _graphs_joined=1, _traj_report=False, _traj_axis='x', _scale='linear', _width_pixels=None): #MR27012017
     def uti_plot_data_file(self, _fname, _read_labels=1, _e=0, _x=0, _y=0, _graphs_joined=1, #OC16112017 (renamed: uti_plot_data_file -> uti_plot_data_file)
                            _multicolumn_data=False, _column_x=None, _column_y=None, #MR31102017
-                           _scale='linear', _width_pixels=None):
+                           _scale='linear', _width_pixels=None, _diagonals=False):
         #data, mode, allrange = srw_ascii_load(fname)
         #data, mode, allrange, arLabels, arUnits = _file_load(_fname, _read_labels)
         #data, mode, allrange, arLabels, arUnits = uti_plot_com.file_load(_fname, _read_labels)
@@ -196,7 +210,7 @@ class Backend(object):
         elif mode==m.E:
             fig = self.__mode_E(data, allrange, arLabels, arUnits)
         elif mode==m.HV:
-            fig = self.__mode_HV(data, allrange, arLabels, arUnits, _x, _y, _graphs_joined)
+            fig = self.__mode_HV(data, allrange, arLabels, arUnits, _x, _y, _graphs_joined, _diagonals)
         #elif mode==m.EV:
         #  fig = __mode_EV(data,allrange)
         #elif mode==m.EH:
@@ -478,7 +492,7 @@ class Backend(object):
         self._plot_1D(data,range_e,label,fig)
         return fig
 
-    def __mode_HV(self, data, allrange, _ar_labels, _ar_units, _xc=0, _yc=0, _graphs_joined=True):
+    def __mode_HV(self, data, allrange, _ar_labels, _ar_units, _xc=0, _yc=0, _graphs_joined=True, _diagonals=False):
         #Could be moved to uti_plot_com.py (since there is not Matplotlib-specific content)
         #allrange, units = _rescale_range(allrange)
         #allrange, units = _rescale_range(allrange, _ar_units, 0, _xc, _yc)
@@ -500,17 +514,17 @@ class Backend(object):
         #print(label2D)
 
         #label1H = ("Horizontal Position, ["+units[1]+"]","Ph/s/0.1%BW/mm^2")
-        strTitle = 'At ' + _ar_labels[2] + ': ' + str(yc)
+        strTitle = 'At ' + ('45 degree diagonal' if _diagonals else _ar_labels[2]) + ': ' + str(yc)
         if yc != 0: strTitle += ' ' + units[2]
         label1H = (_ar_labels[1] + ' [' + units[1] + ']', _ar_labels[3] + ' [' + _ar_units[3] + ']', strTitle)
 
         #label1V = ("Vertical Position, ["+units[2]+"]","Ph/s/0.1%BW/mm^2")
-        strTitle = 'At ' + _ar_labels[1] + ': ' + str(xc)
+        strTitle = 'At ' + ('-45 degree diagonal' if _diagonals else _ar_labels[1]) + ': ' + str(xc)
         if xc != 0: strTitle += ' ' + units[1]
         label1V = (_ar_labels[2] + ' [' + units[2] + ']', _ar_labels[3] + ' [' + _ar_units[3] + ']', strTitle)
 
         #return plot_2D_1D(data, range_x, range_y, [label2D, label1H, label1V], _graphs_joined)
-        return self.uti_plot2d1d(data, range_x, range_y, xc, yc, [label2D, label1H, label1V], _graphs_joined)
+        return self.uti_plot2d1d(data, range_x, range_y, xc, yc, [label2D, label1H, label1V], _graphs_joined, _diagonals)
 
     ##    fig = None
     ##    if _graphs_joined:

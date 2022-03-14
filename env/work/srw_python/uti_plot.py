@@ -165,7 +165,7 @@ def uti_plot2d(ar2d, x_range=None, y_range=None, labels=('Horizontal Position [m
     _backend.uti_plot2d(ar2d, x_range, y_range, labels)
     #if(show): uti_plot_show() #OC16082021 (commented-out back)
 
-def uti_plot2d1d(ar2d, x_range, y_range, x=0, y=0, labels=('Horizontal Position', 'Vertical Position', 'Intensity'), units=None, graphs_joined=True): #OC23082021
+def uti_plot2d1d(ar2d, x_range, y_range, x=0, y=0, labels=('Horizontal Position', 'Vertical Position', 'Intensity'), units=None, graphs_joined=True, _diagonals=False): #OC23082021
 #def uti_plot2d1d(ar2d, x_range, y_range, x=0, y=0, labels=('Horizontal Position', 'Vertical Position', 'Intensity'), units=None, graphs_joined=True, show=False): #OC16082021
     """Generate 2d quad mesh plot from given "flattened" array, and 1d cuts passing through (x, y)
 
@@ -177,6 +177,7 @@ def uti_plot2d1d(ar2d, x_range, y_range, x=0, y=0, labels=('Horizontal Position'
     :param tuple labels: (x-axis, y-axis, z-axis)
     :param tuple units: (x-axis, y-axis, z-axis)
     :param graphs_joined: switch specifying whether the 2d plot and 1d cuts have to be displayed in one panel or separately
+    :param bool _diagonals: switch specifying whether the 2d plot and 1d cuts have to be displayed with diagonals or without
     """
     
     #if '_backend' not in locals(): uti_plot_init() #?
@@ -223,7 +224,7 @@ def uti_plot2d1d(ar2d, x_range, y_range, x=0, y=0, labels=('Horizontal Position'
 
     labels = [label2D, label1X, label1Y]
 
-    _backend.uti_plot2d1d(ar2d, x_range, y_range, x, y, labels, graphs_joined)
+    _backend.uti_plot2d1d(ar2d, x_range, y_range, x, y, labels, graphs_joined, _diagonals)
     #if(show): uti_plot_show() #OC16082021 (commented-out back)
 
 #def uti_plot_img(_img, _x_range=None, _y_range=None, ): #OC29052020
@@ -231,7 +232,7 @@ def uti_plot2d1d(ar2d, x_range, y_range, x=0, y=0, labels=('Horizontal Position'
 
 def uti_plot_data_file(_fname, _read_labels=1, _e=0, _x=0, _y=0, _graphs_joined=True, #Same as uti_data_file_plot, but better fits function name decoration rules in this module (uti_plot*)
                        _multicolumn_data=False, _column_x=None, _column_y=None, #MR31102017
-                       _scale='linear', _width_pixels=None):
+                       _scale='linear', _width_pixels=None, _diagonals=False):
     """Generate plot from configuration in _fname
 
     :param str _fname: config loaded from here
@@ -244,12 +245,13 @@ def uti_plot_data_file(_fname, _read_labels=1, _e=0, _x=0, _y=0, _graphs_joined=
     :param str _column_x: column for horizontal axis
     :param str _column_x: column for vertical axis
     :param str _scale: the scale to use for plotting data (linear by default, but could use log, log2, log10)  
-    :param int _width_pixels: the width of the final plot in pixels  
+    :param int _width_pixels: the width of the final plot in pixels 
+    :param bool _diagonals: if true, plot diagonal lines 
     """
     #if '_backend' not in locals(): uti_plot_init() #?
     _backend.uti_plot_data_file(_fname, _read_labels, _e, _x, _y, _graphs_joined,
                                 _multicolumn_data, _column_x, _column_y, #MR31102017
-                                _scale, _width_pixels)
+                                _scale, _width_pixels, _diagonals)
 
 #def uti_data_file_plot(_fname, _read_labels=1, _e=0, _x=0, _y=0, _graphs_joined=True):
 #def uti_data_file_plot(_fname, _read_labels=1, _e=0, _x=0, _y=0, _graphs_joined=True, _traj_report=False, _traj_axis='x'): #MR29072016

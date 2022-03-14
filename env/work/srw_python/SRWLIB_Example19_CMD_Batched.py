@@ -240,8 +240,8 @@ matDelta = 4.773e-05 #Refractive Index Decrement
 matAttenLen = 2.48644e-06 #Attenuation Length [m]
 
 #***********Detector
-nxDet = 2070 #Detector Number of Pixels in Horizontal direction
-nyDet = 2167 #Detector Number of Pixels in Vertical direction
+nxDet = 2048 #Detector Number of Pixels in Horizontal direction
+nyDet = 2048 #Detector Number of Pixels in Vertical direction
 pSize = 75e-06 #Detector Pixel Size
 xrDet = nxDet*pSize
 yrDet = nyDet*pSize
@@ -362,7 +362,7 @@ for it in range(len(listObjBrownian)):
     #    if(curI <= 0.): arLogI1[i] = 0 #?
     #    else: arLogI1[i] = log(curI, 10)
 
-    uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
+    uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['At 45 degree diagonal', 'At -45 degree diagonal', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''], _diagonals=True)
     print('done')
 
     #if(arDetFrames is not None): #Saving simulated Detector data file

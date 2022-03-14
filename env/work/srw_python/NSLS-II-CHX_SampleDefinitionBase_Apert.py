@@ -142,9 +142,9 @@ varParam = [
     ['ws_fni', 's', 'res_int_pr_se.dat', 'file name for saving propagated single-e intensity distribution vs horizontal and vertical position'],
     ['ws_pl', 's', 'xy', 'plot the resulting intensity distributions in graph(s): ""- dont plot, "x"- vs horizontal position, "y"- vs vertical position, "xy"- vs horizontal and vertical position'],
 
-    ['wm_nm', 'i', 10, 'number of macro-electrons (coherent wavefronts) for calculation of multi-electron wavefront propagation'],
-    ['wm_na', 'i', 10, 'number of macro-electrons (coherent wavefronts) to average on each node for parallel (MPI-based) calculation of multi-electron wavefront propagation'],
-    ['wm_ns', 'i', 10, 'saving periodicity (in terms of macro-electrons / coherent wavefronts) for intermediate intensity at multi-electron wavefront propagation calculation'],
+    ['wm_nm', 'i', 1, 'number of macro-electrons (coherent wavefronts) for calculation of multi-electron wavefront propagation'],
+    ['wm_na', 'i', 1, 'number of macro-electrons (coherent wavefronts) to average on each node for parallel (MPI-based) calculation of multi-electron wavefront propagation'],
+    ['wm_ns', 'i', 1, 'saving periodicity (in terms of macro-electrons / coherent wavefronts) for intermediate intensity at multi-electron wavefront propagation calculation'],
     ['wm_ch', 'i', 0, 'type of a characteristic to be extracted after calculation of multi-electron wavefront propagation: #0- intensity (s0); 1- four Stokes components; 2- mutual intensity cut vs x; 3- mutual intensity cut vs y; 40- intensity(s0), mutual intensity cuts and degree of coherence vs X & Y'],
     ['wm_ap', 'i', 0, 'switch specifying representation of the resulting Stokes parameters: coordinate (0) or angular (1)'],
     ['wm_x0', 'f', 0.0, 'horizontal center position for mutual intensity cut calculation'],
@@ -156,7 +156,7 @@ varParam = [
     ['wm_ff', 's', 'ascii', 'format of file name for saving propagated multi-e intensity distribution vs horizontal and vertical position (ascii and hdf5 supported)'],
 
     ['wm_nmm', 'i', 4, 'number of MPI masters to use'],
-    ['wm_ncm', 'i', 10, 'number of Coherent Modes to calculate'],
+    ['wm_ncm', 'i', 1, 'number of Coherent Modes to calculate'],
     ['wm_acm', 's', 'SP', 'coherent mode decomposition algorithm to be used (supported algorithms are: "SP" for SciPy, "SPS" for SciPy Sparse, "PM" for Primme, based on names of software packages)'],
     ['wm_nop', '', '', 'switch forcing to do calculations ignoring any optics defined (by set_optics function)', 'store_true'],
 
@@ -200,14 +200,14 @@ varParam = [
     ['op_Sample_xc', 'f', 0.0, 'horizontalCenterCoordinate'],
     ['op_Sample_yc', 'f', 0.0, 'verticalCenterCoordinate'],
     ['op_Sample_zc', 'f', 0.0, 'depthCenterCoordinate'],
-    ['op_Sample_rx', 'f', 100.e-06, 'rx'],
-    ['op_Sample_ry', 'f', 100.e-06, 'ry'],
-    ['op_Sample_rz', 'f', 100.e-06, 'rz'],
-    ['op_Sample_obj_size_min', 'f', 100.e-09, 'obj_size_min'],
+    ['op_Sample_rx', 'f', 40.e-06, 'rx'],
+    ['op_Sample_ry', 'f', 40.e-06, 'ry'],
+    ['op_Sample_rz', 'f', 40.e-06, 'rz'],
+    ['op_Sample_obj_size_min', 'f', 150.e-09, 'obj_size_min'],
     ['op_Sample_obj_size_max', 'f', 500.e-09, 'obj_size_max'],
     ['op_Sample_extTransm', 'i', 1, 'transmissionImage'],
-    ['op_Sample_nx', 'i', 2000, 'nx'],
-    ['op_Sample_ny', 'i', 2000, 'ny'],
+    ['op_Sample_nx', 'i', 4000, 'nx'],
+    ['op_Sample_ny', 'i', 4000, 'ny'],
 
     # Sample_Detector: drift
     ['op_Sample_Detector_L', 'f', 10.0, 'length'],
@@ -248,7 +248,7 @@ def main(idx, per_proc = 5):
     v = srwl_bl.srwl_uti_parse_options(srwl_bl.srwl_uti_ext_options(varParam), use_sys_argv=True)
     
     listObjInit = srwl_uti_smp_rnd_obj3d.setup_list_obj3d(
-        _n = 3000, #Number of 3D nano-objects
+        _n = 5000, #Number of 3D nano-objects
         _ranges = [0.95*v.op_Sample_rx, 0.95*v.op_Sample_ry, v.op_Sample_rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
         #_ranges = [rx, ry, rz], #Ranges of horizontal, vertical and longitudinal position within which the 3D objects are defined
         _cen = [v.op_Sample_xc, v.op_Sample_yc, v.op_Sample_zc], #Horizontal, Vertical and Longitudinal coordinates of center position around which the 3D objects are defined
@@ -276,9 +276,9 @@ def main(idx, per_proc = 5):
     for i in range(idx * per_proc, (idx + 1) * per_proc):
         if i >= len(listObjBrownian): break
         v.op_Sample_Objects = listObjBrownian[i]
-        v.wm_fni = 'res_int_pr_me_%d.dat' % i
+        v.wm_fni = 'res_int_pr_me_%d_fc.dat' % i
         op = set_optics(v, names, True)
-        srwl_bl.SRWLBeamline(_name=v.name).calc_all(v, op, _gpu=1)
+        srwl_bl.SRWLBeamline(_name=v.name).calc_all(v, op, _gpu=0)
 
 if __name__ == '__main__':
     main(0, 1)

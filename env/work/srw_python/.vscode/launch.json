@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: ExampleViewDataFile",
+            "type": "python",
+            "request": "launch",
+            "args": ["-f", "sample_def/res_int_pr_me_0.dat", "-s", "log10", "-j1", "--diag=1"],
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

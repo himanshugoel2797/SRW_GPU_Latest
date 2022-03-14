@@ -24,8 +24,32 @@ def read_ascii_data_cols(_file_path, _str_sep, _i_col_start=0, _i_col_end=-1, _n
     :param _n_line_skip: number of lines to skip in the beginning of the file
     :return: 2D list containing data columns read
     """
+    try:
+        import pandas as pd
+        df = pd.read_csv(_file_path, sep=_str_sep, skiprows=_n_line_skip, dtype=float if _float else str, header=None)
+        if _i_col_end < 0:
+            _i_col_end = len(df.columns) - 1
+        if _i_col_start < 0:
+            _i_col_start = 0
+        resCols = df.transpose().values.tolist()[_i_col_start:_i_col_end+1]
+        return resCols
+    except:
+        print('WARNING: pandas module is not available. Trying numpy for read_ascii_data_cols() instead.')
+
+    try:
+        import numpy as np
+        resCols = np.loadtxt(_file_path, skiprows=_n_line_skip, unpack=True, dtype=float if _float else str)
+        resCols = list(resCols)
+        if _i_col_end < 0:
+            _i_col_end = len(resCols)
+        if _i_col_start < 0:
+            _i_col_start = 0
+        return resCols[_i_col_start:_i_col_end]
+    except:
+        print('WARNING: numpy module is not available, using slower version of read_ascii_data_cols()')
+
     f = open(_file_path, 'r')
-    lines = f.readlines()
+    #lines = f.readlines()
 
     resCols = []
 
@@ -33,18 +57,24 @@ def read_ascii_data_cols(_file_path, _str_sep, _i_col_start=0, _i_col_end=-1, _n
     #for iCol in range(nCol):
     #    resCols.append([])
 
-    nRows = len(lines) - _n_line_skip - _n_line_skip_end #OC20042020
+    #nRows = len(lines) - _n_line_skip - _n_line_skip_end #OC20042020
     #nRows = len(lines) - _n_line_skip
 
-    for i in range(nRows):
-        curLine = lines[_n_line_skip + i]
+    i = 0
+    for curLine in f:
+        if i < _n_line_skip:
+            i += 1
+            continue
+    #for i in range(nRows):
+        #curLine = lines[_n_line_skip + i]
         curLineParts = curLine.split(_str_sep)
-        curNumParts = len(curLineParts)
+        #curNumParts = len(curLineParts)
         #print(curLineParts)
 
         colCount = 0; colCountTrue = 0
-        for iCol in range(curNumParts):
-            curPart = curLineParts[iCol]
+        for curPart in curLineParts:
+        #for iCol in range(curNumParts):
+        #    curPart = curLineParts[iCol]
             #print(curPart)
             
             if(len(curPart) > 0):
@@ -55,6 +85,7 @@ def read_ascii_data_cols(_file_path, _str_sep, _i_col_start=0, _i_col_end=-1, _n
                     else: resCols[colCountTrue].append(curPart)
                     colCountTrue += 1
                 colCount += 1
+        i += 1
     f.close()
     return resCols #attn: returns lists, not arrays!
 
