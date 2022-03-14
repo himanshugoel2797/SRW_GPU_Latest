@@ -8,8 +8,7 @@
 #define CUDA_BLOCK_SIZE_MAX 16
 #define CUDA_GRID_SIZE_MAX 16
 
- //#include "srradmnp.h"
-#include "srradmnpgpu.h"
+#include "srradmnp.h"
 #include "utidev.h"
 #include "gmfft.h"
 #include "gmmeth.h"

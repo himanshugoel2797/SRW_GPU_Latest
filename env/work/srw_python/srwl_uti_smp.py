@@ -854,7 +854,11 @@ def srwl_opt_setup_transm_from_obj3d( #OC28012021
         atten_len = [atten_len]
 
     nTot = 2 * ne * nx * ny
-    arTr = array('d', [0]*nTot)
+
+    if useCuPy:
+        arTr = cupy.zeros(nTot, dtype=cp.float64)
+    else:
+        arTr = array('d', [0]*nTot)
 
     opT = SRWLOptT(_nx=nx, _ny=ny, _rx=rx, _ry=ry,
                    _arTr=arTr, _extTr=extTr, _Fx=fx, _Fy=fy,

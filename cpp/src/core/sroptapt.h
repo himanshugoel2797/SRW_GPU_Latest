@@ -51,7 +51,7 @@ public:
 	{
 		int result;
 		if(pRadAccessData->Pres != 0) if(result = SetRadRepres(pRadAccessData, 0)) return result;
-		if(result = TraverseRadZXE(pRadAccessData, pGpuUsage)) return result;
+		if(result = TraverseRadZXE(pRadAccessData, 0, pGpuUsage)) return result;
 		if(result = PropagateRadMoments(pRadAccessData, 0)) return result;
 
 		SetNewNonZeroWfrLimits(pRadAccessData);
@@ -80,7 +80,7 @@ public:
 	{
 		int result;
 		if(pRadAccessData->Pres != 0) if(result = SetRadRepres(pRadAccessData, 0)) return result;
-		if(result = TraverseRadZXE(pRadAccessData, pGpuUsage)) return result;
+		if(result = TraverseRadZXE(pRadAccessData, 0, pGpuUsage)) return result;
 
 		SetNewNonZeroWfrLimits(pRadAccessData);
 		return 0;

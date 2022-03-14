@@ -14,8 +14,7 @@
 #include <string>
 #include <assert.h>
 #include <math.h>
-
-#include "srradmnpgpu.cuh"
+#include "srradmnp.h"
 
 #define CUDA_BLOCK_SIZE_MAX 16
 #define CUDA_GRID_SIZE_MAX 16
@@ -126,7 +125,7 @@ __global__ void StokesLV(float *mo, float *v1, float *v1p, float *v2, float *v2p
 
 
 
-__global__ void MutualIntensityComponentCUDA(float *mo, float *v1, float *v2, long nxy, double iter, long long tot_iter, int PloCom){
+void srTRadGenManip::MutualIntensityComponentCUDA(float *mo, float *v1, float *v2, long nxy, double iter, long long tot_iter, int PloCom){
 	int block_size=CUDA_BLOCK_SIZE_MAX, grid_size;
         grid_size = (int)(nxy/block_size);
 	if(grid_size*block_size!=nxy){

@@ -454,6 +454,9 @@ public:
 		return 0;
 	}
 
+#ifdef _OFFLOAD_GPU
+	static void MutualIntensityComponentCUDA(float *mo, float *v1, float *v2, long nxy, double iter, long long tot_iter, int PloCom);
+#endif
 	inline int MutualIntensityComponent(float* pEx, float* pExT, float* pEz, float* pEzT, int PolCom, double iter, float* pResMI) //OC16122019
 	//int MutualIntensityComponent(float* pEx, float* pExT, float* pEz, float* pEzT, int PolCom, long long iter, float* pResMI) //OC13122019
 	//int MutualIntensityComponent(float* pEx, float* pExT, float* pEz, float* pEzT, int PolCom, float* pResMI)

@@ -1,0 +1,28 @@
+{
+    "files.associations": {
+        "D_CNJG.C": "cpp",
+        "WRTFMT.C": "cpp",
+        "CLOSE.C": "cpp",
+        "D_IMAG.C": "cpp",
+        "D_MOD.C": "cpp",
+        "D_SIGN.C": "cpp",
+        "DFE.C": "cpp",
+        "DOLIO.C": "cpp",
+        "DUE.C": "cpp",
+        "ENDFILE.C": "cpp",
+        "ERR.C": "cpp",
+        "FMT.C": "cpp",
+        "FMTLIB.C": "cpp",
+        "I_DNNT.C": "cpp",
+        "I_INDX.C": "cpp",
+        "I_LEN.C": "cpp",
+        "IIO.C": "cpp",
+        "ILNW.C": "cpp",
+        "INQUIRE.C": "cpp",
+        "LREAD.C": "cpp",
+        "LWRITE.C": "cpp",
+        "RSLI.C": "cpp",
+        "WSLE.C": "cpp",
+        "XWSNE.C": "cpp"
+    }
+}

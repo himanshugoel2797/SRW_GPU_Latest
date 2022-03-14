@@ -29,7 +29,6 @@
 #include "srinterf.h"
 #include "sropthck.h"
 #include "sroptgrat.h"
-#include "sroptelmgpu.h"
 #include "utidev.h"
 
 #ifdef _WITH_OMP //Pre-processor definition for compiling with OpenMP library

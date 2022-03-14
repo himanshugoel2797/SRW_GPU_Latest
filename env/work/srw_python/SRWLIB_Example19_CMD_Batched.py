@@ -268,7 +268,7 @@ opSmp_Det = SRWLOptD(distSmp_Det)
 #[10]: New Horizontal wavefront Center position after Shift
 #[11]: New Vertical wavefront Center position after Shift
 #           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
-ppSmp =     [0, 0, 1., 0, 0, 1., 55. * 3, 1., 55. * 3,  0, 0, 0]
+ppSmp =     [0, 0, 1., 0, 0, 1., 55. * 1, 1., 55. * 1,  0, 0, 0]
 ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 
@@ -316,7 +316,7 @@ for it in range(len(listObjBrownian)):
         print('   Propagating Wavefront Group #%d... '%(idx), end='')
         t = time.time()
 
-        srwl.PropagElecField(wfrP, opBL, None, 0)    
+        srwl.PropagElecField(wfrP, opBL, None, 1)    
         print('done in', round(time.time() - t, 3), 's')
         idx+=1
 
@@ -327,13 +327,17 @@ for it in range(len(listObjBrownian)):
         if arI1 is None:
             arI1 = cp.zeros(mesh1.nx*mesh1.ny*wfrP.nWfr, dtype=np.float32)#array('f', [0]*mesh1.nx*mesh1.ny*wfrP.nWfr) #"flat" array to take 2D intensity data
         srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
-        stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr, _gpu=0) #"Projecting" intensity on detector (by interpolation)
+        stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr, _gpu=1) #"Projecting" intensity on detector (by interpolation)
         mesh1 = deepcopy(stkDet.mesh)
-        cmFrames.append(stkDet.arS)
+        cmFrames.append(stkDet.arS.get())
         
-        #del stkDet.arS
+        del stkDet.arS
         del wfrP.arEx
         del wfrP.arEy
+
+        cupyMempool.free_all_blocks()
+        print(cupyMempool.used_bytes() / (1024 * 1024))
+        print(cupyMempool.total_bytes() / (1024 * 1024))
         
         print('done in', round(time.time() - t, 3), 's')
 

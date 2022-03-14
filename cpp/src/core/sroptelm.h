@@ -44,6 +44,9 @@
 #endif
 #endif
 
+#ifdef _OFFLOAD_GPU
+#include "sroptelmgpu.h"
+#endif
 //*************************************************************************
 
 extern srTIntVect gVectWarnNos;
@@ -139,8 +142,7 @@ public:
 	virtual int RangeShouldBeAdjustedAtPropag() { return 1;}
 	virtual int ResolutionShouldBeAdjustedAtPropag() { return 1;}
 
-	template<class T> int RadPointModifierParallelImpl(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars); //HG03092022
-	virtual int RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars) { return -1; } //HG03092022
+	virtual int RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars) { printf("Using empty RadPointModifierParallel\n"); return -1; } //HG03092022
 	virtual void RadPointModifier(srTEXZ&, srTEFieldPtrs&, void* pBufVars=0) {} //OC29082019
 	//virtual void RadPointModifier(srTEXZ&, srTEFieldPtrs&) {}
 	virtual void RadPointModifier1D(srTEXZ&, srTEFieldPtrs&, void* pBufVars=0) {}//OC06092019

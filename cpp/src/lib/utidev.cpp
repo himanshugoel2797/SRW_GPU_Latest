@@ -51,12 +51,14 @@ bool UtiDev::GPUAvailable()
 
 bool UtiDev::GPUEnabled(gpuUsageArg_t *arg) 
 {
+#ifdef _OFFLOAD_GPU
 	if (arg == NULL)
 		return false;
 	if (*arg > 0) {
 		if (cudaSetDevice(*arg - 1) != cudaSuccess) return false;
 		return GPUAvailable();
 	}
+#endif
 	return false;
 }
 
@@ -67,12 +69,16 @@ void UtiDev::SetGPUStatus(bool enabled)
 
 int UtiDev::GetDevice(gpuUsageArg_t* arg)
 {
+#ifdef _OFFLOAD_GPU
 	if (arg == NULL)
 		return cudaCpuDeviceId;
 
 	int curDevice = 0;
 	cudaGetDevice(&curDevice);
 	return curDevice;
+#else
+	return 0;
+#endif
 }
 
 void UtiDev::Init() {
@@ -89,6 +95,7 @@ void UtiDev::Fini() {
 	//deviceOffloadInitialized = false;
 }
 
+#ifndef __CUDACC__
 void* operator new[](std::size_t sz) // no inline, required by [replacement.functions]/3
 {
 	if (sz == 0)
@@ -104,6 +111,7 @@ void* operator new[](std::size_t sz) // no inline, required by [replacement.func
 
 	throw std::bad_alloc{}; // required by [new.delete.single]/3
 }
+
 void operator delete[](void* ptr) noexcept
 {
 	if (deviceOffloadInitialized)
@@ -111,3 +119,4 @@ void operator delete[](void* ptr) noexcept
 	else
 		std::free(ptr);
 }
+#endif
