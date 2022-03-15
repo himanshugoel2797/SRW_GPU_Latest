@@ -24,5 +24,13 @@
         "RSLI.C": "cpp",
         "WSLE.C": "cpp",
         "XWSNE.C": "cpp"
-    }
+    },
+    "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
+    "makefile.configurations": [
+        {
+            "name": "Unnamed configuration 1"
+        }
+    ],
+    "C_Cpp.default.compileCommands": "./compile_commands.json",
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc"
 }

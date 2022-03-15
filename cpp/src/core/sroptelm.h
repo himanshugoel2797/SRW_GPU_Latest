@@ -278,15 +278,18 @@ public:
 
 	int RadResizeGen(srTSRWRadStructAccessData&, srTRadResize&, gpuUsageArg_t* =0);
 	int RadResizeGenE(srTSRWRadStructAccessData&, srTRadResize&);
+#ifdef _OFFLOAD_GPU
+	int RadResizeCoreParallel(srTSRWRadStructAccessData&, srTSRWRadStructAccessData&, char=0);
+#endif
 	int RadResizeCore(srTSRWRadStructAccessData&, srTSRWRadStructAccessData&, srTRadResize&, char =0, gpuUsageArg_t* =0);
 	int RadResizeCoreE(srTSRWRadStructAccessData&, srTSRWRadStructAccessData&, srTRadResize&, char =0);
 	int RadResizeCore_OnlyLargerRange(srTSRWRadStructAccessData& OldRadAccessData, srTSRWRadStructAccessData& NewRadAccessData, srTRadResize& RadResizeStruct, char PolComp);
 	int RadResizeCore_OnlyLargerRangeE(srTSRWRadStructAccessData& OldRadAccessData, srTSRWRadStructAccessData& NewRadAccessData, srTRadResize& RadResizeStruct, char PolComp);
 
 	//inline void GetCellDataForInterpol(float*, long long , long long, srTInterpolAuxF*);
-	inline static void GetCellDataForInterpol(float*, long long, long long, srTInterpolAuxF*); //OC02022020
+	GPU_PORTABLE inline static void GetCellDataForInterpol(float*, long long, long long, srTInterpolAuxF*); //OC02022020
 	//inline void SetupCellDataI(srTInterpolAuxF*, srTInterpolAuxF*);
-	inline static void SetupCellDataI(srTInterpolAuxF*, srTInterpolAuxF*); //OC02022020
+	GPU_PORTABLE inline static void SetupCellDataI(srTInterpolAuxF*, srTInterpolAuxF*); //OC02022020
 	//char WaveFrontTermCanBeTreated(srTSRWRadStructAccessData&);
 	//char WaveFrontTermCanBeTreated(srTSRWRadStructAccessData&, bool checkBenefit=true); //OC06012017 (uncommented after some fixes in bool srTSRWRadStructAccessData::CheckIfQuadTermTreatIsBenefit(char, char))
 	//char WaveFrontTermCanBeTreated(srTSRWRadStructAccessData&, bool checkBenefit=false); //OC05012017 (changed to checkBenefit=false to resolve problem of resizing in near field at strong under-sampling)
@@ -299,22 +302,22 @@ public:
 	void TreatStronglyOscillatingTermIrregMeshTrf(srTSRWRadStructAccessData& RadAccessData, char AddOrRem, double CrdTrf[2][3], char PolComp =0, int ieOnly =-1); //OC27122020
 
 	//inline void SetupInterpolAux02(srTInterpolAuxF*, srTInterpolAux01*, srTInterpolAux02*);
-	inline static void SetupInterpolAux02(srTInterpolAuxF*, srTInterpolAux01*, srTInterpolAux02*); //OC02022020
+	GPU_PORTABLE inline static void SetupInterpolAux02(srTInterpolAuxF*, srTInterpolAux01*, srTInterpolAux02*); //OC02022020
 	//inline void SetupInterpolAux02_LowOrder(srTInterpolAuxF*, srTInterpolAux01*, srTInterpolAux02*);
-	inline static void SetupInterpolAux02_LowOrder(srTInterpolAuxF*, srTInterpolAux01*, srTInterpolAux02*); //OC02022020
+	GPU_PORTABLE inline static void SetupInterpolAux02_LowOrder(srTInterpolAuxF*, srTInterpolAux01*, srTInterpolAux02*); //OC02022020
 	//inline void InterpolF(srTInterpolAux02*, double, double, float*, int);
-	inline static void InterpolF(srTInterpolAux02*, double, double, float*, int); //OC02022020
+	GPU_PORTABLE inline static void InterpolF(srTInterpolAux02*, double, double, float*, int); //OC02022020
 	//inline void InterpolFI(srTInterpolAux02*, double, double, float*, int);
-	inline static void InterpolFI(srTInterpolAux02*, double, double, float*, int); //OC02022020
+	GPU_PORTABLE inline static void InterpolFI(srTInterpolAux02*, double, double, float*, int); //OC02022020
 	//inline void InterpolF_LowOrder(srTInterpolAux02*, double, double, float*, int);
-	inline static void InterpolF_LowOrder(srTInterpolAux02*, double, double, float*, int); //OC02022020
+	GPU_PORTABLE inline static void InterpolF_LowOrder(srTInterpolAux02*, double, double, float*, int); //OC02022020
 	//inline void InterpolFI_LowOrder(srTInterpolAux02*, double, double, float*, int);
-	inline static void InterpolFI_LowOrder(srTInterpolAux02*, double, double, float*, int); //OC02022020
+	GPU_PORTABLE inline static void InterpolFI_LowOrder(srTInterpolAux02*, double, double, float*, int); //OC02022020
 	inline double InterpLin(double r, double f1, double f2) { return f1 + r*(f2 - f1);}
 	//inline void ImproveReAndIm(float*, float*);
-	inline static void ImproveReAndIm(float*, float*); //OC02022020
+	GPU_PORTABLE inline static void ImproveReAndIm(float*, float*); //OC02022020
 	//inline int CheckForLowOrderInterp(srTInterpolAuxF*, srTInterpolAuxF*, int, int, srTInterpolAux01*, srTInterpolAux02*, srTInterpolAux02*);
-	inline static int CheckForLowOrderInterp(srTInterpolAuxF*, srTInterpolAuxF*, int, int, srTInterpolAux01*, srTInterpolAux02*, srTInterpolAux02*); //OC02022020
+	GPU_PORTABLE inline static int CheckForLowOrderInterp(srTInterpolAuxF*, srTInterpolAuxF*, int, int, srTInterpolAux01*, srTInterpolAux02*, srTInterpolAux02*); //OC02022020
 
 	int RadResizeGen1D(srTRadSect1D&, srTRadResize1D&);
 	int RadResizeCore1D(srTRadSect1D&, srTRadSect1D&, srTRadResize1D&);

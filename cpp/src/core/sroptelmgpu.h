@@ -66,6 +66,7 @@ template<class T> int RadPointModifierParallelImpl(srTSRWRadStructAccessData* pR
     cudaFree(local_copy);
 
 #ifdef _DEBUG
+	cudaStreamSynchronize(0);
 	auto err = cudaGetLastError();
 	printf("%s\r\n", cudaGetErrorString(err));
 #endif

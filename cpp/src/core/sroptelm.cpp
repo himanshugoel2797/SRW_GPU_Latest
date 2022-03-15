@@ -2577,7 +2577,7 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 			//Added by SY (for profiling?) at parallelizing SRW via OpenMP:
 			//srwlPrintTime(":RadResizeGen: copydata",&start);
 			
-			if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct)) return result;
+			if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct, 0, pGpuUsage)) return result;
 			
 			if(OldRadXCopy != 0) delete[] OldRadXCopy;
 			if(OldRadZCopy != 0) delete[] OldRadZCopy;
@@ -2905,7 +2905,7 @@ int srTGenOptElem::RadResizeCore(srTSRWRadStructAccessData& OldRadAccessData, sr
 		NewRadAccessData.WfrQuadTermCanBeTreatedAtResizeX = OldRadAccessData.WfrQuadTermCanBeTreatedAtResizeX;
 		NewRadAccessData.WfrQuadTermCanBeTreatedAtResizeZ = OldRadAccessData.WfrQuadTermCanBeTreatedAtResizeZ;
 
-		TreatStronglyOscillatingTerm(OldRadAccessData, 'r', PolComp, -1, pGpuUsage);
+		TreatStronglyOscillatingTerm(OldRadAccessData, 'r', PolComp, -1, 0);//pGpuUsage);
 
 		//Added by SY (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime(":RadResizeCore: TreatStronglyOscillatingTerm 1",&start);
@@ -2954,187 +2954,195 @@ int srTGenOptElem::RadResizeCore(srTSRWRadStructAccessData& OldRadAccessData, sr
 
 	int result = 0;
 
+	GPU_COND(pGpuUsage,
+	{
+		printf ("RadResizeCore GPU\n");
+		RadResizeCoreParallel(OldRadAccessData, NewRadAccessData, PolComp);
+	})
+	else
+	{
+		printf ("RadResizeCore CPU\n");
 #ifdef _WITH_OMP //OC31102018: added by SY at parallelizing SRW via OpenMP
 	#pragma omp parallel for
 #endif
-
-	for (int iwfr = 0; iwfr < OldRadAccessData.nWfr; iwfr++)
-	{
-		if (TreatPolCompX) pEX0_New = NewRadAccessData.pBaseRadX + iwfr * PerWfr_New;
-		if (TreatPolCompZ) pEZ0_New = NewRadAccessData.pBaseRadZ + iwfr * PerWfr_New;
-
-		float* pEX0_Old = 0, * pEZ0_Old = 0;
-		if (TreatPolCompX) pEX0_Old = OldRadAccessData.pBaseRadX + iwfr * PerWfr_Old;
-		if (TreatPolCompZ) pEZ0_Old = OldRadAccessData.pBaseRadZ + iwfr * PerWfr_Old;
-
-		for (int ie = 0; ie < NewRadAccessData.ne; ie++)
+		for (int iwfr = 0; iwfr < OldRadAccessData.nWfr; iwfr++)
 		{
-			//OC31102018: modified by SY at OpenMP parallelization
-			//ixStOldPrev = -1000; izStOldPrev = -1000;
+			if (TreatPolCompX) pEX0_New = NewRadAccessData.pBaseRadX + iwfr * PerWfr_New;
+			if (TreatPolCompZ) pEZ0_New = NewRadAccessData.pBaseRadZ + iwfr * PerWfr_New;
 
-			//OC31102018: moved by SY at OpenMP parallelization
-			srTInterpolAux01 InterpolAux01;
-			srTInterpolAux02 InterpolAux02[4], InterpolAux02I[2];
-			srTInterpolAuxF AuxF[4], AuxFI[2];
-			int ixStOld, izStOld, ixStOldPrev = -1000, izStOldPrev = -1000;
-			float BufF[4], BufFI[2];
-			char UseLowOrderInterp_PolCompX, UseLowOrderInterp_PolCompZ;
+			float* pEX0_Old = 0, * pEZ0_Old = 0;
+			if (TreatPolCompX) pEX0_Old = OldRadAccessData.pBaseRadX + iwfr * PerWfr_Old;
+			if (TreatPolCompZ) pEZ0_Old = OldRadAccessData.pBaseRadZ + iwfr * PerWfr_Old;
 
-			//long Two_ie = ie << 1;
-			long long Two_ie = ie << 1;
-			for (int iz = izStart; iz <= izEnd; iz++)
+			for (int ie = 0; ie < NewRadAccessData.ne; ie++)
 			{
-				//SY: do we need this (always returns 0, updates some clock)
-				//if(result = srYield.Check()) return result;
+				//OC31102018: modified by SY at OpenMP parallelization
+				//ixStOldPrev = -1000; izStOldPrev = -1000;
 
-				double zAbs = NewRadAccessData.zStart + iz * NewRadAccessData.zStep;
+				//OC31102018: moved by SY at OpenMP parallelization
+				srTInterpolAux01 InterpolAux01;
+				srTInterpolAux02 InterpolAux02[4], InterpolAux02I[2];
+				srTInterpolAuxF AuxF[4], AuxFI[2];
+				int ixStOld, izStOld, ixStOldPrev = -1000, izStOldPrev = -1000;
+				float BufF[4], BufFI[2];
+				char UseLowOrderInterp_PolCompX, UseLowOrderInterp_PolCompZ;
 
-				char FieldShouldBeZeroedDueToZ = 0;
-				if (NewRadAccessData.WfrEdgeCorrShouldBeDone)
+				//long Two_ie = ie << 1;
+				long long Two_ie = ie << 1;
+				for (int iz = izStart; iz <= izEnd; iz++)
 				{
-					if ((zAbs < NewRadAccessData.zWfrMin - DistAbsTol) || (zAbs > NewRadAccessData.zWfrMax + DistAbsTol)) FieldShouldBeZeroedDueToZ = 1;
-				}
+					//SY: do we need this (always returns 0, updates some clock)
+					//if(result = srYield.Check()) return result;
 
-				int izcOld = int((zAbs - OldRadAccessData.zStart) * zStepInvOld + 1.E-06);
+					double zAbs = NewRadAccessData.zStart + iz * NewRadAccessData.zStep;
 
-				double zRel = zAbs - (OldRadAccessData.zStart + izcOld * OldRadAccessData.zStep);
-
-				if (izcOld == nz_mi_1Old) { izStOld = izcOld - 3; zRel += 2. * OldRadAccessData.zStep; }
-				else if (izcOld == nz_mi_2Old) { izStOld = izcOld - 2; zRel += OldRadAccessData.zStep; }
-				else if (izcOld == 0) { izStOld = izcOld; zRel -= OldRadAccessData.zStep; }
-				else izStOld = izcOld - 1;
-
-				zRel *= zStepInvOld;
-
-				int izcOld_mi_izStOld = izcOld - izStOld;
-				//long izPerZ_New = iz*PerZ_New;
-				long long izPerZ_New = iz * PerZ_New;
-
-				float* pEX_StartForX_New = 0, * pEZ_StartForX_New = 0;
-				if (TreatPolCompX) pEX_StartForX_New = pEX0_New + izPerZ_New;
-				if (TreatPolCompZ) pEZ_StartForX_New = pEZ0_New + izPerZ_New;
-
-				for (int ix = ixStart; ix <= ixEnd; ix++)
-				{
-					//long ixPerX_New_p_Two_ie = ix*PerX_New + Two_ie;
-					long long ixPerX_New_p_Two_ie = ix * PerX_New + Two_ie;
-					float* pEX_New = 0, * pEZ_New = 0;
-					if (TreatPolCompX) pEX_New = pEX_StartForX_New + ixPerX_New_p_Two_ie;
-					if (TreatPolCompZ) pEZ_New = pEZ_StartForX_New + ixPerX_New_p_Two_ie;
-
-					double xAbs = NewRadAccessData.xStart + ix * NewRadAccessData.xStep;
-
-					char FieldShouldBeZeroedDueToX = 0;
+					char FieldShouldBeZeroedDueToZ = 0;
 					if (NewRadAccessData.WfrEdgeCorrShouldBeDone)
 					{
-						if ((xAbs < NewRadAccessData.xWfrMin - DistAbsTol) || (xAbs > NewRadAccessData.xWfrMax + DistAbsTol)) FieldShouldBeZeroedDueToX = 1;
+						if ((zAbs < NewRadAccessData.zWfrMin - DistAbsTol) || (zAbs > NewRadAccessData.zWfrMax + DistAbsTol)) FieldShouldBeZeroedDueToZ = 1;
 					}
-					char FieldShouldBeZeroed = (FieldShouldBeZeroedDueToX || FieldShouldBeZeroedDueToZ);
 
-					int ixcOld = int((xAbs - OldRadAccessData.xStart) * xStepInvOld + 1.E-06);
-					double xRel = xAbs - (OldRadAccessData.xStart + ixcOld * OldRadAccessData.xStep);
+					int izcOld = int((zAbs - OldRadAccessData.zStart) * zStepInvOld + 1.E-06);
 
-					if (ixcOld == nx_mi_1Old) { ixStOld = ixcOld - 3; xRel += 2. * OldRadAccessData.xStep; }
-					else if (ixcOld == nx_mi_2Old) { ixStOld = ixcOld - 2; xRel += OldRadAccessData.xStep; }
-					else if (ixcOld == 0) { ixStOld = ixcOld; xRel -= OldRadAccessData.xStep; }
-					else ixStOld = ixcOld - 1;
+					double zRel = zAbs - (OldRadAccessData.zStart + izcOld * OldRadAccessData.zStep);
 
-					xRel *= xStepInvOld;
+					if (izcOld == nz_mi_1Old) { izStOld = izcOld - 3; zRel += 2. * OldRadAccessData.zStep; }
+					else if (izcOld == nz_mi_2Old) { izStOld = izcOld - 2; zRel += OldRadAccessData.zStep; }
+					else if (izcOld == 0) { izStOld = izcOld; zRel -= OldRadAccessData.zStep; }
+					else izStOld = izcOld - 1;
 
-					int ixcOld_mi_ixStOld = ixcOld - ixStOld;
+					zRel *= zStepInvOld;
 
-					if ((izStOld != izStOldPrev) || (ixStOld != ixStOldPrev))
+					int izcOld_mi_izStOld = izcOld - izStOld;
+					//long izPerZ_New = iz*PerZ_New;
+					long long izPerZ_New = iz * PerZ_New;
+
+					float* pEX_StartForX_New = 0, * pEZ_StartForX_New = 0;
+					if (TreatPolCompX) pEX_StartForX_New = pEX0_New + izPerZ_New;
+					if (TreatPolCompZ) pEZ_StartForX_New = pEZ0_New + izPerZ_New;
+
+					for (int ix = ixStart; ix <= ixEnd; ix++)
 					{
-						UseLowOrderInterp_PolCompX = 0; UseLowOrderInterp_PolCompZ = 0;
+						//long ixPerX_New_p_Two_ie = ix*PerX_New + Two_ie;
+						long long ixPerX_New_p_Two_ie = ix * PerX_New + Two_ie;
+						float* pEX_New = 0, * pEZ_New = 0;
+						if (TreatPolCompX) pEX_New = pEX_StartForX_New + ixPerX_New_p_Two_ie;
+						if (TreatPolCompZ) pEZ_New = pEZ_StartForX_New + ixPerX_New_p_Two_ie;
 
-						//long TotOffsetOld = izStOld*PerZ_Old + ixStOld*PerX_Old + Two_ie;
-						long long TotOffsetOld = izStOld * PerZ_Old + ixStOld * PerX_Old + Two_ie;
+						double xAbs = NewRadAccessData.xStart + ix * NewRadAccessData.xStep;
+
+						char FieldShouldBeZeroedDueToX = 0;
+						if (NewRadAccessData.WfrEdgeCorrShouldBeDone)
+						{
+							if ((xAbs < NewRadAccessData.xWfrMin - DistAbsTol) || (xAbs > NewRadAccessData.xWfrMax + DistAbsTol)) FieldShouldBeZeroedDueToX = 1;
+						}
+						char FieldShouldBeZeroed = (FieldShouldBeZeroedDueToX || FieldShouldBeZeroedDueToZ);
+
+						int ixcOld = int((xAbs - OldRadAccessData.xStart) * xStepInvOld + 1.E-06);
+						double xRel = xAbs - (OldRadAccessData.xStart + ixcOld * OldRadAccessData.xStep);
+
+						if (ixcOld == nx_mi_1Old) { ixStOld = ixcOld - 3; xRel += 2. * OldRadAccessData.xStep; }
+						else if (ixcOld == nx_mi_2Old) { ixStOld = ixcOld - 2; xRel += OldRadAccessData.xStep; }
+						else if (ixcOld == 0) { ixStOld = ixcOld; xRel -= OldRadAccessData.xStep; }
+						else ixStOld = ixcOld - 1;
+
+						xRel *= xStepInvOld;
+
+						int ixcOld_mi_ixStOld = ixcOld - ixStOld;
+
+						if ((izStOld != izStOldPrev) || (ixStOld != ixStOldPrev))
+						{
+							UseLowOrderInterp_PolCompX = 0; UseLowOrderInterp_PolCompZ = 0;
+
+							//long TotOffsetOld = izStOld*PerZ_Old + ixStOld*PerX_Old + Two_ie;
+							long long TotOffsetOld = izStOld * PerZ_Old + ixStOld * PerX_Old + Two_ie;
+
+							if (TreatPolCompX)
+							{
+								float* pExSt_Old = pEX0_Old + TotOffsetOld;
+								GetCellDataForInterpol(pExSt_Old, PerX_Old, PerZ_Old, AuxF);
+
+								SetupCellDataI(AuxF, AuxFI);
+								UseLowOrderInterp_PolCompX = CheckForLowOrderInterp(AuxF, AuxFI, ixcOld_mi_ixStOld, izcOld_mi_izStOld, &InterpolAux01, InterpolAux02, InterpolAux02I);
+
+								if (!UseLowOrderInterp_PolCompX)
+								{
+									for (int i = 0; i < 2; i++)
+									{
+										SetupInterpolAux02(AuxF + i, &InterpolAux01, InterpolAux02 + i);
+									}
+									SetupInterpolAux02(AuxFI, &InterpolAux01, InterpolAux02I);
+								}
+							}
+							if (TreatPolCompZ)
+							{
+								float* pEzSt_Old = pEZ0_Old + TotOffsetOld;
+								GetCellDataForInterpol(pEzSt_Old, PerX_Old, PerZ_Old, AuxF + 2);
+
+								SetupCellDataI(AuxF + 2, AuxFI + 1);
+								UseLowOrderInterp_PolCompZ = CheckForLowOrderInterp(AuxF + 2, AuxFI + 1, ixcOld_mi_ixStOld, izcOld_mi_izStOld, &InterpolAux01, InterpolAux02 + 2, InterpolAux02I + 1);
+
+								if (!UseLowOrderInterp_PolCompZ)
+								{
+									for (int i = 0; i < 2; i++)
+									{
+										SetupInterpolAux02(AuxF + 2 + i, &InterpolAux01, InterpolAux02 + 2 + i);
+									}
+									SetupInterpolAux02(AuxFI + 1, &InterpolAux01, InterpolAux02I + 1);
+								}
+							}
+
+							ixStOldPrev = ixStOld; izStOldPrev = izStOld;
+						}
 
 						if (TreatPolCompX)
 						{
-							float* pExSt_Old = pEX0_Old + TotOffsetOld;
-							GetCellDataForInterpol(pExSt_Old, PerX_Old, PerZ_Old, AuxF);
-
-							SetupCellDataI(AuxF, AuxFI);
-							UseLowOrderInterp_PolCompX = CheckForLowOrderInterp(AuxF, AuxFI, ixcOld_mi_ixStOld, izcOld_mi_izStOld, &InterpolAux01, InterpolAux02, InterpolAux02I);
-
-							if (!UseLowOrderInterp_PolCompX)
+							if (UseLowOrderInterp_PolCompX)
 							{
-								for (int i = 0; i < 2; i++)
-								{
-									SetupInterpolAux02(AuxF + i, &InterpolAux01, InterpolAux02 + i);
-								}
-								SetupInterpolAux02(AuxFI, &InterpolAux01, InterpolAux02I);
+								InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 0);
+								InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 0);
 							}
+							else
+							{
+								InterpolF(InterpolAux02, xRel, zRel, BufF, 0);
+								InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 0);
+							}
+
+							(*BufFI) *= AuxFI->fNorm;
+							ImproveReAndIm(BufF, BufFI);
+
+							if (FieldShouldBeZeroed)
+							{
+								*BufF = 0.; *(BufF + 1) = 0.;
+							}
+
+							*pEX_New = *BufF;
+							*(pEX_New + 1) = *(BufF + 1);
 						}
 						if (TreatPolCompZ)
 						{
-							float* pEzSt_Old = pEZ0_Old + TotOffsetOld;
-							GetCellDataForInterpol(pEzSt_Old, PerX_Old, PerZ_Old, AuxF + 2);
-
-							SetupCellDataI(AuxF + 2, AuxFI + 1);
-							UseLowOrderInterp_PolCompZ = CheckForLowOrderInterp(AuxF + 2, AuxFI + 1, ixcOld_mi_ixStOld, izcOld_mi_izStOld, &InterpolAux01, InterpolAux02 + 2, InterpolAux02I + 1);
-
-							if (!UseLowOrderInterp_PolCompZ)
+							if (UseLowOrderInterp_PolCompZ)
 							{
-								for (int i = 0; i < 2; i++)
-								{
-									SetupInterpolAux02(AuxF + 2 + i, &InterpolAux01, InterpolAux02 + 2 + i);
-								}
-								SetupInterpolAux02(AuxFI + 1, &InterpolAux01, InterpolAux02I + 1);
+								InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 2);
+								InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 1);
 							}
+							else
+							{
+								InterpolF(InterpolAux02, xRel, zRel, BufF, 2);
+								InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 1);
+							}
+
+							(*(BufFI + 1)) *= (AuxFI + 1)->fNorm;
+							ImproveReAndIm(BufF + 2, BufFI + 1);
+
+							if (FieldShouldBeZeroed)
+							{
+								*(BufF + 2) = 0.; *(BufF + 3) = 0.;
+							}
+
+							*pEZ_New = *(BufF + 2);
+							*(pEZ_New + 1) = *(BufF + 3);
 						}
-
-						ixStOldPrev = ixStOld; izStOldPrev = izStOld;
-					}
-
-					if (TreatPolCompX)
-					{
-						if (UseLowOrderInterp_PolCompX)
-						{
-							InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 0);
-							InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 0);
-						}
-						else
-						{
-							InterpolF(InterpolAux02, xRel, zRel, BufF, 0);
-							InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 0);
-						}
-
-						(*BufFI) *= AuxFI->fNorm;
-						ImproveReAndIm(BufF, BufFI);
-
-						if (FieldShouldBeZeroed)
-						{
-							*BufF = 0.; *(BufF + 1) = 0.;
-						}
-
-						*pEX_New = *BufF;
-						*(pEX_New + 1) = *(BufF + 1);
-					}
-					if (TreatPolCompZ)
-					{
-						if (UseLowOrderInterp_PolCompZ)
-						{
-							InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 2);
-							InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 1);
-						}
-						else
-						{
-							InterpolF(InterpolAux02, xRel, zRel, BufF, 2);
-							InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 1);
-						}
-
-						(*(BufFI + 1)) *= (AuxFI + 1)->fNorm;
-						ImproveReAndIm(BufF + 2, BufFI + 1);
-
-						if (FieldShouldBeZeroed)
-						{
-							*(BufF + 2) = 0.; *(BufF + 3) = 0.;
-						}
-
-						*pEZ_New = *(BufF + 2);
-						*(pEZ_New + 1) = *(BufF + 3);
 					}
 				}
 			}

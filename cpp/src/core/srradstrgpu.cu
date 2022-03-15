@@ -55,6 +55,7 @@ void MultiplyElFieldByPhaseLin_CUDA(double xMult, double zMult, float* pBaseRadX
     MultiplyElFieldByPhaseLin_Kernel<< <blocks, threads >> > (xMult, zMult, pBaseRadX, pBaseRadZ, nWfr, nz, nx, ne, zStart, zStep, xStart, xStep);
 
 #ifdef _DEBUG
+	cudaStreamSynchronize(0);
     auto err = cudaGetLastError();
     printf("%s\r\n", cudaGetErrorString(err));
 #endif

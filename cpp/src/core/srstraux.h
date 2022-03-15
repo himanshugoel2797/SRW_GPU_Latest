@@ -1587,7 +1587,7 @@ struct srTInterpolAux01 {
 	double cAx2z0, cAx2z1, cAx2z2, cAx2z3, cAx3z0, cAx3z1, cAx3z2, cAx3z3;
 	double cLAx1z0, cLAx0z1, cLAx1z1;
 
-	srTInterpolAux01()
+	GPU_PORTABLE srTInterpolAux01()
 	{
 		cAx0z1 = 0.1666666667;
 		cAx0z2 = 0.5;
@@ -1653,11 +1653,11 @@ struct srTInterpolAuxF {
 	float f03, f13, f23, f33;
 
 	float fAvg, fNorm;
-	void SetUpAvg()
+	GPU_PORTABLE void SetUpAvg()
 	{
 		fAvg = (float)(0.0625*(f00 + f10 + f20 + f30 + f01 + f11 + f21 + f31 + f02 + f12 + f22 + f32 + f03 + f13 + f23 + f33));
 	}
-	void NormalizeByAvg()
+	GPU_PORTABLE void NormalizeByAvg()
 	{
 		const float CritNorm = 1.;
 		if(::fabs(fAvg) > CritNorm)
