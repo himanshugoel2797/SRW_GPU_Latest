@@ -506,13 +506,15 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 		GPU_COND(pGpuUsage, {
 			if (DataToFFT != 0)
 			{
-				RepairSignAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany);
-				RotateDataAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany);
+				//RepairSignAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany);
+				//RotateDataAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany);
+				RepairSignAndRotateDataAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany);
 			}
 			else if (dDataToFFT != 0)
 			{
-				RepairSignAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany);
-				RotateDataAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany);
+				//RepairSignAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany);
+				//RotateDataAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany);
+				RepairSignAndRotateDataAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany);
 			}
 		})
 		else {

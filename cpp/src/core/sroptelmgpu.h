@@ -10,8 +10,8 @@ void MakeWfrEdgeCorrection_CUDA(srTSRWRadStructAccessData& RadAccessData, float*
 #ifdef __CUDACC__
 template<class T> __global__ void RadPointModifierParallel_Kernel(srTSRWRadStructAccessData RadAccessData, void* pBufVars, T* tgt_obj)
 {
-	int iz = (blockIdx.x * blockDim.x + threadIdx.x); //nz range
-	int ix = (blockIdx.y * blockDim.y + threadIdx.y); //nx range
+	int ix = (blockIdx.x * blockDim.x + threadIdx.x); //nx range
+	int iz = (blockIdx.y * blockDim.y + threadIdx.y); //nz range
 
 	if (ix < RadAccessData.nx && iz < RadAccessData.nz)
 	{
@@ -53,7 +53,7 @@ template<class T> __global__ void RadPointModifierParallel_Kernel(srTSRWRadStruc
 template<class T> int RadPointModifierParallelImpl(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars, T* tgt_obj)
 {
 	const int bs = 256;
-	dim3 blocks(pRadAccessData->nz / bs + ((pRadAccessData->nz & (bs - 1)) != 0), pRadAccessData->nx);
+	dim3 blocks(pRadAccessData->nx / bs + ((pRadAccessData->nx & (bs - 1)) != 0), pRadAccessData->nz);
 	dim3 threads(bs, 1);
 
     printf("RadPointModifierParallelImpl on GPU\n");

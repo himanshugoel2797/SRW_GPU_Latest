@@ -10,8 +10,8 @@
 
 
 __global__ void TreatStronglyOscillatingTerm_Kernel(srTSRWRadStructAccessData RadAccessData, bool TreatPolCompX, bool TreatPolCompZ, int ieStart, double ConstRx, double ConstRz) {
-    int iz = (blockIdx.x * blockDim.x + threadIdx.x); //nz range
-    int ix = (blockIdx.y * blockDim.y + threadIdx.y); //nx range
+    int ix = (blockIdx.x * blockDim.x + threadIdx.x); //nx range
+    int iz = (blockIdx.y * blockDim.y + threadIdx.y); //nz range
     int ie = (blockIdx.z * blockDim.z + threadIdx.z) + ieStart; //ne range
     
     if (ix < RadAccessData.nx && iz < RadAccessData.nz && ie < RadAccessData.ne + ieStart) 
@@ -81,7 +81,7 @@ __global__ void TreatStronglyOscillatingTerm_Kernel(srTSRWRadStructAccessData Ra
 void TreatStronglyOscillatingTerm_CUDA(srTSRWRadStructAccessData& RadAccessData, bool TreatPolCompX, bool TreatPolCompZ, int ieStart, int ieBefEnd, double ConstRx, double ConstRz)
 {
     const int bs = 256;
-    dim3 blocks(RadAccessData.nz / bs + ((RadAccessData.nz & (bs - 1)) != 0), RadAccessData.nx, ieBefEnd - ieStart);
+    dim3 blocks(RadAccessData.nx / bs + ((RadAccessData.nx & (bs - 1)) != 0), RadAccessData.nz, ieBefEnd - ieStart);
     dim3 threads(bs, 1);
     TreatStronglyOscillatingTerm_Kernel<< <blocks, threads >> > (RadAccessData, TreatPolCompX, TreatPolCompZ, ieStart, ConstRx, ConstRz);
 
@@ -91,25 +91,29 @@ void TreatStronglyOscillatingTerm_CUDA(srTSRWRadStructAccessData& RadAccessData,
 #endif
 }
 
-__global__ void MakeWfrEdgeCorrection_Kernel(srTSRWRadStructAccessData RadAccessData, float* pDataEx, float* pDataEz, srTDataPtrsForWfrEdgeCorr DataPtrs)
+__global__ void MakeWfrEdgeCorrection_Kernel(srTSRWRadStructAccessData RadAccessData, float* pDataEx, float* pDataEz, srTDataPtrsForWfrEdgeCorr DataPtrs, float dxSt, float dxFi, float dzSt, float dzFi)
 {
-    int iz = (blockIdx.x * blockDim.x + threadIdx.x); //nz range
-    int ix = (blockIdx.y * blockDim.y + threadIdx.y); //nx range
+    int ix = (blockIdx.x * blockDim.x + threadIdx.x); //nx range
+    int iz = (blockIdx.y * blockDim.y + threadIdx.y); //nz range
     int iwfr = (blockIdx.z * blockDim.z + threadIdx.z); //nwfr range
 
     if (ix < RadAccessData.nx && iz < RadAccessData.nz && iwfr < RadAccessData.nWfr)
     {
-		double dxSt_dzSt = DataPtrs.dxSt * DataPtrs.dzSt;
-		double dxSt_dzFi = DataPtrs.dxSt * DataPtrs.dzFi;
-		double dxFi_dzSt = DataPtrs.dxFi * DataPtrs.dzSt;
-		double dxFi_dzFi = DataPtrs.dxFi * DataPtrs.dzFi;
+		//float dxSt = (float)DataPtrs.dxSt;
+		//float dxFi = (float)DataPtrs.dxFi;
+		//float dzSt = (float)DataPtrs.dzSt;
+		//float dzFi = (float)DataPtrs.dzFi;
+		float dxSt_dzSt = dxSt * dzSt;
+		float dxSt_dzFi = dxSt * dzFi;
+		float dxFi_dzSt = dxFi * dzSt;
+		float dxFi_dzFi = dxFi * dzFi;
 
 		long TwoNz = RadAccessData.nz << 1;
 		long PerX = 2;
 		long PerZ = PerX * RadAccessData.nx;
 		long PerWfr = RadAccessData.nz * PerZ;
 
-#define DATAPTR_CHECK(x, a) ((x >= 0) ? a[x + TwoNz * iwfr] : 0.)
+#define DATAPTR_CHECK(x, a) ((x >= 0) ? a[x + TwoNz * iwfr] : 0.f)
 		float fSSExRe = DATAPTR_CHECK(DataPtrs.fxStzSt_[0], DataPtrs.FFTArrXStEx);
 		float fSSExIm = DATAPTR_CHECK(DataPtrs.fxStzSt_[1], DataPtrs.FFTArrXStEx);
 		float fSSEzRe = DATAPTR_CHECK(DataPtrs.fxStzSt_[2], DataPtrs.FFTArrXStEz);
@@ -138,19 +142,19 @@ __global__ void MakeWfrEdgeCorrection_Kernel(srTSRWRadStructAccessData RadAccess
 		float ExRe = *tEx, ExIm = *(tEx + 1);
 		float EzRe = *tEz, EzIm = *(tEz + 1);
 
-		if (DataPtrs.dxSt != 0.)
+		if (dxSt != 0.f)
 		{
 			float ExpXStRe = DataPtrs.ExpArrXSt[Two_ix], ExpXStIm = DataPtrs.ExpArrXSt[Two_ix_p_1];
 
 			bRe = DataPtrs.FFTArrXStEx[Two_iz + TwoNz * iwfr]; bIm = DataPtrs.FFTArrXStEx[Two_iz_p_1 + TwoNz * iwfr];
-			ExRe += (float)(DataPtrs.dxSt * (ExpXStRe * bRe - ExpXStIm * bIm));
-			ExIm += (float)(DataPtrs.dxSt * (ExpXStRe * bIm + ExpXStIm * bRe));
+			ExRe += (float)(dxSt * (ExpXStRe * bRe - ExpXStIm * bIm));
+			ExIm += (float)(dxSt * (ExpXStRe * bIm + ExpXStIm * bRe));
 
 			bRe = DataPtrs.FFTArrXStEz[Two_iz + TwoNz * iwfr]; bIm = DataPtrs.FFTArrXStEz[Two_iz_p_1 + TwoNz * iwfr];
-			EzRe += (float)(DataPtrs.dxSt * (ExpXStRe * bRe - ExpXStIm * bIm));
-			EzIm += (float)(DataPtrs.dxSt * (ExpXStRe * bIm + ExpXStIm * bRe));
+			EzRe += (float)(dxSt * (ExpXStRe * bRe - ExpXStIm * bIm));
+			EzIm += (float)(dxSt * (ExpXStRe * bIm + ExpXStIm * bRe));
 
-			if (DataPtrs.dzSt != 0.)
+			if (dzSt != 0.f)
 			{
 				bRe = DataPtrs.ExpArrZSt[Two_iz], bIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
 				cRe = ExpXStRe * bRe - ExpXStIm * bIm; cIm = ExpXStRe * bIm + ExpXStIm * bRe;
@@ -160,7 +164,7 @@ __global__ void MakeWfrEdgeCorrection_Kernel(srTSRWRadStructAccessData RadAccess
 				EzRe += (float)(dxSt_dzSt * (fSSEzRe * cRe - fSSEzIm * cIm));
 				EzIm += (float)(dxSt_dzSt * (fSSEzRe * cIm + fSSEzIm * cRe));
 			}
-			if (DataPtrs.dzFi != 0.)
+			if (dzFi != 0.f)
 			{
 				bRe = DataPtrs.ExpArrZFi[Two_iz], bIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
 				cRe = ExpXStRe * bRe - ExpXStIm * bIm; cIm = ExpXStRe * bIm + ExpXStIm * bRe;
@@ -171,19 +175,19 @@ __global__ void MakeWfrEdgeCorrection_Kernel(srTSRWRadStructAccessData RadAccess
 				EzIm -= (float)(dxSt_dzFi * (fSFEzRe * cIm + fSFEzIm * cRe));
 			}
 		}
-		if (DataPtrs.dxFi != 0.)
+		if (dxFi != 0.f)
 		{
 			float ExpXFiRe = DataPtrs.ExpArrXFi[Two_ix], ExpXFiIm = DataPtrs.ExpArrXFi[Two_ix_p_1];
 
 			bRe = DataPtrs.FFTArrXFiEx[Two_iz + TwoNz * iwfr]; bIm = DataPtrs.FFTArrXFiEx[Two_iz_p_1 + TwoNz * iwfr];
-			ExRe -= (float)(DataPtrs.dxFi * (ExpXFiRe * bRe - ExpXFiIm * bIm));
-			ExIm -= (float)(DataPtrs.dxFi * (ExpXFiRe * bIm + ExpXFiIm * bRe));
+			ExRe -= (float)(dxFi * (ExpXFiRe * bRe - ExpXFiIm * bIm));
+			ExIm -= (float)(dxFi * (ExpXFiRe * bIm + ExpXFiIm * bRe));
 
 			bRe = DataPtrs.FFTArrXFiEz[Two_iz + TwoNz * iwfr]; bIm = DataPtrs.FFTArrXFiEz[Two_iz_p_1 + TwoNz * iwfr];
-			EzRe -= (float)(DataPtrs.dxFi * (ExpXFiRe * bRe - ExpXFiIm * bIm));
-			EzIm -= (float)(DataPtrs.dxFi * (ExpXFiRe * bIm + ExpXFiIm * bRe));
+			EzRe -= (float)(dxFi * (ExpXFiRe * bRe - ExpXFiIm * bIm));
+			EzIm -= (float)(dxFi * (ExpXFiRe * bIm + ExpXFiIm * bRe));
 
-			if (DataPtrs.dzSt != 0.)
+			if (dzSt != 0.f)
 			{
 				bRe = DataPtrs.ExpArrZSt[Two_iz], bIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
 				cRe = ExpXFiRe * bRe - ExpXFiIm * bIm; cIm = ExpXFiRe * bIm + ExpXFiIm * bRe;
@@ -193,7 +197,7 @@ __global__ void MakeWfrEdgeCorrection_Kernel(srTSRWRadStructAccessData RadAccess
 				EzRe -= (float)(dxFi_dzSt * (fFSEzRe * cRe - fFSEzIm * cIm));
 				EzIm -= (float)(dxFi_dzSt * (fFSEzRe * cIm + fFSEzIm * cRe));
 			}
-			if (DataPtrs.dzFi != 0.)
+			if (dzFi != 0.f)
 			{
 				bRe = DataPtrs.ExpArrZFi[Two_iz], bIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
 				cRe = ExpXFiRe * bRe - ExpXFiIm * bIm; cIm = ExpXFiRe * bIm + ExpXFiIm * bRe;
@@ -204,29 +208,29 @@ __global__ void MakeWfrEdgeCorrection_Kernel(srTSRWRadStructAccessData RadAccess
 				EzIm += (float)(dxFi_dzFi * (fFFEzRe * cIm + fFFEzIm * cRe));
 			}
 		}
-		if (DataPtrs.dzSt != 0.)
+		if (dzSt != 0.f)
 		{
 			float ExpZStRe = DataPtrs.ExpArrZSt[Two_iz], ExpZStIm = DataPtrs.ExpArrZSt[Two_iz_p_1];
 
 			bRe = DataPtrs.FFTArrZStEx[Two_ix + TwoNz * iwfr]; bIm = DataPtrs.FFTArrZStEx[Two_ix_p_1 + TwoNz * iwfr];
-			ExRe += (float)(DataPtrs.dzSt * (ExpZStRe * bRe - ExpZStIm * bIm));
-			ExIm += (float)(DataPtrs.dzSt * (ExpZStRe * bIm + ExpZStIm * bRe));
+			ExRe += (float)(dzSt * (ExpZStRe * bRe - ExpZStIm * bIm));
+			ExIm += (float)(dzSt * (ExpZStRe * bIm + ExpZStIm * bRe));
 
 			bRe = DataPtrs.FFTArrZStEz[Two_ix + TwoNz * iwfr]; bIm = DataPtrs.FFTArrZStEz[Two_ix_p_1 + TwoNz * iwfr];
 			EzRe += (float)(DataPtrs.dzSt * (ExpZStRe * bRe - ExpZStIm * bIm));
 			EzIm += (float)(DataPtrs.dzSt * (ExpZStRe * bIm + ExpZStIm * bRe));
 		}
-		if (DataPtrs.dzFi != 0.)
+		if (dzFi != 0.f)
 		{
 			float ExpZFiRe = DataPtrs.ExpArrZFi[Two_iz], ExpZFiIm = DataPtrs.ExpArrZFi[Two_iz_p_1];
 
 			bRe = DataPtrs.FFTArrZFiEx[Two_ix + TwoNz * iwfr]; bIm = DataPtrs.FFTArrZFiEx[Two_ix_p_1 + TwoNz * iwfr];
-			ExRe -= (float)(DataPtrs.dzFi * (ExpZFiRe * bRe - ExpZFiIm * bIm));
-			ExIm -= (float)(DataPtrs.dzFi * (ExpZFiRe * bIm + ExpZFiIm * bRe));
+			ExRe -= (float)(dzFi * (ExpZFiRe * bRe - ExpZFiIm * bIm));
+			ExIm -= (float)(dzFi * (ExpZFiRe * bIm + ExpZFiIm * bRe));
 
 			bRe = DataPtrs.FFTArrZFiEz[Two_ix + TwoNz * iwfr]; bIm = DataPtrs.FFTArrZFiEz[Two_ix_p_1 + TwoNz * iwfr];
-			EzRe -= (float)(DataPtrs.dzFi * (ExpZFiRe * bRe - ExpZFiIm * bIm));
-			EzIm -= (float)(DataPtrs.dzFi * (ExpZFiRe * bIm + ExpZFiIm * bRe));
+			EzRe -= (float)(dzFi * (ExpZFiRe * bRe - ExpZFiIm * bIm));
+			EzIm -= (float)(dzFi * (ExpZFiRe * bIm + ExpZFiIm * bRe));
 		}
 
 		*tEx = ExRe; *(tEx + 1) = ExIm;
@@ -237,9 +241,9 @@ __global__ void MakeWfrEdgeCorrection_Kernel(srTSRWRadStructAccessData RadAccess
 void MakeWfrEdgeCorrection_CUDA(srTSRWRadStructAccessData& RadAccessData, float* pDataEx, float* pDataEz, srTDataPtrsForWfrEdgeCorr& DataPtrs)
 {
 	const int bs = 256;
-	dim3 blocks(RadAccessData.nz / bs + ((RadAccessData.nz & (bs - 1)) != 0), RadAccessData.nx, RadAccessData.nWfr);
+	dim3 blocks(RadAccessData.nx / bs + ((RadAccessData.nx & (bs - 1)) != 0), RadAccessData.nz, RadAccessData.nWfr);
 	dim3 threads(bs, 1);
-	MakeWfrEdgeCorrection_Kernel << <blocks, threads >> > (RadAccessData, pDataEx, pDataEz, DataPtrs);
+	MakeWfrEdgeCorrection_Kernel << <blocks, threads >> > (RadAccessData, pDataEx, pDataEz, DataPtrs, (float)DataPtrs.dxSt, (float)DataPtrs.dxFi, (float)DataPtrs.dzSt, (float)DataPtrs.dzFi);
 
 #ifdef _DEBUG
 	auto err = cudaGetLastError();

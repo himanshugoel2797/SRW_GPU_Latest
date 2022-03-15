@@ -6,7 +6,7 @@
 #include <iostream>
 #include <chrono>
 
-template <class T> __global__ void RepairSignAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2) {
+template <typename T> __global__ void RepairSignAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 4 + 2; //Nx range
     
     if (ix < Nx2) {
@@ -18,7 +18,7 @@ template <class T> __global__ void RepairSignAfter1DFFT_Kernel(T* pAfterFFT, lon
     }
 }
 
-template <class T> __global__ void RotateDataAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2, long Nx) {
+template <typename T> __global__ void RotateDataAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2, long Nx) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //HalfNx range
     
     if (ix < Nx) {
@@ -35,7 +35,7 @@ template <class T> __global__ void RotateDataAfter1DFFT_Kernel(T* pAfterFFT, lon
     }
 }
 
-template <class T> __global__ void RepairAndRotateAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2, long Nx) {
+template <typename T> __global__ void RepairAndRotateAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2, long Nx) {
     int ix_cmplx_num = blockIdx.x * blockDim.x + threadIdx.x;
     int ix = ix_cmplx_num * 2; //Nx range
     int k = threadIdx.y; //HowMany range
@@ -63,7 +63,7 @@ template <class T> __global__ void RepairAndRotateAfter1DFFT_Kernel(T* pAfterFFT
     }
 }
 
-template <class T> __global__ void NormalizeDataAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2, T Mult) {
+template <typename T> __global__ void NormalizeDataAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2, T Mult) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //Nx range
     
     if (ix < Nx2) {
@@ -74,7 +74,7 @@ template <class T> __global__ void NormalizeDataAfter1DFFT_Kernel(T* pAfterFFT, 
     }
 }
 
-template <class T> __global__ void FillArrayShift_Kernel(double t0, double tStep, long N, T* arShiftX) {
+template <typename T> __global__ void FillArrayShift_Kernel(double t0, double tStep, long N, T* arShiftX) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //HalfNx range
 
     double t0TwoPi = t0 * 2 * CUDART_PI;
@@ -99,7 +99,7 @@ template <class T> __global__ void FillArrayShift_Kernel(double t0, double tStep
     }
 }
 
-template <class T> __global__ void TreatShift_Kernel(T* pData, long HowMany, long Nx2, T* tShiftX) {
+template <typename T> __global__ void TreatShift_Kernel(T* pData, long HowMany, long Nx2, T* tShiftX) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //Nx range
     
     if (ix < Nx2) {
@@ -269,7 +269,7 @@ void TreatShift_CUDA(double* pData, long HowMany, long Nx, double* tShiftX) {
 }
 
 
-template <class T> __global__ void RepairSignAfter2DFFT_Kernel(T* pAfterFFT, long Nx, long Ny, long Nx2Ny2, long howMany) {
+template <typename T> __global__ void RepairSignAfter2DFFT_Kernel(T* pAfterFFT, long Nx, long Ny, long Nx2Ny2, long howMany) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //Nx range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //Ny range
 
@@ -285,7 +285,7 @@ template <class T> __global__ void RepairSignAfter2DFFT_Kernel(T* pAfterFFT, lon
     }
 }
 
-template <class T> __global__ void RotateDataAfter2DFFT_Kernel(T* pAfterFFT, long HalfNx, long Nx, long HalfNy, long Ny, long Nx2Ny2, long howMany) {
+template <typename T> __global__ void RotateDataAfter2DFFT_Kernel(T* pAfterFFT, long HalfNx, long Nx, long HalfNy, long Ny, long Nx2Ny2, long howMany) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //HalfNx range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //HalfNy range
 
@@ -317,18 +317,57 @@ template <class T> __global__ void RotateDataAfter2DFFT_Kernel(T* pAfterFFT, lon
     }
 }
 
-template <class T> __global__ void NormalizeDataAfter2DFFT_Kernel(T* pAfterFFT, long Nx2Ny2, long howMany, T Mult) {
-    int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //Nx range
+template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T* pAfterFFT, long HalfNx, long Nx, long HalfNy, long Ny, long Nx2Ny2, long howMany) {
+    int ix = (blockIdx.x * blockDim.x + threadIdx.x); //HalfNx range
+    int iy = (blockIdx.y * blockDim.y + threadIdx.y); //HalfNy range
 
-    if (ix < Nx2Ny2) {
+    float sx0 = 1 - 2 * (ix % 2);
+    float sy0 = 1 - 2 * (iy % 2);
+    float s = sx0 * sy0;
+
+    if (ix < Nx && iy < Ny) {
+        int idx = (ix + iy * Nx) * 2;
         for (long i = 0; i < howMany; i++){
-            pAfterFFT[ix + Nx2Ny2 * i] *= Mult;
-            pAfterFFT[ix + Nx2Ny2 * i + 1] *= Mult;
+            long long HalfNyNx = ((long long)HalfNy) * ((long long)Nx);
+            T* t1 = pAfterFFT + i * Nx2Ny2, *t2 = pAfterFFT + (HalfNyNx + HalfNx) * 2 + i * Nx2Ny2;
+            T* t3 = pAfterFFT + HalfNx * 2 + i * Nx2Ny2, *t4 = pAfterFFT + HalfNyNx * 2 + i * Nx2Ny2;
+            
+            T buf_r = t1[idx] * s;
+            T buf_im = t1[idx + 1] * s;
+            
+            if (ix < HalfNx && iy < HalfNy) 
+            {
+                t1[idx] = t2[idx];
+                t1[idx + 1] = t2[idx + 1];
+
+                t2[idx] = buf_r;
+                t2[idx + 1] = buf_im;
+
+                buf_r = t3[idx];
+                buf_im = t3[idx + 1];
+                t3[idx] = t4[idx];
+                t3[idx + 1] = t4[idx + 1];
+
+                t4[idx] = buf_r;
+                t4[idx + 1] = buf_im;
+            }
+
+            t1[idx] = buf_r;
+            t1[idx + 1] = buf_im;
         }
     }
 }
 
-template <class T> __global__ void TreatShift2D_Kernel(T* pData, long HowMany, long Nx2, long Ny, T* tShiftX, T* tShiftY, bool NeedsShiftX, bool NeedsShiftY) {
+template <typename T> __global__ void NormalizeDataAfter2DFFT_Kernel(T* pAfterFFT, long Nx2Ny2, long howMany, long n, T Mult) {
+    int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2 * n; //Nx range
+
+    for (; ix < n && ix < Nx2Ny2 * howMany; ix+=2) {
+        pAfterFFT[ix] *= Mult;
+        pAfterFFT[ix + 1] *= Mult;
+    }
+}
+
+template <typename T> __global__ void TreatShift2D_Kernel(T* pData, long HowMany, long Nx2, long Ny, T* tShiftX, T* tShiftY, bool NeedsShiftX, bool NeedsShiftY) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //Nx range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //Ny range
 
@@ -394,11 +433,19 @@ void RotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany)
     RotateDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny * 2, howMany);
 }
 
+void RepairSignAndRotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany) {
+    const int bs = 256;
+    dim3 blocks(Nx / (2 * bs) + ((Nx / 2 & (bs - 1)) != 0), Ny);
+    dim3 threads(bs, 1);
+    RepairSignAndRotateDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny * 2, howMany);
+}
+
 void NormalizeDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany, double Mult) {
     const int bs = 256;
-    dim3 blocks((Nx * Ny) / bs + (((Nx * Ny) & (bs - 1)) != 0), 1);
+    const int per_thd = 32;
+    dim3 blocks((Nx * Ny * howMany) / (bs * per_thd) + (((Nx * Ny * howMany) & ((bs * per_thd) - 1)) != 0), 1);
     dim3 threads(bs, 1);
-    NormalizeDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany, Mult);
+    NormalizeDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany, per_thd, Mult);
 }
 
 void TreatShifts2D_CUDA(float* pData, long Nx, long Ny, long howMany, bool NeedsShiftX, bool NeedsShiftY, float* m_ArrayShiftX, float* m_ArrayShiftY) {
@@ -422,11 +469,19 @@ void RotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany
     RotateDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny * 2, howMany);
 }
 
+void RepairSignAndRotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany) {
+    const int bs = 256;
+    dim3 blocks(Nx / (2 * bs) + ((Nx / 2 & (bs - 1)) != 0), Ny);
+    dim3 threads(bs, 1);
+    RepairSignAndRotateDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny * 2, howMany);
+}
+
 void NormalizeDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany, double Mult) {
     const int bs = 256;
-    dim3 blocks((Nx * Ny) / bs + (((Nx * Ny) & (bs - 1)) != 0), 1);
+    const int per_thd = 32;
+    dim3 blocks((Nx * Ny * howMany) / (bs * per_thd) + (((Nx * Ny * howMany) & ((bs * per_thd) - 1)) != 0), 1);
     dim3 threads(bs, 1);
-    NormalizeDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany, Mult);
+    NormalizeDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany, per_thd, Mult);
 }
 
 void TreatShifts2D_CUDA(double* pData, long Nx, long Ny, long howMany, bool NeedsShiftX, bool NeedsShiftY, double* m_ArrayShiftX, double* m_ArrayShiftY) {
@@ -437,7 +492,7 @@ void TreatShifts2D_CUDA(double* pData, long Nx, long Ny, long howMany, bool Need
 }
 
 
-__global__ void StokesAvgUpdateInterp_Kernel(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, double mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, double yStartMeshRes, double yStepMeshRes, double yStartWfr, double yStepWfr, double xStartMeshRes, double xStepMeshRes, double xStartWfr, double xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr, bool sum)
+template<typename T> __global__ void StokesAvgUpdateInterp_Kernel(float* pStokesArS, float* pMoreStokesArS, int nIters, int nOrder, int nStokesComp, T mult, int iSt, long xNpMeshRes, long yNpMeshRes, long eNpMeshRes, T yStartMeshRes, T yStepMeshRes, T yStartWfr, T yStepWfr, T xStartMeshRes, T xStepMeshRes, T xStartWfr, T xStepWfr, int iOfstSt, long xNpWfr, long yNpWfr, long eNpWfr, bool sum)
 {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //xNpMeshRes range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //yNpMeshRes range
@@ -454,7 +509,7 @@ __global__ void StokesAvgUpdateInterp_Kernel(float* pStokesArS, float* pMoreStok
 
     auto yMeshRes = yStartMeshRes + iy * yStepMeshRes;
     auto xMeshRes = xStartMeshRes + ix * xStepMeshRes;
-    double fInterp = 0;
+    T fInterp = 0;
     int loc_ix_ofst = iOfstSt + ie;
     auto nx_ix_per = xNpWfr * eNpWfr;
 
@@ -543,6 +598,6 @@ void StokesAvgUpdateInterp(float* pStokesArS, float* pMoreStokesArS, int nIters,
     const int bs = 8;
     dim3 threads(xNpMeshRes / bs + ((xNpMeshRes & (bs - 1)) != 0), yNpMeshRes / bs + ((yNpMeshRes & (bs - 1)) != 0), eNpMeshRes);
     dim3 blocks(bs, bs, 1);
-    StokesAvgUpdateInterp_Kernel << <threads, blocks >> > (pStokesArS, pMoreStokesArS, nIters, nOrder, nStokesComp, mult, iSt, xNpMeshRes, yNpMeshRes, eNpMeshRes, yStartMeshRes, yStepMeshRes, yStartWfr, yStepWfr, xStartMeshRes, xStepMeshRes, xStartWfr, xStepWfr, iOfstSt, xNpWfr, yNpWfr, eNpWfr, sum);
+    StokesAvgUpdateInterp_Kernel <float><< <threads, blocks >> > (pStokesArS, pMoreStokesArS, nIters, nOrder, nStokesComp, mult, iSt, xNpMeshRes, yNpMeshRes, eNpMeshRes, yStartMeshRes, yStepMeshRes, yStartWfr, yStepWfr, xStartMeshRes, xStepMeshRes, xStartWfr, xStepWfr, iOfstSt, xNpWfr, yNpWfr, eNpWfr, sum);
 }
 #endif

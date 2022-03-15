@@ -8,8 +8,8 @@
 
 
 __global__ void MultiplyElFieldByPhaseLin_Kernel(double xMult, double zMult, float* pBaseRadX, float* pBaseRadZ, int nWfr, int nz, int nx, int ne, float zStart, float zStep, float xStart, float xStep) {
-    int iz = (blockIdx.x * blockDim.x + threadIdx.x); //nz range
-    int ix = (blockIdx.y * blockDim.y + threadIdx.y); //nx range
+    int ix = (blockIdx.x * blockDim.x + threadIdx.x); //nx range
+    int iz = (blockIdx.y * blockDim.y + threadIdx.y); //nz range
     int iwfr = (blockIdx.z * blockDim.z + threadIdx.z); //nWfr range
 
     if (ix < nx && iz < nz && iwfr < nWfr) 
@@ -50,7 +50,7 @@ __global__ void MultiplyElFieldByPhaseLin_Kernel(double xMult, double zMult, flo
 void MultiplyElFieldByPhaseLin_CUDA(double xMult, double zMult, float* pBaseRadX, float* pBaseRadZ, int nWfr, int nz, int nx, int ne, float zStart, float zStep, float xStart, float xStep)
 {
     const int bs = 256;
-    dim3 blocks(nz / bs + ((nz & (bs - 1)) != 0), nx, nWfr);
+    dim3 blocks(nx / bs + ((nx & (bs - 1)) != 0), nz, nWfr);
     dim3 threads(bs, 1);
     MultiplyElFieldByPhaseLin_Kernel<< <blocks, threads >> > (xMult, zMult, pBaseRadX, pBaseRadZ, nWfr, nz, nx, ne, zStart, zStep, xStart, xStep);
 

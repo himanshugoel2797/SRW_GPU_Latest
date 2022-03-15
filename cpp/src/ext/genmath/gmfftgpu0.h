@@ -16,10 +16,12 @@ void TreatShift_CUDA(double* pData, long HowMany, long Nx, double* tShiftX);
 
 void RepairSignAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany);
 void RotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany);
+void RepairSignAndRotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany);
 void NormalizeDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany, double Mult);
 void TreatShifts2D_CUDA(float* pData, long Nx, long Ny, long howMany, bool NeedsShiftX, bool NeedsShiftY, float* m_ArrayShiftX, float* m_ArrayShiftY);
 
 void RepairSignAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany);
 void RotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany);
+void RepairSignAndRotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany);
 void NormalizeDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany, double Mult);
 void TreatShifts2D_CUDA(double* pData, long Nx, long Ny, long howMany, bool NeedsShiftX, bool NeedsShiftY, double* m_ArrayShiftX, double* m_ArrayShiftY);
