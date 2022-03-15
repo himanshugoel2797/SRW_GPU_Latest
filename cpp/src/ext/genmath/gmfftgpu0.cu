@@ -108,8 +108,11 @@ template <typename T> __global__ void TreatShift_Kernel(T* pData, long HowMany, 
 
         for (long k = 0; k < HowMany; k++)
         {
-            T NewRe = pData[ix + k * Nx2] * MultX_Re - pData[ix + k * Nx2 + 1] * MultX_Im;
-            T NewIm = pData[ix + k * Nx2] * MultX_Im + pData[ix + k * Nx2 + 1] * MultX_Re;
+            T buf_r = pData[ix + k * Nx2];
+            T buf_im = pData[ix + k * Nx2 + 1];
+
+            T NewRe = buf_r * MultX_Re - buf_im * MultX_Im;
+            T NewIm = buf_r * MultX_Im + buf_im * MultX_Re;
             pData[ix + k * Nx2] = NewRe;
             pData[ix + k * Nx2 + 1] = NewIm;
         }
@@ -321,11 +324,11 @@ template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //HalfNx range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //HalfNy range
 
-    float sx0 = 1 - 2 * (ix % 2);
-    float sy0 = 1 - 2 * (iy % 2);
-    float s = sx0 * sy0;
-
     if (ix < Nx && iy < Ny) {
+        float sx0 = 1 - 2 * (ix % 2);
+        float sy0 = 1 - 2 * (iy % 2);
+        float s = sx0 * sy0;
+
         int idx = (ix + iy * Nx) * 2;
         for (long i = 0; i < howMany; i++){
             long long HalfNyNx = ((long long)HalfNy) * ((long long)Nx);
@@ -334,7 +337,7 @@ template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T
             
             T buf_r = t1[idx] * s;
             T buf_im = t1[idx + 1] * s;
-            
+
             if (ix < HalfNx && iy < HalfNy) 
             {
                 t1[idx] = t2[idx];
@@ -351,9 +354,11 @@ template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T
                 t4[idx] = buf_r;
                 t4[idx + 1] = buf_im;
             }
-
-            t1[idx] = buf_r;
-            t1[idx + 1] = buf_im;
+            else
+            {
+                t1[idx] = buf_r;
+                t1[idx + 1] = buf_im;
+            }
         }
     }
 }
@@ -411,8 +416,10 @@ template <typename T> __global__ void TreatShift2D_Kernel(T* pData, long HowMany
         for (long k = 0; k < HowMany; k++)
         {
             long offset = k * Nx2 * Ny + iy * Nx2 + ix;
-            T NewRe = pData[offset] * MultRe - pData[offset + 1] * MultIm;
-            T NewIm = pData[offset] * MultIm + pData[offset + 1] * MultRe;
+            T buf_r = pData[offset];
+            T buf_im = pData[offset + 1];
+            T NewRe = buf_r * MultRe - buf_im * MultIm;
+            T NewIm = buf_r * MultIm + buf_im * MultRe;
             pData[offset] = NewRe;
             pData[offset + 1] = NewIm;
         }
