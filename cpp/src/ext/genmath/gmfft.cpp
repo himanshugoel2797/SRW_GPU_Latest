@@ -336,14 +336,14 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 		{
 			//ArrayShiftX = new float[Nx << 1];
 			//if(ArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
-			m_ArrayShiftX = new float[Nx << 1];
+			m_ArrayShiftX = ALLOC_ARRAY(float, Nx << 1);
 			if (m_ArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
 		}
 		if (NeedsShiftBeforeY || NeedsShiftAfterY)
 		{
 			//ArrayShiftY = new float[Ny << 1];
 			//if(ArrayShiftY == 0) return MEMORY_ALLOCATION_FAILURE;
-			m_ArrayShiftY = new float[Ny << 1];
+			m_ArrayShiftY = ALLOC_ARRAY(float, Ny << 1);
 			if (m_ArrayShiftY == 0) return MEMORY_ALLOCATION_FAILURE;
 		}
 	}
@@ -351,12 +351,12 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	{
 		if (NeedsShiftBeforeX || NeedsShiftAfterX)
 		{
-			m_dArrayShiftX = new double[Nx << 1];
+			m_dArrayShiftX = ALLOC_ARRAY(double, Nx << 1);
 			if (m_dArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
 		}
 		if (NeedsShiftBeforeY || NeedsShiftAfterY)
 		{
-			m_dArrayShiftY = new double[Ny << 1];
+			m_dArrayShiftY = ALLOC_ARRAY(double, Ny << 1);
 			if (m_dArrayShiftY == 0) return MEMORY_ALLOCATION_FAILURE;
 		}
 	}
@@ -693,10 +693,10 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 
 	//if(ArrayShiftX != 0) { delete[] ArrayShiftX; ArrayShiftX = 0;}
 	//if(ArrayShiftY != 0) { delete[] ArrayShiftY; ArrayShiftY = 0;}
-	if (m_ArrayShiftX != 0) { delete[] m_ArrayShiftX; m_ArrayShiftX = 0; }
-	if (m_ArrayShiftY != 0) { delete[] m_ArrayShiftY; m_ArrayShiftY = 0; }
-	if (m_dArrayShiftX != 0) { delete[] m_dArrayShiftX; m_dArrayShiftX = 0; } //OC02022019
-	if (m_dArrayShiftY != 0) { delete[] m_dArrayShiftY; m_dArrayShiftY = 0; }
+	if (m_ArrayShiftX != 0) { FREE_ARRAY(m_ArrayShiftX);}
+	if (m_ArrayShiftY != 0) { FREE_ARRAY(m_ArrayShiftY);}
+	if (m_dArrayShiftX != 0) { FREE_ARRAY(m_dArrayShiftX);} //OC02022019
+	if (m_dArrayShiftY != 0) { FREE_ARRAY(m_dArrayShiftY);}
 
 	return 0;
 }
@@ -741,12 +741,12 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 	{
 		if (FFT1DInfo.pInData != 0)
 		{
-			m_ArrayShiftX = new float[Nx << 1];
+			m_ArrayShiftX = ALLOC_ARRAY(float, Nx << 1);
 			if (m_ArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
 		}
 		else if (FFT1DInfo.pdInData != 0)
 		{
-			m_dArrayShiftX = new double[Nx << 1];
+			m_dArrayShiftX = ALLOC_ARRAY(double, Nx << 1);
 			if (m_dArrayShiftX == 0) return MEMORY_ALLOCATION_FAILURE;
 		}
 	}
@@ -1141,25 +1141,13 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 #endif
 	}
 
-	GPU_COND(pGpuUsage, {
-		if (m_ArrayShiftX != 0)
-		{
-			cudaFree(m_ArrayShiftX); m_ArrayShiftX = 0;
-		}
-		if (m_dArrayShiftX != 0)
-		{
-			cudaFree(m_dArrayShiftX); m_dArrayShiftX = 0;
-		}
-	})
-	else {
-		if (m_ArrayShiftX != 0)
-		{
-			delete[] m_ArrayShiftX; m_ArrayShiftX = 0;
-		}
-		if (m_dArrayShiftX != 0)
-		{
-			delete[] m_dArrayShiftX; m_dArrayShiftX = 0;
-		}
+	if (m_ArrayShiftX != 0)
+	{
+		FREE_ARRAY(m_ArrayShiftX);
+	}
+	if (m_dArrayShiftX != 0)
+	{
+		FREE_ARRAY(m_dArrayShiftX);
 	}
 
 	GPU_COND(pGpuUsage, {

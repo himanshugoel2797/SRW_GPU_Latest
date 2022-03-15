@@ -23,6 +23,9 @@
 
 typedef int gpuUsageArg_t;
 
+#define ALLOC_ARRAY(type, size) (type *)UtiDev::malloc(sizeof(type)*(size))
+#define FREE_ARRAY(x) UtiDev::free(x); x=NULL
+
 #ifdef _OFFLOAD_GPU
 #define GPU_ENABLED(arg) UtiDev::GPUEnabled(arg)
 #define GPU_COND(arg, code) if (GPU_ENABLED(arg)) { code }
@@ -43,6 +46,19 @@ public:
 	static bool GPUEnabled(gpuUsageArg_t *arg);
 	static void SetGPUStatus(bool enabled);
 	static int GetDevice(gpuUsageArg_t* arg);
+	
+	static inline void* malloc(size_t sz) {
+#ifdef _OFFLOAD_GPU
+			void *ptr;
+			auto err = cudaMallocManaged(&ptr, sz);
+			if (err != cudaSuccess)
+				printf("Allocation Failure\r\n");
+			return ptr;
+#else
+			return std::malloc(sz);
+#endif
+	}
+
 	template<typename T> static inline void malloc(T** ptr, size_t sz) {
 #ifdef _OFFLOAD_GPU
 			auto err = cudaMallocManaged<T>(ptr, sz);

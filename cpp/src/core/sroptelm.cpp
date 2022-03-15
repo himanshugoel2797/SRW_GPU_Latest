@@ -831,10 +831,10 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 
 		if(dxSt != 0.)
 		{
-			DataPtrsForWfrEdgeCorr.ExpArrXSt = new float[TwoNx];
+			DataPtrsForWfrEdgeCorr.ExpArrXSt = ALLOC_ARRAY(float, TwoNx);
 			if(DataPtrsForWfrEdgeCorr.ExpArrXSt == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrXStEx = new float[(TwoNz << 1) * nWfr];
+			DataPtrsForWfrEdgeCorr.FFTArrXStEx = ALLOC_ARRAY(float, (TwoNz << 1) * nWfr);
 			if(DataPtrsForWfrEdgeCorr.FFTArrXStEx == 0) return MEMORY_ALLOCATION_FAILURE;
 			DataPtrsForWfrEdgeCorr.FFTArrXStEz = DataPtrsForWfrEdgeCorr.FFTArrXStEx + TwoNz * nWfr;
 			DataPtrsForWfrEdgeCorr.dxSt = dxSt;
@@ -882,10 +882,10 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 		}
 		if(dxFi != 0.)
 		{
-			DataPtrsForWfrEdgeCorr.ExpArrXFi = new float[TwoNx];
+			DataPtrsForWfrEdgeCorr.ExpArrXFi = ALLOC_ARRAY(float, TwoNx);
 			if(DataPtrsForWfrEdgeCorr.ExpArrXFi == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrXFiEx = new float[(TwoNz << 1) * nWfr];
+			DataPtrsForWfrEdgeCorr.FFTArrXFiEx = ALLOC_ARRAY(float, (TwoNz << 1) * nWfr);
 			if(DataPtrsForWfrEdgeCorr.FFTArrXFiEx == 0) return MEMORY_ALLOCATION_FAILURE;
 			DataPtrsForWfrEdgeCorr.FFTArrXFiEz = DataPtrsForWfrEdgeCorr.FFTArrXFiEx + TwoNz * nWfr;
 			DataPtrsForWfrEdgeCorr.dxFi = dxFi;
@@ -933,10 +933,10 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 		}
 		if(dzSt != 0.)
 		{
-			DataPtrsForWfrEdgeCorr.ExpArrZSt = new float[TwoNz];
+			DataPtrsForWfrEdgeCorr.ExpArrZSt = ALLOC_ARRAY(float, TwoNz);
 			if(DataPtrsForWfrEdgeCorr.ExpArrZSt == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrZStEx = new float[(TwoNx << 1) * nWfr];
+			DataPtrsForWfrEdgeCorr.FFTArrZStEx = ALLOC_ARRAY(float, (TwoNx << 1) * nWfr);
 			if(DataPtrsForWfrEdgeCorr.FFTArrZStEx == 0) return MEMORY_ALLOCATION_FAILURE;
 			DataPtrsForWfrEdgeCorr.FFTArrZStEz = DataPtrsForWfrEdgeCorr.FFTArrZStEx + TwoNx * nWfr;
 			DataPtrsForWfrEdgeCorr.dzSt = dzSt;
@@ -958,10 +958,10 @@ int srTGenOptElem::SetupWfrEdgeCorrData(srTSRWRadStructAccessData* pRadAccessDat
 		}
 		if(dzFi != 0.)
 		{
-			DataPtrsForWfrEdgeCorr.ExpArrZFi = new float[TwoNz];
+			DataPtrsForWfrEdgeCorr.ExpArrZFi = ALLOC_ARRAY(float, TwoNz);
 			if(DataPtrsForWfrEdgeCorr.ExpArrZFi == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrZFiEx = new float[(TwoNx << 1) * nWfr];
+			DataPtrsForWfrEdgeCorr.FFTArrZFiEx = ALLOC_ARRAY(float, (TwoNx << 1) * nWfr);
 			if(DataPtrsForWfrEdgeCorr.FFTArrZFiEx == 0) return MEMORY_ALLOCATION_FAILURE;
 			DataPtrsForWfrEdgeCorr.FFTArrZFiEz = DataPtrsForWfrEdgeCorr.FFTArrZFiEx + TwoNx * nWfr;
 			DataPtrsForWfrEdgeCorr.dzFi = dzFi;
@@ -2520,9 +2520,9 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 		//if((pxmIn*pxdIn*pzmIn*pzdIn >= 1.) || (SRWRadStructAccessData.m_newExtWfrCreateNotAllowed)) //OC140311
 		if(pxmIn*pxdIn*pzmIn*pzdIn >= 1.) //OC161115
 		{//Is this part really necessary?
-			OldRadXCopy = new float[TotAmOfOldData];
+			OldRadXCopy = ALLOC_ARRAY(float, TotAmOfOldData);
 			if(OldRadXCopy == 0) return MEMORY_ALLOCATION_FAILURE;
-			OldRadZCopy = new float[TotAmOfOldData];
+			OldRadZCopy = ALLOC_ARRAY(float, TotAmOfOldData);
 			if(OldRadZCopy == 0) return MEMORY_ALLOCATION_FAILURE;
 			
 			float *tOldRadXCopy = OldRadXCopy, *tOldRadZCopy = OldRadZCopy;
@@ -2579,8 +2579,8 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 			
 			if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct, 0, pGpuUsage)) return result;
 			
-			if(OldRadXCopy != 0) delete[] OldRadXCopy;
-			if(OldRadZCopy != 0) delete[] OldRadZCopy;
+			if(OldRadXCopy != 0) FREE_ARRAY(OldRadXCopy);
+			if(OldRadZCopy != 0) FREE_ARRAY(OldRadZCopy);
 
 			//Added by SY (for profiling?) at parallelizing SRW via OpenMP:
 			//srwlPrintTime(":RadResizeGen: RadResizeCore 1",&start);
@@ -2677,7 +2677,7 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 		{//Is this part necessary at all?
 			if(ExIsOK) //OC13112011
 			{
-				OldRadXCopy = new float[TotAmOfOldData];
+				OldRadXCopy = ALLOC_ARRAY(float, TotAmOfOldData);
 				if(OldRadXCopy == 0) return MEMORY_ALLOCATION_FAILURE;
 
 				float *tOldRadXCopy = OldRadXCopy;
@@ -2705,14 +2705,14 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 				//NOTE: Memory is already zero initialized in python, would be faster to just allocate zero'd out memory than allocating and zero-ing 
 				SRWRadStructAccessData.pBaseRadX = OldRadXCopy;
 				if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct, 'x', pGpuUsage)) return result;
-				if(OldRadXCopy != 0) delete[] OldRadXCopy;
+				if(OldRadXCopy != 0) FREE_ARRAY(OldRadXCopy);
 			}
 			//Added by SY (for profiling?) at parallelizing SRW via OpenMP:
 			//srwlPrintTime(":RadResizeGen: TreatPolarizSepar-ExIsOK1",&start);
 
 			if(EzIsOK)
 			{
-				OldRadZCopy = new float[TotAmOfOldData];
+				OldRadZCopy = ALLOC_ARRAY(float, TotAmOfOldData);
 				if(OldRadZCopy == 0) return MEMORY_ALLOCATION_FAILURE;
 
 				float *tOldRadZCopy = OldRadZCopy;
@@ -2742,7 +2742,7 @@ int srTGenOptElem::RadResizeGen(srTSRWRadStructAccessData& SRWRadStructAccessDat
 				//NOTE: Memory is already zero initialized in python, would be faster to just allocate zero'd out memory than allocating and zero-ing 
 				SRWRadStructAccessData.pBaseRadZ = OldRadZCopy;
 				if(result = RadResizeCore(SRWRadStructAccessData, NewSRWRadStructAccessData, RadResizeStruct, 'z', pGpuUsage)) return result;
-				if(OldRadZCopy != 0) delete[] OldRadZCopy;
+				if(OldRadZCopy != 0) FREE_ARRAY(OldRadZCopy);
 			}
 			//Added by SY (for profiling?) at parallelizing SRW via OpenMP:
 			//srwlPrintTime(":RadResizeGen: TreatPolarizSepar-EzIsOK1",&start);

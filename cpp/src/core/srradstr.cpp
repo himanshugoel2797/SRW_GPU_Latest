@@ -1281,7 +1281,7 @@ srTSRWRadStructAccessData::srTSRWRadStructAccessData(srTSRWRadStructAccessData* 
 
 	if(NeedRadX)
 	{
-		pBaseRadX = new float[LenRadData];
+		pBaseRadX = ALLOC_ARRAY(float, LenRadData);
 		float *tBaseRadX = pBaseRadX;
 		float *tInBaseRadX = InRadStruct.pBaseRadX;
 		//for(long i=0; i<LenRadData; i++) *(tBaseRadX++) = *(tInBaseRadX++);
@@ -1290,7 +1290,7 @@ srTSRWRadStructAccessData::srTSRWRadStructAccessData(srTSRWRadStructAccessData* 
 	}
 	if(NeedRadZ)
 	{
-		pBaseRadZ = new float[LenRadData];
+		pBaseRadZ = ALLOC_ARRAY(float, LenRadData);
 		float *tBaseRadZ = pBaseRadZ;
 		float *tInBaseRadZ = InRadStruct.pBaseRadZ;
 		//for(long i=0; i<LenRadData; i++) *(tBaseRadZ++) = *(tInBaseRadZ++);
@@ -1426,7 +1426,8 @@ srTSRWRadStructAccessData::srTSRWRadStructAccessData(const srTSRWRadStructAccess
 			bool NeedRadZ = (LenRadData > 0) && (inRad.pBaseRadZ != 0);
 			if(NeedRadX)
 			{
-				pBaseRadX = new float[LenRadData];
+				//TODO: make sure this memory is freed
+				pBaseRadX = ALLOC_ARRAY(float, LenRadData);
 				float *tBaseRadX = pBaseRadX;
 				float *tInBaseRadX = inRad.pBaseRadX;
 				//for(long i=0; i<LenRadData; i++) *(tBaseRadX++) = *(tInBaseRadX++);
@@ -1434,7 +1435,7 @@ srTSRWRadStructAccessData::srTSRWRadStructAccessData(const srTSRWRadStructAccess
 			}
 			if(NeedRadZ)
 			{
-				pBaseRadZ = new float[LenRadData];
+				pBaseRadZ = ALLOC_ARRAY(float, LenRadData);
 				float *tBaseRadZ = pBaseRadZ;
 				float *tInBaseRadZ = inRad.pBaseRadZ;
 				//for(long i=0; i<LenRadData; i++) *(tBaseRadZ++) = *(tInBaseRadZ++);
@@ -1560,8 +1561,8 @@ void srTSRWRadStructAccessData::DisposeEmulatedStructs()
 {
 	if(BaseRadWasEmulated)
 	{
-		if(pBaseRadX != 0) delete[] pBaseRadX;
-		if(pBaseRadZ != 0) delete[] pBaseRadZ;
+		if(pBaseRadX != 0) FREE_ARRAY(pBaseRadX);
+		if(pBaseRadZ != 0) FREE_ARRAY(pBaseRadZ);
 		pBaseRadX = pBaseRadZ = 0;
 		BaseRadWasEmulated = false;
 	}
@@ -1939,15 +1940,15 @@ int srTSRWRadStructAccessData::ReAllocBaseRadAccordingToNeNxNz(char PolarizComp)
 
 	if(TreatPolCompX)
 	{
-		if(pBaseRadX != 0) { delete[] pBaseRadX; pBaseRadX = 0;}
-		pBaseRadX = new float[LenRadData];
+		if(pBaseRadX != 0) { FREE_ARRAY(pBaseRadX);}
+		pBaseRadX = ALLOC_ARRAY(float, LenRadData);
 		if(pBaseRadX == 0) return MEMORY_ALLOCATION_FAILURE;
 		BaseRadWasEmulated = true;
 	}
 	if(TreatPolCompZ)
 	{
-		if(pBaseRadZ != 0) { delete[] pBaseRadZ; pBaseRadZ = 0;}
-		pBaseRadZ = new float[LenRadData];
+		if(pBaseRadZ != 0) { FREE_ARRAY(pBaseRadZ);}
+		pBaseRadZ = ALLOC_ARRAY(float, LenRadData);
 		if(pBaseRadZ == 0) return MEMORY_ALLOCATION_FAILURE;
 		BaseRadWasEmulated = true;
 	}
@@ -1966,14 +1967,14 @@ int srTSRWRadStructAccessData::AllocBaseRadAccordingToNeNxNz(char PolarizComp)
 	if(TreatPolCompX)
 	{
 		pBaseRadX = 0;
-		pBaseRadX = new float[LenRadData];
+		pBaseRadX = ALLOC_ARRAY(float, LenRadData);
 		if(pBaseRadX == 0) return MEMORY_ALLOCATION_FAILURE;
 		BaseRadWasEmulated = true;
 	}
 	if(TreatPolCompZ)
 	{
 		pBaseRadZ = 0;
-		pBaseRadZ = new float[LenRadData];
+		pBaseRadZ = ALLOC_ARRAY(float, LenRadData);
 		if(pBaseRadZ == 0) return MEMORY_ALLOCATION_FAILURE;
 		BaseRadWasEmulated = true;
 	}
@@ -1991,11 +1992,11 @@ void srTSRWRadStructAccessData::DeAllocBaseRadAccordingToNeNxNz(char PolarizComp
 
 	if(TreatPolCompX)
 	{
-		if(pBaseRadX != 0) { delete[] pBaseRadX; pBaseRadX = 0;}
+		if(pBaseRadX != 0) { FREE_ARRAY(pBaseRadX);}
 	}
 	if(TreatPolCompZ)
 	{
-		if(pBaseRadZ != 0) { delete[] pBaseRadZ; pBaseRadZ = 0;}
+		if(pBaseRadZ != 0) { FREE_ARRAY(pBaseRadZ);}
 	}
 }
 
@@ -3058,10 +3059,10 @@ int srTSRWRadStructAccessData::SetupWfrEdgeCorrData(float* pDataEx, float* pData
 
 		if(dxSt != 0.)
 		{
-			DataPtrsForWfrEdgeCorr.ExpArrXSt = new float[TwoNx];
+			DataPtrsForWfrEdgeCorr.ExpArrXSt = ALLOC_ARRAY(float, TwoNx);
 			if(DataPtrsForWfrEdgeCorr.ExpArrXSt == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrXStEx = new float[TwoNz << 1];
+			DataPtrsForWfrEdgeCorr.FFTArrXStEx = ALLOC_ARRAY(float, TwoNz << 1);
 			if(DataPtrsForWfrEdgeCorr.FFTArrXStEx == 0) return MEMORY_ALLOCATION_FAILURE;
 			DataPtrsForWfrEdgeCorr.FFTArrXStEz = DataPtrsForWfrEdgeCorr.FFTArrXStEx + TwoNz;
 			DataPtrsForWfrEdgeCorr.dxSt = dxSt;
@@ -3137,10 +3138,10 @@ int srTSRWRadStructAccessData::SetupWfrEdgeCorrData(float* pDataEx, float* pData
 		}
 		if(dzSt != 0.)
 		{
-			DataPtrsForWfrEdgeCorr.ExpArrZSt = new float[TwoNz];
+			DataPtrsForWfrEdgeCorr.ExpArrZSt = ALLOC_ARRAY(float, TwoNz);
 			if(DataPtrsForWfrEdgeCorr.ExpArrZSt == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrZStEx = new float[TwoNx << 1];
+			DataPtrsForWfrEdgeCorr.FFTArrZStEx = ALLOC_ARRAY(float, TwoNx << 1);
 			if(DataPtrsForWfrEdgeCorr.FFTArrZStEx == 0) return MEMORY_ALLOCATION_FAILURE;
 			DataPtrsForWfrEdgeCorr.FFTArrZStEz = DataPtrsForWfrEdgeCorr.FFTArrZStEx + TwoNx;
 			DataPtrsForWfrEdgeCorr.dzSt = dzSt;
@@ -3160,10 +3161,10 @@ int srTSRWRadStructAccessData::SetupWfrEdgeCorrData(float* pDataEx, float* pData
 		}
 		if(dzFi != 0.)
 		{
-			DataPtrsForWfrEdgeCorr.ExpArrZFi = new float[TwoNz];
+			DataPtrsForWfrEdgeCorr.ExpArrZFi = ALLOC_ARRAY(float, TwoNz);
 			if(DataPtrsForWfrEdgeCorr.ExpArrZFi == 0) return MEMORY_ALLOCATION_FAILURE;
 
-			DataPtrsForWfrEdgeCorr.FFTArrZFiEx = new float[TwoNx << 1];
+			DataPtrsForWfrEdgeCorr.FFTArrZFiEx = ALLOC_ARRAY(float, TwoNx << 1);
 			if(DataPtrsForWfrEdgeCorr.FFTArrZFiEx == 0) return MEMORY_ALLOCATION_FAILURE;
 			DataPtrsForWfrEdgeCorr.FFTArrZFiEz = DataPtrsForWfrEdgeCorr.FFTArrZFiEx + TwoNx;
 			DataPtrsForWfrEdgeCorr.dzFi = dzFi;

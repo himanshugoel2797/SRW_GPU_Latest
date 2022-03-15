@@ -95,6 +95,7 @@ void UtiDev::Fini() {
 	//deviceOffloadInitialized = false;
 }
 
+/*
 #ifndef __CUDACC__
 void* operator new[](std::size_t sz) // no inline, required by [replacement.functions]/3
 {
@@ -120,3 +121,4 @@ void operator delete[](void* ptr) noexcept
 		std::free(ptr);
 }
 #endif
+*/
