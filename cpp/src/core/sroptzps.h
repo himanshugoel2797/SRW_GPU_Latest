@@ -94,7 +94,7 @@ public:
 	{
 		int result;
 		if(pRadAccessData->Pres != 0) if(result = SetRadRepres(pRadAccessData, 0)) return result;
-		return TraverseRadZXE(pRadAccessData, 0, pGpuUsage);
+		return TraverseRadZXE(pRadAccessData, 0, 0, pGpuUsage);
 	}
   	int PropagateRadiationSimple1D(srTRadSect1D* pSect1D)
 	{

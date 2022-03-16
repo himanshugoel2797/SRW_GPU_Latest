@@ -142,7 +142,7 @@ public:
 	virtual int RangeShouldBeAdjustedAtPropag() { return 1;}
 	virtual int ResolutionShouldBeAdjustedAtPropag() { return 1;}
 
-	virtual int RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars) { return -1; } //HG03092022
+	virtual int RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars=0, long pBufVarsSz=0) { return -1; } //HG03092022
 	virtual void RadPointModifier(srTEXZ&, srTEFieldPtrs&, void* pBufVars=0) {} //OC29082019
 	//virtual void RadPointModifier(srTEXZ&, srTEFieldPtrs&) {}
 	virtual void RadPointModifier1D(srTEXZ&, srTEFieldPtrs&, void* pBufVars=0) {}//OC06092019
@@ -241,7 +241,7 @@ public:
 
 	int FillOutRadFromInRad(srTSRWRadStructAccessData*, srTSRWRadStructAccessData*);
 
-	int TraverseRadZXE(srTSRWRadStructAccessData*, void* pBufVars=0, gpuUsageArg_t* pGpuUsage = 0); //OC29082019
+	int TraverseRadZXE(srTSRWRadStructAccessData*, void* pBufVars=0, long pBufVarsSz=0, gpuUsageArg_t* pGpuUsage = 0); //OC29082019
 	//int TraverseRadZXE(srTSRWRadStructAccessData*);
 	int TraverseRad1D(srTRadSect1D*, void* pBufVars=0); //OC29082019
 	//int TraverseRad1D(srTRadSect1D*);
@@ -354,7 +354,7 @@ public:
 
 	//inline void MultSquareMatrByVect(float**, float*, int, float*);
 	inline void MultSquareMatrByVect(double**, double*, int, double*); //OC130311
-	inline void CosAndSin(double, float&, float&);
+	GPU_PORTABLE inline void CosAndSin(double, float&, float&);
 	inline void FindLowestAndUppestPoints(TVector3d&, TVector3d*, int, int&, int&);
 	inline void ReflectVect(TVector3d& N, TVector3d& V);
 	inline void FindLineIntersectWithPlane(TVector3d* Plane, TVector3d* Line, TVector3d& IntersectP);

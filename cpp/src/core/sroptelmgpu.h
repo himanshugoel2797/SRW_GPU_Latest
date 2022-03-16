@@ -50,7 +50,7 @@ template<class T> __global__ void RadPointModifierParallel_Kernel(srTSRWRadStruc
 	}
 }
 
-template<class T> int RadPointModifierParallelImpl(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars, T* tgt_obj)
+template<class T> int RadPointModifierParallelImpl(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars, long pBufVarsSz, T* tgt_obj)
 {
 	const int bs = 256;
 	dim3 blocks(pRadAccessData->nx / bs + ((pRadAccessData->nx & (bs - 1)) != 0), pRadAccessData->nz);
@@ -61,9 +61,17 @@ template<class T> int RadPointModifierParallelImpl(srTSRWRadStructAccessData* pR
     T* local_copy = NULL;
     cudaMallocManaged(&local_copy, sizeof(T));
     memcpy(local_copy, tgt_obj, sizeof(T));
-	RadPointModifierParallel_Kernel<T> << <blocks, threads >> > (*pRadAccessData, pBufVars, local_copy);
-    cudaDeviceSynchronize();
-    cudaFree(local_copy);
+	
+	void* pBufVars_dev = NULL;
+	if (pBufVarsSz > 0)
+	{
+    	cudaMallocManaged(&pBufVars_dev, pBufVarsSz);
+    	memcpy(pBufVars_dev, pBufVars, pBufVarsSz);
+	}
+	RadPointModifierParallel_Kernel<T> << <blocks, threads >> > (*pRadAccessData, pBufVars_dev, local_copy);
+    //cudaDeviceSynchronize();
+    cudaFreeAsync(local_copy, 0);
+	if (pBufVarsSz > 0) cudaFreeAsync(pBufVars_dev, 0);
 
 #ifdef _DEBUG
 	cudaStreamSynchronize(0);

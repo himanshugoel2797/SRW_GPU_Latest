@@ -151,7 +151,7 @@ public:
 		SetupPropBufVars_SingleE(pWfr->eStart); //check if all these buf. var. are necessary
 		AdjustWfrMeshParamToTreatAnamorphMagn(pWfr);
 
-		if(result = TraverseRadZXE(pWfr, pGpuUsage)) return result;
+		if(result = TraverseRadZXE(pWfr, 0, 0, pGpuUsage)) return result;
 
 		//To simulate anamorphic magnification in the functions:
 		//if(result = PropagateRadMoments(pRadAccessData, 0)) return result;

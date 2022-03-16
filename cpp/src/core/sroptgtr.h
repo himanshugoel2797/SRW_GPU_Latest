@@ -122,7 +122,7 @@ public:
 	{
 		int result;
 		if(pRadAccessData->Pres != 0) if(result = SetRadRepres(pRadAccessData, 0)) return result;
-		return TraverseRadZXE(pRadAccessData, 0, pGpuUsage);
+		return TraverseRadZXE(pRadAccessData, 0, 0, pGpuUsage);
 	}
   	int PropagateRadiationSimple1D(srTRadSect1D* pSect1D)
 	{
@@ -133,7 +133,7 @@ public:
 
 #ifdef _OFFLOAD_GPU
 	//__device__ __host__ void RadPointModifierParallel_Kernel(srTSRWRadStructAccessData RadAccessData, void* pBufVars);
-	int RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars) override; //HG03092022
+	int RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars, long pBufVarsSz) override; //HG03092022
 #endif
 	GPU_PORTABLE void RadPointModifierPortable(srTEXZ& EXZ, srTEFieldPtrs& EPtrs, void* pBuf=0);
 	void RadPointModifier(srTEXZ& EXZ, srTEFieldPtrs& EPtrs, void* pBuf=0) { RadPointModifierPortable(EXZ, EPtrs, pBuf); } //OC29082019

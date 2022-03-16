@@ -373,7 +373,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropToWaist(srTSRWRadStructAccessDat
 	//PropBufVars.PassNo = 1;
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result; //OC06092019
 	//OC01102019 (restored)
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars)) return result; //OC29082019
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, sizeof(srTDriftPropBufVars))) return result; //OC29082019
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 
 	//OC240114 (commented-out)
@@ -455,7 +455,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropToWaist(srTSRWRadStructAccessDat
 	//PropBufVars.PassNo = 2;
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result; //OC06092019
 	//OC01102019 (restored)
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars)) return result; //OC30082019
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, sizeof(srTDriftPropBufVars))) return result; //OC30082019
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 
 	pRadAccessData->UnderSamplingX = 1; // Assuming successful propagation to waist
@@ -495,7 +495,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropToWaistBeyondParax(srTSRWRadStru
 	//pRadAccessData->xStart = (pRadAccessData->xStart)*InvLambdaM_d_Rx;
 	//pRadAccessData->zStart = (pRadAccessData->zStart)*InvLambdaM_d_Rz;
 
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars)) return result;
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, sizeof(srTDriftPropBufVars))) return result;
 
 	CGenMathFFT2DInfo FFT2DInfo;
 	FFT2DInfo.xStep = pRadAccessData->xStep;
@@ -602,7 +602,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropFromWaist(srTSRWRadStructAccessD
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 	//OC01102019 (restored)
 	BufVars.PassNo = 1;
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars, pGpuUsage)) return result;
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, sizeof(srTDriftPropBufVars), pGpuUsage)) return result;
 	//OC06092019
 	//pBufVars->PassNo = 1;
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result;
@@ -676,7 +676,7 @@ int srTDriftSpace::PropagateRadiationSimple_PropFromWaist(srTSRWRadStructAccessD
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 	//OC01102019 (restored)
 	BufVars.PassNo = 2;
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars, pGpuUsage)) return result;
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, sizeof(srTDriftPropBufVars), pGpuUsage)) return result;
 	//OC06092019
 	//pBufVars->PassNo = 2;
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result;
@@ -718,7 +718,7 @@ int srTDriftSpace::PropagateRadiationSimple_AnalytTreatQuadPhaseTerm(srTSRWRadSt
 	//PropBufVars.PassNo = 1; //Remove quadratic term from the Phase in coord. repres.
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result; //OC06092019
 	//OC01102019 (restored)
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars)) return result; //OC30082019
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, sizeof(srTDriftPropBufVars))) return result; //OC30082019
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
@@ -748,7 +748,7 @@ int srTDriftSpace::PropagateRadiationSimple_AnalytTreatQuadPhaseTerm(srTSRWRadSt
 	//PropBufVars.PassNo = 2; //Loop in angular repres.
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result; //OC06092019
 	//OC01102019 (restored)
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars)) return result; //OC30082019
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, sizeof(srTDriftPropBufVars))) return result; //OC30082019
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
@@ -803,7 +803,7 @@ int srTDriftSpace::PropagateRadiationSimple_AnalytTreatQuadPhaseTerm(srTSRWRadSt
 	//PropBufVars.PassNo = 3; //Add new quadratic term to the Phase in coord. repres.
 	//if(result = TraverseRadZXE(pRadAccessData, pBufVars)) return result; //OC06092019
 	//OC01102019 (restored)
-	if(result = TraverseRadZXE(pRadAccessData, &BufVars)) return result; //OC30082019
+	if(result = TraverseRadZXE(pRadAccessData, &BufVars, sizeof(srTDriftPropBufVars))) return result; //OC30082019
 	//if(result = TraverseRadZXE(pRadAccessData)) return result;
 
 	//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:

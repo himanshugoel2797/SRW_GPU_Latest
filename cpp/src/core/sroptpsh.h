@@ -95,7 +95,7 @@ public:
 		tPhaseShiftData = (double*)(PhShWaveAccessData.pWaveData); //OC26112019 (related to SRW port to IGOR XOP8 on Mac)
 
 		if(pRadAccessData->Pres != 0) if(result = SetRadRepres(pRadAccessData, 0)) return result;
-		if(result = TraverseRadZXE(pRadAccessData, 0, pGpuUsage)) return result;
+		if(result = TraverseRadZXE(pRadAccessData, 0, 0, pGpuUsage)) return result;
 
 		//srTSend Send;
 		//if(result = Send.FinishWorkingWithWave(&PhShWaveAccessData)) return result;

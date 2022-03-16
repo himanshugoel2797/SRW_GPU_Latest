@@ -18,6 +18,7 @@
 #include "gmobj.h"
 #endif
 
+#include "utidev.h"
 #include "gmvect.h"
 #include <math.h>
 #include <complex>
@@ -379,13 +380,13 @@ public:
 		//else return 1.E+23;
 	}
 
-	static double radicalOnePlusSmall(double x)
+	GPU_PORTABLE static double radicalOnePlusSmall(double x)
 	{
 		if(::fabs(x) > 0.01) return sqrt(1. + x);
 		return 1. + x*(0.5 + x*(-0.125 + x*(0.0625 + x*(-0.0390625 + x*(0.02734375 + x*(-0.0205078125 + x*0.01611328125))))));
 	}
 
-	static double radicalOnePlusSmallMinusOne(double x)
+	GPU_PORTABLE static double radicalOnePlusSmallMinusOne(double x)
 	{
 		if(::fabs(x) > 0.01) return sqrt(1. + x) - 1.;
 		return x*(0.5 + x*(-0.125 + x*(0.0625 + x*(-0.0390625 + x*(0.02734375 + x*(-0.0205078125 + x*0.01611328125))))));

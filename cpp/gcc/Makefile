@@ -54,7 +54,7 @@ CFLAGS=	$(SRW_FLAGS) $(SRW_INCLUDES) $(SRW_SRC_DEF)
 #PYFLAGS=-I$(PYPATH)/include/python2.6 -L$(PYPATH)/lib/python2.6
 
 OBJ=	utidev.o auxparse.o gmfft.o gmfit.o gminterp.o gmmeth.o gmtrans.o srclcuti.o srcradint.o srctrjdt.o sremitpr.o srgsnbm.o srgtrjdt.o srisosrc.o srmagcnt.o srmagfld.o srmatsta.o sroptapt.o sroptcnt.o sroptdrf.o sroptel2.o sroptel3.o sroptelm.o sroptfoc.o sroptgrat.o sroptgtr.o sropthck.o sroptcryst.o sroptmat.o sroptpsh.o sroptshp.o sroptsmr.o sroptwgr.o sroptzp.o sroptzps.o srpersto.o srpowden.o srprdint.o srprgind.o srpropme.o srptrjdt.o srradinc.o srradint.o srradmnp.o srradstr.o srremflp.o srsase.o srsend.o srstowig.o srsysuti.o srthckbm.o srthckbm2.o srtrjaux.o srtrjdat.o srtrjdat3d.o all_com.o check.o diagno.o esource.o field.o incoherent.o initrun.o input.o loadbeam.o loadrad.o magfield.o main.o math.o mpi.o output.o partsim.o pushp.o rpos.o scan.o source.o stepz.o string.o tdepend.o timerec.o track.o srerror.o srwlib.o 
-CMN_OBJ= sroptgtrgpu.o
+CMN_OBJ= sroptgtrgpu.o sroptdrfgpu.o
 #F2C_OBJ= CLOSE.o DFE.o DOLIO.o DUE.o D_CNJG.o D_IMAG.o D_MOD.o D_SIGN.o ENDFILE.o ERR.o FMT.o FMTLIB.o IIO.o ILNW.o INQUIRE.o I_DNNT.o I_INDX.o I_LEN.o LREAD.o LWRITE.o OPEN.o POW_II.o POW_RI.o RDFMT.o REWIND.o RSFE.o RSLI.o RSNE.o SFE.o SIG_DIE.o S_CAT.o S_CMP.o S_COPY.o S_STOP.o TYPESIZE.o UIO.o UTIL.o WREF.o WRTFMT.o WSFE.o WSLE.o WSNE.o XWSNE.o Z_DIV.o Z_EXP.o
 
 PRG=	libsrw.a

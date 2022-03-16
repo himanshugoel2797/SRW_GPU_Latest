@@ -184,5 +184,5 @@ GPU_PORTABLE void srTGenTransmission::RadPointModifierPortable(srTEXZ& EXZ, srTE
 }
 
 #ifdef _OFFLOAD_GPU
-int srTGenTransmission::RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars) { return RadPointModifierParallelImpl<srTGenTransmission>(pRadAccessData, pBufVars, this); } //HG03092022
+int srTGenTransmission::RadPointModifierParallel(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars, long pBufVarsSz) { return RadPointModifierParallelImpl<srTGenTransmission>(pRadAccessData, pBufVars, pBufVarsSz, this); } //HG03092022
 #endif

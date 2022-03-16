@@ -147,7 +147,7 @@ int srTGenOptElem::ExtraDataExpected(const char* sElemID) //OC01062020
 
 //*************************************************************************
 
-int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars, gpuUsageArg_t* pGpuUsage) //OC29082019
+int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, void* pBufVars, long pBufVarsSz, gpuUsageArg_t* pGpuUsage) //OC29082019
 //int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData)
 {
 	//long PerX = pRadAccessData->ne << 1;
@@ -158,9 +158,9 @@ int srTGenOptElem::TraverseRadZXE(srTSRWRadStructAccessData* pRadAccessData, voi
 
 	GPU_COND(pGpuUsage,
 	{
-		if (RadPointModifierParallel(pRadAccessData, pBufVars) == -1)
+		if (RadPointModifierParallel(pRadAccessData, pBufVars, pBufVarsSz) == -1)
 		{
-			return TraverseRadZXE(pRadAccessData, pBufVars, 0);	//If element does not support gpu, force the cpu version
+			return TraverseRadZXE(pRadAccessData, pBufVars, pBufVarsSz, 0);	//If element does not support gpu, force the cpu version
 		}
 	})
 	else

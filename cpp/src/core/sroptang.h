@@ -47,7 +47,7 @@ public:
 	{
 		int result;
 		if(pRadAccessData->Pres != 0) if(result = SetRadRepres(pRadAccessData, 0)) return result;
-		if(result = TraverseRadZXE(pRadAccessData, 0, pGpuUsage)) return result;
+		if(result = TraverseRadZXE(pRadAccessData, 0, 0, pGpuUsage)) return result;
 		//consider programming Angle on angular side by simple change of limits
 		//however note potential problems for many photon energies!
 

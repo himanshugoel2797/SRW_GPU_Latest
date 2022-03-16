@@ -25,6 +25,8 @@ typedef int gpuUsageArg_t;
 
 #define ALLOC_ARRAY(type, size) (type *)UtiDev::malloc(sizeof(type)*(size))
 #define FREE_ARRAY(x) UtiDev::free(x); x=NULL
+#define ALLOC_STRUCT(type) (type *)UtiDev::malloc(sizeof(type))
+#define FREE_STRUCT(x) UtiDev::free(x); x=NULL
 
 #ifdef _OFFLOAD_GPU
 #define GPU_ENABLED(arg) UtiDev::GPUEnabled(arg)

@@ -151,7 +151,7 @@ public:
 		if(result = PropagateRadiationSimple_AngRepres(&AuxWfrData)) return result;
 
 		srTRectAperture RectAp(Dx, Dz, TransvCenPoint.x, TransvCenPoint.y);
-		if(result = RectAp.TraverseRadZXE(&AuxWfrData, 0, pGpuUsage)) return result;
+		if(result = RectAp.TraverseRadZXE(&AuxWfrData, 0, 0, pGpuUsage)) return result;
 
 		if(result = CopyElecFieldDataForOut(AuxWfrData, *pRadAccessData)) return result;
 		AuxWfrData.DeleteElecFieldArrays(); //deletes Ex, Ez only
