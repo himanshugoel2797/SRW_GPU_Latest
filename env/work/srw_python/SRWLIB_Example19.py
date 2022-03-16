@@ -163,7 +163,7 @@ opSmp_Det = SRWLOptD(distSmp_Det)
 #[10]: New Horizontal wavefront Center position after Shift
 #[11]: New Vertical wavefront Center position after Shift
 #           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
-ppSmp =     [0, 0, 1., 0, 0, 1., 150., 1., 150.,  0, 0, 0]
+ppSmp =     [0, 0, 1., 0, 0, 1., 50., 1., 50.,  0, 0, 0]
 ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 
@@ -212,7 +212,7 @@ for it in range(len(listObjBrownian)):
     print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
     t = time.time()
     mesh1 = deepcopy(wfrP.mesh)
-    arI1 = cp.zeros(mesh1.nx*mesh1.ny) if useCuPy else array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
+    arI1 = cp.zeros(mesh1.nx*mesh1.ny, dtype=cp.float32) if useCuPy else array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
     srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
 
     stkDet = det.treat_int(arI1, _mesh = mesh1, _gpu=gpu_id) #"Projecting" intensity on detector (by interpolation)
@@ -222,11 +222,11 @@ for it in range(len(listObjBrownian)):
     #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
     #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
-    if(arDetFrames is not None): 
-        if useCuPy:
-            arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
-        else:
-            arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose()
+    #if(arDetFrames is not None): 
+    #    if useCuPy:
+    #        arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+    #    else:
+    #        arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose()
     print('done in', round(time.time() - t, 3), 's')
 
     #Plotting the Results (requires 3rd party graphics package)
@@ -236,8 +236,8 @@ for it in range(len(listObjBrownian)):
     meshS = opSmp.mesh
     plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
     plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
-    if useCuPy:
-        opPathDif = opPathDif.get()
+    #if useCuPy:
+    #    opPathDif = opPathDif.get()
     #uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
         
     #Scattered Radiation Intensity Distribution in Log Scale
@@ -259,7 +259,7 @@ for it in range(len(listObjBrownian)):
     #    if(curI <= 0.): arLogI1[i] = 0 #?
     #    else: arLogI1[i] = log(curI, 10)
 
-    #uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
+    uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
 
     print('done')
 

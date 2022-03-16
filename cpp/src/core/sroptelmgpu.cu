@@ -255,7 +255,6 @@ void MakeWfrEdgeCorrection_CUDA(srTSRWRadStructAccessData& RadAccessData, float*
 
 __global__ void RadResizeCore_Kernel(srTSRWRadStructAccessData OldRadAccessData, srTSRWRadStructAccessData NewRadAccessData, bool TreatPolCompX, bool TreatPolCompZ)
 {
-	return;
 	int ixStart = int(NewRadAccessData.AuxLong1);
 	int ixEnd = int(NewRadAccessData.AuxLong2);
 	int izStart = int(NewRadAccessData.AuxLong3);
@@ -265,8 +264,8 @@ __global__ void RadResizeCore_Kernel(srTSRWRadStructAccessData OldRadAccessData,
     int iz = (blockIdx.y * blockDim.y + threadIdx.y) + izStart; //nz range
     int iwfr = (blockIdx.z * blockDim.z + threadIdx.z); //nwfr range
 
-	if (ix >= ixEnd) return;
-	if (iz >= izEnd) return;
+	if (ix > ixEnd) return;
+	if (iz > izEnd) return;
 
 	const double DistAbsTol = 1.E-10;
 	double xStepInvOld = 1./OldRadAccessData.xStep;
@@ -345,14 +344,14 @@ __global__ void RadResizeCore_Kernel(srTSRWRadStructAccessData OldRadAccessData,
 		long long izPerZ_New = iz * PerZ_New;
 
 		float* pEX_StartForX_New = 0, * pEZ_StartForX_New = 0;
-		if (TreatPolCompX) pEX_StartForX_New = pEX0_New + izPerZ_New;
-		if (TreatPolCompZ) pEZ_StartForX_New = pEZ0_New + izPerZ_New;
+		pEX_StartForX_New = pEX0_New + izPerZ_New;
+		pEZ_StartForX_New = pEZ0_New + izPerZ_New;
 
 		//long ixPerX_New_p_Two_ie = ix*PerX_New + Two_ie;
 		long long ixPerX_New_p_Two_ie = ix * PerX_New + Two_ie;
 		float* pEX_New = 0, * pEZ_New = 0;
-		if (TreatPolCompX) pEX_New = pEX_StartForX_New + ixPerX_New_p_Two_ie;
-		if (TreatPolCompZ) pEZ_New = pEZ_StartForX_New + ixPerX_New_p_Two_ie;
+		pEX_New = pEX_StartForX_New + ixPerX_New_p_Two_ie;
+		pEZ_New = pEZ_StartForX_New + ixPerX_New_p_Two_ie;
 
 		double xAbs = NewRadAccessData.xStart + ix * NewRadAccessData.xStep;
 
@@ -476,8 +475,8 @@ int srTGenOptElem::RadResizeCoreParallel(srTSRWRadStructAccessData& OldRadAccess
 	char TreatPolCompX = ((PolComp == 0) || (PolComp == 'x'));
 	char TreatPolCompZ = ((PolComp == 0) || (PolComp == 'z'));
 
-	int nx = NewRadAccessData.AuxLong2 - NewRadAccessData.AuxLong1;
-	int nz = NewRadAccessData.AuxLong4 - NewRadAccessData.AuxLong3;
+	int nx = NewRadAccessData.AuxLong2 - NewRadAccessData.AuxLong1 + 1;
+	int nz = NewRadAccessData.AuxLong4 - NewRadAccessData.AuxLong3 + 1;
 	int nWfr = NewRadAccessData.nWfr;
 
 	const int bs = 256;
@@ -491,6 +490,8 @@ int srTGenOptElem::RadResizeCoreParallel(srTSRWRadStructAccessData& OldRadAccess
 	auto err = cudaGetLastError();
 	printf("%s\r\n", cudaGetErrorString(err));
 #endif
+
+	return 0;
 }
 
 #endif

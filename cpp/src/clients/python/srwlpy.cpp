@@ -5107,9 +5107,11 @@ static PyObject* srwlpy_CalcTransm(PyObject* self, PyObject* args) //HG27012021
 			CPyParse::CopyPyListElemsToNumArray(prec_obj, 'd', arPar, nPar, dummy);
 		}
 
+		srwlUtiDevInit();
 		//ProcRes(srwlCalcTransm(&pOptElem, atten_len, delta, shape_defs, shape_def_count, nullptr));
 		//ProcRes(srwlCalcTransm(&opTr, atten_len, delta, arObjShapeDefs, numObj3D, arPar)); //OC28012021
 		ProcRes(srwlCalcTransm(&opTr, delta, atten_len, arObjShapeDefs, numObj3D, arPar)); //OC24082021
+		srwlUtiDevFini();
 	}
 	catch(const char* erText) 
 	{

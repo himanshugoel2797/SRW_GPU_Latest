@@ -3016,13 +3016,13 @@ class SRWLOptT(SRWLOpt):
         :param _y: vertical position [m] (to keep fixed)
         """
         nTot = self.mesh.ne*self.mesh.nx*self.mesh.ny
-        arAux = array('d', [0]*nTot)
+        arAux = cp.zeros(nTot, dtype=cp.float64) if useCuPy else array('d', [0]*nTot)
         if (_typ == 1) or (_typ == 2):
-            arAux = deepcopy(self.arTr[0:nTot*2:2])
+            arAux = self.arTr[0:nTot*2:2] if useCuPy else deepcopy(self.arTr[0:nTot*2:2])
             if _typ == 2:
                 arAux = arAux ** 2
         else:
-            arAux = deepcopy(self.arTr[1:nTot*2+1:2])
+            arAux = self.arTr[1:nTot*2+1:2] if useCuPy else deepcopy(self.arTr[1:nTot*2+1:2])
 
         #for i in range(nTot): #put all data into one column using "C-alignment" as a "flat" 1D array
         #    tr = 0

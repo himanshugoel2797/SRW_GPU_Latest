@@ -59,6 +59,7 @@ public:
 #endif
 	}
 
+/*
 	template<typename T> static inline void malloc(T** ptr, size_t sz) {
 #ifdef _OFFLOAD_GPU
 			auto err = cudaMallocManaged<T>(ptr, sz);
@@ -67,7 +68,7 @@ public:
 #else
 			*ptr = std::malloc(sz);
 #endif
-	}
+	}*/
 
 	static inline void free(void* ptr) {
 #ifdef _OFFLOAD_GPU

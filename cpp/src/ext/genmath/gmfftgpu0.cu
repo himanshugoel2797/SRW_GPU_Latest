@@ -375,11 +375,13 @@ template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T
 }
 
 template <typename T> __global__ void NormalizeDataAfter2DFFT_Kernel(T* pAfterFFT, long Nx2Ny2, long howMany, long n, T Mult) {
-    int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2 * n; //Nx range
+    int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //Nx range
 
-    for (; ix < n && ix < Nx2Ny2 * howMany; ix+=2) {
-        pAfterFFT[ix] *= Mult;
-        pAfterFFT[ix + 1] *= Mult;
+    if (ix < Nx2Ny2) {
+        for (long i = 0; i < howMany; i++){
+            pAfterFFT[ix + Nx2Ny2 * i] *= Mult;
+            pAfterFFT[ix + Nx2Ny2 * i + 1] *= Mult;
+        }
     }
 }
 
@@ -460,10 +462,9 @@ void RepairSignAndRotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, 
 
 void NormalizeDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany, double Mult) {
     const int bs = 256;
-    const int per_thd = 32;
-    dim3 blocks((Nx * Ny * howMany) / (bs * per_thd) + (((Nx * Ny * howMany) & ((bs * per_thd) - 1)) != 0), 1);
+    dim3 blocks((Nx * Ny) / bs + (((Nx * Ny) & (bs - 1)) != 0), 1);
     dim3 threads(bs, 1);
-    NormalizeDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany, per_thd, Mult);
+    NormalizeDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany,1, Mult);
 }
 
 void TreatShifts2D_CUDA(float* pData, long Nx, long Ny, long howMany, bool NeedsShiftX, bool NeedsShiftY, float* m_ArrayShiftX, float* m_ArrayShiftY) {
@@ -496,10 +497,9 @@ void RepairSignAndRotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny,
 
 void NormalizeDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany, double Mult) {
     const int bs = 256;
-    const int per_thd = 32;
-    dim3 blocks((Nx * Ny * howMany) / (bs * per_thd) + (((Nx * Ny * howMany) & ((bs * per_thd) - 1)) != 0), 1);
+    dim3 blocks((Nx * Ny) / bs + (((Nx * Ny) & (bs - 1)) != 0), 1);
     dim3 threads(bs, 1);
-    NormalizeDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany, per_thd, Mult);
+    NormalizeDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx * Ny * 2, howMany,1, Mult);
 }
 
 void TreatShifts2D_CUDA(double* pData, long Nx, long Ny, long howMany, bool NeedsShiftX, bool NeedsShiftY, double* m_ArrayShiftX, double* m_ArrayShiftY) {

@@ -19,25 +19,26 @@ NVCXX = nvc++
 
 SRW_SRC_DEF= -D_GNU_SOURCE -D__USE_XOPEN2K8 -DFFTW_ENABLE_FLOAT -D_GM_WITHOUT_BASE -DSRWLIB_STATIC -DNO_TIMER -DANSI_DECLARATORS -DTRILIBRARY -DLINUX
 SRW_INCLUDES= -I$(SRW_SRC_GEN_DIR) -I$(SRW_SRC_LIB_DIR) -I$(SH_SRC_PARSE_DIR) -I$(SH_SRC_GEN_MATH_DIR)
-SRW_FLAGS=-O0 -fPIC -g
+SRW_FLAGS=-fPIC
 LDFLAGS=-L$(LIB_DIR) -lm 
 
 ifeq ($(MODE),cuda)
-SRW_SRC_DEF += -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3 -D_DEBUG
+SRW_SRC_DEF += -D_OFFLOAD_GPU -DUSE_CUDA -D_FFTW3
 SRW_INCLUDES += -I$(NVCOMPILERS)/$(NVARCH)/$(NVVERSION)/math_libs/include -I$(NVCOMPILERS)/$(NVARCH)/$(NVVERSION)/cuda/include 
 SRW_FLAGS += -std=c++11 -mavx2
 LDFLAGS += -L$(NVCOMPILERS)/$(NVARCH)/$(NVVERSION)/cuda/lib64 -lcudart_static -lcudadevrt -lcufft -lrt
-NVCFLAGS = -O0 -g -arch=sm_86 -dlto -rdc=true
+NVCFLAGS = -O3 -g -arch=sm_86 -dlto -rdc=true
 CUDA_OBJ= gmfftgpu0.o srradmnpgpu.o srradstrgpu.o sroptelmgpu.o #srradintgpu.o
 else
 ifeq ($(MODE), omp)
 SRW_SRC_DEF+= -D_WITH_OMP
-SRW_FLAGS+= -fopenmp -Wno-write-strings 
+SRW_FLAGS+= -fopenmp -Wno-write-strings -O3 -g
 LDFLAGS+= -lfftw 
 else
 ifeq ($(MODE), 0)
 SRW_SRC_DEF+= -D_FFTW3 
 LDFLAGS+= -lfftw3f -lfftw3
+SRW_FLAGS+= -O3 -g
 else
 $(error Unknown SRW compilation option)
 endif
