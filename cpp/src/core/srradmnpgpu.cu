@@ -172,7 +172,8 @@ void srTRadGenManip::MutualIntensityComponentCUDA(float *mo, float *v1, float *v
 	}
 }
 
-__global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract, srTSRWRadStructAccessData RadAccessData, srTRadGenManip *obj, double* arAuxInt, long long ie0, long long ie1, double InvStepRelArg)
+template <bool allStokesReq, bool intOverEnIsRequired>
+__global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract, srTSRWRadStructAccessData RadAccessData, srTRadGenManip *obj, double* arAuxInt, long long ie0, long long ie1, double InvStepRelArg, int Int_or_ReE)
 {
 	int ix = (blockIdx.x * blockDim.x + threadIdx.x); //nx range
     int iz = (blockIdx.y * blockDim.y + threadIdx.y); //nz range
@@ -181,11 +182,8 @@ __global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract
 	if (ix < RadAccessData.nx && iz < RadAccessData.nz && iwfr < RadAccessData.nWfr) 
     {
 		int PolCom = RadExtract.PolarizCompon;
-		int Int_or_ReE = RadExtract.Int_or_Phase;
-
-		if (Int_or_ReE == 7) Int_or_ReE = 0; //OC150813: time/phot. energy integrated single-e intensity requires "normal" intensity here
 			
-		bool allStokesReq = (PolCom == -5); //OC18042020
+		//bool allStokesReq = (PolCom == -5); //OC18042020
 
 		float* pI = 0, * pI1 = 0, * pI2 = 0, * pI3 = 0; //OC17042020
 		double* pId = 0, * pI1d = 0, * pI2d = 0, * pI3d = 0;
@@ -222,7 +220,7 @@ __global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract
 		long long PerZ = PerX * nx;
 		long long PerWfr = PerZ * nz;
 
-		bool intOverEnIsRequired = (RadExtract.Int_or_Phase == 7) && (ne > 1); //OC18042020
+		//bool intOverEnIsRequired = (RadExtract.Int_or_Phase == 7) && (ne > 1); //OC18042020
 		double resInt, resInt1, resInt2, resInt3;
 		double ConstPhotEnInteg = 1.;
 		long long Two_ie0 = ie0 << 1, Two_ie1 = ie1 << 1; //OC26042019
@@ -316,18 +314,18 @@ __global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract
 			}
 		}
 		//OC140813
-		if (pI != 0) *(pI++) = (float)resInt;
-		if (pId != 0) *(pId++) = resInt; //OC18042020
+		if (pI != 0) *pI = (float)resInt;
+		if (pId != 0) *pId = resInt; //OC18042020
 		//if(pId != 0) *(pId++) = (double)resInt;
 		if (allStokesReq) //OC18042020
 		{
 			if (RadExtract.pExtractedData != 0)
 			{
-				*(pI1++) = (float)resInt1; *(pI2++) = (float)resInt2; *(pI3++) = (float)resInt3;
+				*pI1 = (float)resInt1; *pI2 = (float)resInt2; *pI3 = (float)resInt3;
 			}
 			else
 			{
-				*(pI1d++) = resInt1; *(pI2d++) = resInt2; *(pI3d++) = resInt3;
+				*pI1d = resInt1; *pI2d = resInt2; *pI3d = resInt3;
 			}
 		}
 	}
@@ -345,7 +343,22 @@ int srTRadGenManip::ExtractSingleElecIntensity2DvsXZParallel(srTRadExtract& RadE
 	cudaMalloc((void**)&local_copy, sizeof(srTRadGenManip));
 	cudaMemcpy(local_copy, this, sizeof(srTRadGenManip), cudaMemcpyHostToDevice);
 
-    ExtractSingleElecIntensity2DvsXZ_Kernel<< <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg);
+	bool allStokesReq = (RadExtract.PolarizCompon == -5);
+	bool intOverEnIsRequired = (RadExtract.Int_or_Phase == 7) && (RadAccessData.ne > 1);
+
+	int Int_or_ReE = RadExtract.Int_or_Phase;
+	if (Int_or_ReE == 7) Int_or_ReE = 0; //OC150813: time/phot. energy integrated single-e intensity requires "normal" intensity here
+
+	if (allStokesReq)
+		if (intOverEnIsRequired)
+    		ExtractSingleElecIntensity2DvsXZ_Kernel<true, true> << <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
+		else
+    		ExtractSingleElecIntensity2DvsXZ_Kernel<true, false> << <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
+	else
+		if (intOverEnIsRequired)
+    		ExtractSingleElecIntensity2DvsXZ_Kernel<false, true> << <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
+		else
+    		ExtractSingleElecIntensity2DvsXZ_Kernel<false, false> << <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
 	cudaFreeAsync(local_copy, 0);
 
 #ifdef _DEBUG
