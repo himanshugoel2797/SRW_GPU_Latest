@@ -10,6 +10,7 @@ from tabnanny import check #Python 2.7 compatibility
 from srwlib import *
 from srwl_uti_smp import *
 import srwl_uti_smp_rnd_obj3d
+import matplotlib.pyplot as plt
 from uti_plot import * #required for plotting
 import os
 import time
@@ -205,7 +206,7 @@ def uti_read_wfr_cm_hdf5(_file_path, _gen0s=True, _wfrs_per_grp = 100): #OC11042
 
     return wfrs
 
-wfr_list = uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName), _wfrs_per_grp=2)
+wfr_list = uti_read_wfr_cm_hdf5(os.path.join(os.getcwd(), strDataFolderName, strCmDataFileName), _wfrs_per_grp=1)
 print('{} groups of coherent modes with {} per group loaded'.format(len(wfr_list), wfr_list[0].nWfr))
 
 #************Defining Samples (lists of 3D objects (spheres))
@@ -311,8 +312,6 @@ for it in range(len(listObjBrownian)):
     opBL = SRWLOptC([opSmp, opSmp_Det], 
                     [ppSmp, ppSmp_Det, ppFin])
     
-    arI1_CM = None
-
     idx = 0
     wfrP_list = deepcopy(wfr_list)
     cmFrames = []
@@ -323,7 +322,6 @@ for it in range(len(listObjBrownian)):
 
         srwl.PropagElecField(wfrP, opBL, None, gpu_id)
         print('done in', round(time.time() - t, 3), 's')
-        idx+=1
 
         print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
         
@@ -338,17 +336,18 @@ for it in range(len(listObjBrownian)):
             cmFrames.append(stkDet.arS.get())
         else:
             cmFrames.append(stkDet.arS)
+        print('done in', round(time.time() - t, 3), 's')
         
         del stkDet.arS
         del wfrP.arEx
         del wfrP.arEy
 
-        print('done in', round(time.time() - t, 3), 's')
         if useCuPy:
             cupyMempool.free_all_blocks()
             print('used bytes (MiB): ', cupyMempool.used_bytes() / (1024 * 1024))
             print('total bytes (MiB): ', cupyMempool.total_bytes() / (1024 * 1024))
         
+        idx+=1
 
     #Plotting the Results (requires 3rd party graphics package)
     print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
@@ -363,7 +362,7 @@ for it in range(len(listObjBrownian)):
     if useCuPy:
         opPathDif = opPathDif.get()
     uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
-        
+    
     #Scattered Radiation Intensity Distribution in Log Scale
     plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
     plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
@@ -372,13 +371,38 @@ for it in range(len(listObjBrownian)):
     arLogI1 = copy(cmArI1)
     arLogI1 = np.clip(cmArI1, 0, None, arLogI1)
     arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0)
+    
+    arLogI1_fc = copy(cmFrames[0])
+    arLogI1_fc = np.clip(cmFrames[0], 0, None, arLogI1_fc)
+    arLogI1_fc = np.where(arLogI1_fc != 0, np.log10(arLogI1_fc, out=arLogI1_fc), 0)
     #for i in range(nTot):
     #    curI = arI1[i]
     #    if(curI <= 0.): arLogI1[i] = 0 #?
     #    else: arLogI1[i] = log(curI, 10)
 
-    uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['At 45 degree diagonal', 'At -45 degree diagonal', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''], _diagonals=True)
+    uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['45 degree diagonal', '-45 degree diagonal', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''], _diagonals=True)
     print('done')
+
+    diag0_pc = np.diag(arLogI1.reshape(mesh1.ny, mesh1.nx).transpose()) #45 degree diagonal
+    diag1_pc = np.diag(arLogI1.reshape(mesh1.ny, mesh1.nx)) #-45 degree diagonal
+    
+    diag0_fc = np.diag(arLogI1_fc.reshape(mesh1.ny, mesh1.nx).transpose()) #45 degree diagonal
+    diag1_fc = np.diag(arLogI1_fc.reshape(mesh1.ny, mesh1.nx)) #-45 degree diagonal
+
+    diagScale = 1000
+    diagStart = -(mesh1.xStart**2 + mesh1.yStart**2) ** 0.5 * diagScale
+    diagFin = (mesh1.xFin**2 + mesh1.yFin**2) ** 0.5 * diagScale
+
+    #Generate FC vs PC plot
+    plt.figure()
+    plt.title("Fully Coherent vs Partially Coherent Intensity")
+    plt.xlabel("45 degree diagonal (mm)")
+    plt.ylabel("Log of Intensity at Detector")
+    plt.plot(np.arange(diagStart, diagFin, (diagFin - diagStart)/len(diag0_pc)), diag0_fc, label="Fully Coherent", color="red", linewidth=0.7)
+    plt.plot(np.arange(diagStart, diagFin, (diagFin - diagStart)/len(diag0_pc)), diag0_pc, label="Partially Coherent", color="blue", linewidth=0.7)
+    plt.legend()
+    plt.grid(True, which="both")
+    plt.show()
 
     #if(arDetFrames is not None): #Saving simulated Detector data file
     #    print('   Saving all Detector data to another file (that can be used in subsequent processing) ... ', end='')
