@@ -672,7 +672,7 @@ int srTRadGenManip::ExtractSingleElecIntensity1DvsZ(srTRadExtract& RadExtract)
 
 //*************************************************************************
 
-int srTRadGenManip::ExtractSingleElecIntensity2DvsXZ(srTRadExtract& RadExtract)
+int srTRadGenManip::ExtractSingleElecIntensity2DvsXZ(srTRadExtract& RadExtract, gpuUsageArg_t* pGpuUsage)
 {
 	int PolCom = RadExtract.PolarizCompon;
 	int Int_or_ReE = RadExtract.Int_or_Phase;
@@ -728,7 +728,7 @@ int srTRadGenManip::ExtractSingleElecIntensity2DvsXZ(srTRadExtract& RadExtract)
 	//double *arAuxInt = 0, resInt;
 	if (intOverEnIsRequired)
 	{
-		arAuxInt = new double[RadAccessData.ne];
+		arAuxInt = ALLOC_ARRAY(double, RadAccessData.ne);
 	}
 	else SetupIntCoord('e', RadExtract.ePh, ie0, ie1, InvStepRelArg); //OC140813
 
@@ -741,128 +741,135 @@ int srTRadGenManip::ExtractSingleElecIntensity2DvsXZ(srTRadExtract& RadExtract)
 	//long izPerZ = 0;
 	long ix, ie;
 
-	long long iwfrPerWfr = 0;
-	for (long long iwfr = 0; iwfr < nwfr; iwfr++)
+	GPU_COND(pGpuUsage,
 	{
-		long long izPerZ = 0;
-		for (long long iz = 0; iz < nz; iz++) //OC18042020
-		//for(long long iz=0; iz<RadAccessData.nz; iz++) //OC26042019
-		//for(long iz=0; iz<RadAccessData.nz; iz++)
+		ExtractSingleElecIntensity2DvsXZParallel(RadExtract, arAuxInt, ie0, ie1, InvStepRelArg);
+	})
+	else
+	{
+		long long iwfrPerWfr = 0;
+		for (long long iwfr = 0; iwfr < nwfr; iwfr++)
 		{
-			float* pEx_StartForX = pEx0 + iwfrPerWfr + izPerZ;
-			float* pEz_StartForX = pEz0 + iwfrPerWfr + izPerZ;
-			//long ixPerX = 0;
-
-			float* pEx_St = pEx_StartForX + Two_ie0;
-			float* pEz_St = pEz_StartForX + Two_ie0;
-			float* pEx_Fi = pEx_StartForX + Two_ie1;
-			float* pEz_Fi = pEz_StartForX + Two_ie1;
-
-			for (ix = 0; ix < nx; ix++) //OC18042020
-			//for(long ix=0; ix<RadAccessData.nx; ix++)
+			long long izPerZ = 0;
+			for (long long iz = 0; iz < nz; iz++) //OC18042020
+			//for(long long iz=0; iz<RadAccessData.nz; iz++) //OC26042019
+			//for(long iz=0; iz<RadAccessData.nz; iz++)
 			{
-				//float *pEx_StartForE = pEx_StartForX + ixPerX;
-				//float *pEz_StartForE = pEz_StartForX + ixPerX;
-				//float *pEx_St = pEx_StartForE + Two_ie0, *pEx_Fi = pEx_StartForE + Two_ie1;
-				//float *pEz_St = pEz_StartForE + Two_ie0, *pEz_Fi = pEz_StartForE + Two_ie1;
+				float* pEx_StartForX = pEx0 + iwfrPerWfr + izPerZ;
+				float* pEz_StartForX = pEz0 + iwfrPerWfr + izPerZ;
+				//long ixPerX = 0;
 
-				//OC140813
-				//if(pI != 0) *(pI++) = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, PolCom, Int_or_ReE);
-				//if(pId != 0) *(pId++) = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, PolCom, Int_or_ReE);
+				float* pEx_St = pEx_StartForX + Two_ie0;
+				float* pEz_St = pEz_StartForX + Two_ie0;
+				float* pEx_Fi = pEx_StartForX + Two_ie1;
+				float* pEz_Fi = pEz_StartForX + Two_ie1;
 
-				if (intOverEnIsRequired) //OC140813
-				{//integrate over photon energy / time
-					double* tInt = arAuxInt;
-					float* pEx_StAux = pEx_St;
-					float* pEz_StAux = pEz_St;
+				for (ix = 0; ix < nx; ix++) //OC18042020
+				//for(long ix=0; ix<RadAccessData.nx; ix++)
+				{
+					//float *pEx_StartForE = pEx_StartForX + ixPerX;
+					//float *pEz_StartForE = pEz_StartForX + ixPerX;
+					//float *pEx_St = pEx_StartForE + Two_ie0, *pEx_Fi = pEx_StartForE + Two_ie1;
+					//float *pEz_St = pEz_StartForE + Two_ie0, *pEz_Fi = pEz_StartForE + Two_ie1;
 
-					if (!allStokesReq) //OC17042020
-					{
-						for (ie = 0; ie < ne; ie++) //OC18042020
-						//for(int ie=0; ie<RadAccessData.ne; ie++)
+					//OC140813
+					//if(pI != 0) *(pI++) = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, PolCom, Int_or_ReE);
+					//if(pId != 0) *(pId++) = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, PolCom, Int_or_ReE);
+
+					if (intOverEnIsRequired) //OC140813
+					{//integrate over photon energy / time
+						double* tInt = arAuxInt;
+						float* pEx_StAux = pEx_St;
+						float* pEz_StAux = pEz_St;
+
+						if (!allStokesReq) //OC17042020
 						{
-							*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, PolCom, Int_or_ReE);
-							pEx_StAux += 2;
-							pEz_StAux += 2;
+							for (ie = 0; ie < ne; ie++) //OC18042020
+							//for(int ie=0; ie<RadAccessData.ne; ie++)
+							{
+								*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, PolCom, Int_or_ReE);
+								pEx_StAux += 2;
+								pEz_StAux += 2;
+							}
+							resInt = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep); //OC18042020
+							//resInt = ConstPhotEnInteg*CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, RadAccessData.ne, RadAccessData.eStep);
 						}
-						resInt = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep); //OC18042020
-						//resInt = ConstPhotEnInteg*CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, RadAccessData.ne, RadAccessData.eStep);
+						else
+						{
+							for (ie = 0; ie < ne; ie++)
+							{
+								*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, -1, Int_or_ReE);
+								pEx_StAux += 2; pEz_StAux += 2;
+							}
+							resInt = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep);
+
+							tInt = arAuxInt; pEx_StAux = pEx_St; pEz_StAux = pEz_St;
+							for (ie = 0; ie < ne; ie++)
+							{
+								*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, -2, Int_or_ReE);
+								pEx_StAux += 2; pEz_StAux += 2;
+							}
+							resInt1 = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep);
+
+							tInt = arAuxInt; pEx_StAux = pEx_St; pEz_StAux = pEz_St;
+							for (ie = 0; ie < ne; ie++)
+							{
+								*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, -3, Int_or_ReE);
+								pEx_StAux += 2; pEz_StAux += 2;
+							}
+							resInt2 = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep);
+
+							tInt = arAuxInt; pEx_StAux = pEx_St; pEz_StAux = pEz_St;
+							for (ie = 0; ie < ne; ie++)
+							{
+								*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, -4, Int_or_ReE);
+								pEx_StAux += 2; pEz_StAux += 2;
+							}
+							resInt3 = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep);
+						}
 					}
 					else
 					{
-						for (ie = 0; ie < ne; ie++)
+						if (!allStokesReq) //OC18042020
 						{
-							*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, -1, Int_or_ReE);
-							pEx_StAux += 2; pEz_StAux += 2;
+							resInt = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, PolCom, Int_or_ReE);
 						}
-						resInt = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep);
-
-						tInt = arAuxInt; pEx_StAux = pEx_St; pEz_StAux = pEz_St;
-						for (ie = 0; ie < ne; ie++)
+						else //OC18042020
 						{
-							*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, -2, Int_or_ReE);
-							pEx_StAux += 2; pEz_StAux += 2;
+							resInt = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, -1, Int_or_ReE);
+							resInt1 = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, -2, Int_or_ReE);
+							resInt2 = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, -3, Int_or_ReE);
+							resInt3 = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, -4, Int_or_ReE);
 						}
-						resInt1 = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep);
-
-						tInt = arAuxInt; pEx_StAux = pEx_St; pEz_StAux = pEz_St;
-						for (ie = 0; ie < ne; ie++)
-						{
-							*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, -3, Int_or_ReE);
-							pEx_StAux += 2; pEz_StAux += 2;
-						}
-						resInt2 = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep);
-
-						tInt = arAuxInt; pEx_StAux = pEx_St; pEz_StAux = pEz_St;
-						for (ie = 0; ie < ne; ie++)
-						{
-							*(tInt++) = IntensityComponent(pEx_StAux, pEz_StAux, -4, Int_or_ReE);
-							pEx_StAux += 2; pEz_StAux += 2;
-						}
-						resInt3 = ConstPhotEnInteg * CGenMathMeth::Integ1D_FuncDefByArray(arAuxInt, ne, RadAccessData.eStep);
 					}
+					//OC140813
+					if (pI != 0) *(pI++) = (float)resInt;
+					if (pId != 0) *(pId++) = resInt; //OC18042020
+					//if(pId != 0) *(pId++) = (double)resInt;
+					if (allStokesReq) //OC18042020
+					{
+						if (RadExtract.pExtractedData != 0)
+						{
+							*(pI1++) = (float)resInt1; *(pI2++) = (float)resInt2; *(pI3++) = (float)resInt3;
+						}
+						else
+						{
+							*(pI1d++) = resInt1; *(pI2d++) = resInt2; *(pI3d++) = resInt3;
+						}
+					}
+
+					//ixPerX += PerX;
+					pEx_St += PerX;
+					pEz_St += PerX;
+					pEx_Fi += PerX;
+					pEz_Fi += PerX;
 				}
-				else
-				{
-					if (!allStokesReq) //OC18042020
-					{
-						resInt = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, PolCom, Int_or_ReE);
-					}
-					else //OC18042020
-					{
-						resInt = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, -1, Int_or_ReE);
-						resInt1 = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, -2, Int_or_ReE);
-						resInt2 = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, -3, Int_or_ReE);
-						resInt3 = IntensityComponentSimpleInterpol(pEx_St, pEx_Fi, pEz_St, pEz_Fi, InvStepRelArg, -4, Int_or_ReE);
-					}
-				}
-				//OC140813
-				if (pI != 0) *(pI++) = (float)resInt;
-				if (pId != 0) *(pId++) = resInt; //OC18042020
-				//if(pId != 0) *(pId++) = (double)resInt;
-				if (allStokesReq) //OC18042020
-				{
-					if (RadExtract.pExtractedData != 0)
-					{
-						*(pI1++) = (float)resInt1; *(pI2++) = (float)resInt2; *(pI3++) = (float)resInt3;
-					}
-					else
-					{
-						*(pI1d++) = resInt1; *(pI2d++) = resInt2; *(pI3d++) = resInt3;
-					}
-				}
-
-				//ixPerX += PerX;
-				pEx_St += PerX;
-				pEz_St += PerX;
-				pEx_Fi += PerX;
-				pEz_Fi += PerX;
+				izPerZ += PerZ;
 			}
-			izPerZ += PerZ;
+			iwfrPerWfr += PerWfr;
 		}
-		iwfrPerWfr += PerWfr;
 	}
-	if (arAuxInt != 0) delete[] arAuxInt; //OC150813
+	if (arAuxInt != 0) FREE_ARRAY(arAuxInt); //OC150813
 	return 0;
 }
 

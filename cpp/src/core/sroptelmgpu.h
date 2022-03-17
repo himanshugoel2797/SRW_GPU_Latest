@@ -59,14 +59,14 @@ template<class T> int RadPointModifierParallelImpl(srTSRWRadStructAccessData* pR
     printf("RadPointModifierParallelImpl on GPU\n");
 
     T* local_copy = NULL;
-    cudaMallocManaged(&local_copy, sizeof(T));
-    memcpy(local_copy, tgt_obj, sizeof(T));
+    cudaMalloc(&local_copy, sizeof(T));
+    cudaMemcpy(local_copy, tgt_obj, sizeof(T), cudaMemcpyHostToDevice);
 	
 	void* pBufVars_dev = NULL;
 	if (pBufVarsSz > 0)
 	{
-    	cudaMallocManaged(&pBufVars_dev, pBufVarsSz);
-    	memcpy(pBufVars_dev, pBufVars, pBufVarsSz);
+    	cudaMalloc(&pBufVars_dev, pBufVarsSz);
+    	cudaMemcpy(pBufVars_dev, pBufVars, pBufVarsSz, cudaMemcpyHostToDevice);
 	}
 	RadPointModifierParallel_Kernel<T> << <blocks, threads >> > (*pRadAccessData, pBufVars_dev, local_copy);
     //cudaDeviceSynchronize();

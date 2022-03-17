@@ -3339,8 +3339,10 @@ void ParseDeviceParam(PyObject* oDev, gpuUsageArg_t *pGpuUsage) //HG10202021
 	if (oDev != 0) {
 		if (PyLong_Check(oDev)) {
 			*pGpuUsage = _PyLong_AsInt(oDev);
+			return;
 		}
 	}
+	*pGpuUsage = 0;
 }
 
 /************************************************************************//**
@@ -4656,11 +4658,12 @@ static PyObject* srwlpy_CalcIntFromElecField(PyObject *self, PyObject *args)
 {
 	//PyObject *oInt=0, *oWfr=0, *oPol=0, *oIntType=0, *oDepType=0, *oE=0, *oX=0, *oY=0;
 	//PyObject *oInt=0, *oWfr=0, *oPol=0, *oIntType=0, *oDepType=0, *oE=0, *oX=0, *oY=0, *oMeth=0;
-	PyObject *oInt=0, *oWfr=0, *oPol=0, *oIntType=0, *oDepType=0, *oE=0, *oX=0, *oY=0, *oMeth=0, *oFldTrj=0; //OC23022020
+	PyObject *oInt=0, *oWfr=0, *oPol=0, *oIntType=0, *oDepType=0, *oE=0, *oX=0, *oY=0, *oMeth=0, *oFldTrj=0, *oDev=0; //OC23022020
 	vector<Py_buffer> vBuf;
 	SRWLWfr wfr;
 	SRWLMagFldC *pMagCnt=0; //OC23022020
 	SRWLPrtTrj *pPrtTrj=0;
+	gpuUsageArg_t gpuUsage;
 
 	srwlUtiDevInit();
 	try
@@ -4668,7 +4671,7 @@ static PyObject* srwlpy_CalcIntFromElecField(PyObject *self, PyObject *args)
 		//if(!PyArg_ParseTuple(args, "OOOOOOOO:CalcIntFromElecField", &oInt, &oWfr, &oPol, &oIntType, &oDepType, &oE, &oX, &oY)) throw strEr_BadArg_CalcIntFromElecField;
 		//if(!PyArg_ParseTuple(args, "OOOOOOOO|O:CalcIntFromElecField", &oInt, &oWfr, &oPol, &oIntType, &oDepType, &oE, &oX, &oY, &oMeth)) throw strEr_BadArg_CalcIntFromElecField; //OC13122019
 		//if(!PyArg_ParseTuple(args, "OOOOOOOO|O:CalcIntFromElecField", &oInt, &oWfr, &oPol, &oIntType, &oDepType, &oE, &oX, &oY, &oMeth, &oFldTrj)) throw strEr_BadArg_CalcIntFromElecField; //OC23022020
-		if(!PyArg_ParseTuple(args, "OOOOOOOO|OO:CalcIntFromElecField", &oInt, &oWfr, &oPol, &oIntType, &oDepType, &oE, &oX, &oY, &oMeth, &oFldTrj)) throw strEr_BadArg_CalcIntFromElecField; //OC03032021 (just formally corrected, according to number of arguments)
+		if(!PyArg_ParseTuple(args, "OOOOOOOO|OOO:CalcIntFromElecField", &oInt, &oWfr, &oPol, &oIntType, &oDepType, &oE, &oX, &oY, &oMeth, &oFldTrj, &oDev)) throw strEr_BadArg_CalcIntFromElecField; //OC03032021 (just formally corrected, according to number of arguments)
 		if((oInt == 0) || (oWfr == 0) || (oPol == 0) || (oIntType == 0) || (oDepType == 0) || (oE == 0) || (oX == 0) || (oY == 0)) throw strEr_BadArg_CalcIntFromElecField;
 
 		//char *arInt = (char*)GetPyArrayBuf(oInt, vBuf, PyBUF_WRITABLE, 0);
@@ -4729,9 +4732,11 @@ static PyObject* srwlpy_CalcIntFromElecField(PyObject *self, PyObject *args)
 			}
 		}
 
+		ParseDeviceParam(oDev, &gpuUsage);
 		//ProcRes(srwlCalcIntFromElecField(arInt, &wfr, pol, intType, depType, e, x, y));
 		//ProcRes(srwlCalcIntFromElecField(arInt, &wfr, pol, intType, depType, e, x, y, pMeth)); //OC13122019
-		ProcRes(srwlCalcIntFromElecField(arInt, &wfr, pol, intType, depType, e, x, y, pMeth, pFldTrj)); //OC23022020
+		ProcRes(srwlCalcIntFromElecField(arInt, &wfr, pol, intType, depType, e, x, y, pMeth, pFldTrj, &gpuUsage)); //OC23022020
+		CleanDeviceParam();
 	}
 	catch(const char* erText) 
 	{
@@ -5069,6 +5074,7 @@ static PyObject* srwlpy_CalcTransm(PyObject* self, PyObject* args) //HG27012021
 	double **arObjShapeDefs=0; //OC28012021
 	int numObj3D=0; //OC28012021
 
+	srwlUtiDevInit();
 	try 
 	{
 		//PyObject *shape_defs_obj = 0, *delta_obj = 0, *atten_len_obj = 0, *optT_obj = 0, *presc_obj;
@@ -5107,17 +5113,16 @@ static PyObject* srwlpy_CalcTransm(PyObject* self, PyObject* args) //HG27012021
 			CPyParse::CopyPyListElemsToNumArray(prec_obj, 'd', arPar, nPar, dummy);
 		}
 
-		srwlUtiDevInit();
 		//ProcRes(srwlCalcTransm(&pOptElem, atten_len, delta, shape_defs, shape_def_count, nullptr));
 		//ProcRes(srwlCalcTransm(&opTr, atten_len, delta, arObjShapeDefs, numObj3D, arPar)); //OC28012021
 		ProcRes(srwlCalcTransm(&opTr, delta, atten_len, arObjShapeDefs, numObj3D, arPar)); //OC24082021
-		srwlUtiDevFini();
 	}
 	catch(const char* erText) 
 	{
 		PyErr_SetString(PyExc_RuntimeError, erText);
 		optT_obj = 0; //OC27012021
 	}
+	srwlUtiDevFini();
 
 	if(shape_defs != 0) delete[] shape_defs; //OC27012021
 	if(atten_len != 0) delete[] atten_len;

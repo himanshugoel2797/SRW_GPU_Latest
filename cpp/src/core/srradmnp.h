@@ -85,7 +85,7 @@ public:
 	//	if(m_arIndEforCSD != 0) delete[] m_arIndEforCSD;
 	//}
 
-	void ExtractRadiation(int PolarizCompon, int Int_or_Phase, int SectID, int TransvPres, double e, double x, double z, char* pData, double* pMeth=0, srTTrjDat* pTrjDat=0) //OC23022020
+	void ExtractRadiation(int PolarizCompon, int Int_or_Phase, int SectID, int TransvPres, double e, double x, double z, char* pData, double* pMeth=0, srTTrjDat* pTrjDat=0, gpuUsageArg_t* pGpuUsage=0) //OC23022020
 	//void ExtractRadiation(int PolarizCompon, int Int_or_Phase, int SectID, int TransvPres, double e, double x, double z, char* pData, double* pMeth=0) //OC16122019
 	//void ExtractRadiation(int PolarizCompon, int Int_or_Phase, int SectID, int TransvPres, double e, double x, double z, char* pData, int* pMeth=0) //OC13122019
 	//void ExtractRadiation(int PolarizCompon, int Int_or_Phase, int SectID, int TransvPres, double e, double x, double z, char* pData);
@@ -127,7 +127,7 @@ public:
 		//}
 		else
 		{
-			if(res = ExtractSingleElecIntensity(RadExtract)) throw res;
+			if(res = ExtractSingleElecIntensity(RadExtract, pGpuUsage)) throw res;
 		}
 
 		//OCTEST17082019
@@ -156,7 +156,7 @@ public:
 	//	ExtractRadiation((int)polar, (int)intType, (int)depType, (int)transvPres, e, x, z, pData);
 	//}
 
-	int ExtractRadiation(srTRadExtract& RadExtract, srTWaveAccessData& ExtractedWaveData)
+	int ExtractRadiation(srTRadExtract& RadExtract, srTWaveAccessData& ExtractedWaveData, gpuUsageArg_t* pGpuUsage=0)
 	{
 		int result;
         srTSRWRadStructAccessData& RadAccessData = *((srTSRWRadStructAccessData*)(hRadAccessData.ptr()));
@@ -170,7 +170,7 @@ public:
 		}
 		else
 		{
-			if(result = ExtractSingleElecIntensity(RadExtract)) return result;
+			if(result = ExtractSingleElecIntensity(RadExtract, pGpuUsage)) return result;
 		}
 		if(result = SetupExtractedWaveData(RadExtract, ExtractedWaveData)) return result;
 
@@ -179,12 +179,12 @@ public:
 		return 0;
 	}
 
-	int ExtractSingleElecIntensity(srTRadExtract& RadExtract)
+	int ExtractSingleElecIntensity(srTRadExtract& RadExtract, gpuUsageArg_t* pGpuUsage=0)
 	{
 		if(RadExtract.PlotType == 0) return ExtractSingleElecIntensity1DvsE(RadExtract);
 		else if(RadExtract.PlotType == 1) return ExtractSingleElecIntensity1DvsX(RadExtract);
 		else if(RadExtract.PlotType == 2) return ExtractSingleElecIntensity1DvsZ(RadExtract);
-		else if(RadExtract.PlotType == 3) return ExtractSingleElecIntensity2DvsXZ(RadExtract);
+		else if(RadExtract.PlotType == 3) return ExtractSingleElecIntensity2DvsXZ(RadExtract, pGpuUsage);
 		else if(RadExtract.PlotType == 4) return ExtractSingleElecIntensity2DvsEX(RadExtract);
 		else if(RadExtract.PlotType == 5) return ExtractSingleElecIntensity2DvsEZ(RadExtract);
 		else return ExtractSingleElecIntensity3D(RadExtract);
@@ -233,7 +233,10 @@ public:
 	int ExtractSingleElecIntensity1DvsE(srTRadExtract&);
 	int ExtractSingleElecIntensity1DvsX(srTRadExtract&);
 	int ExtractSingleElecIntensity1DvsZ(srTRadExtract&);
-	int ExtractSingleElecIntensity2DvsXZ(srTRadExtract&);
+#ifdef _OFFLOAD_GPU
+	int ExtractSingleElecIntensity2DvsXZParallel(srTRadExtract&, double*, long long, long long, double);
+#endif
+	int ExtractSingleElecIntensity2DvsXZ(srTRadExtract&, gpuUsageArg_t* pGpuUsage=0);
 	int ExtractSingleElecIntensity2DvsEX(srTRadExtract&);
 	int ExtractSingleElecIntensity2DvsEZ(srTRadExtract&);
 	int ExtractSingleElecIntensity3D(srTRadExtract&);
@@ -306,7 +309,7 @@ public:
 		else if(PolCom==4) { *PolVect = OneReN; *(PolVect+1) = OneImN;}
 		else if(PolCom==5) { *PolVect = OneReN; *(PolVect+1) = -OneImN;}
 	}
-	float IntensityComponentSimpleInterpol(float* pEx_St, float* pEx_Fi, float* pEz_St, float* pEz_Fi, double InvStepRelArg, int PolCom, int Int_or_ReE)
+	GPU_PORTABLE float IntensityComponentSimpleInterpol(float* pEx_St, float* pEx_Fi, float* pEz_St, float* pEz_Fi, double InvStepRelArg, int PolCom, int Int_or_ReE)
 	{
 		float I_St = IntensityComponent(pEx_St, pEz_St, PolCom, Int_or_ReE);
 		if(Int_or_ReE == 2) return I_St;
@@ -325,7 +328,7 @@ public:
 		double Arg1Arg2 = Arg1*Arg2;
 		return (float)((I00 - I01 - I10 + I11)*Arg1Arg2 + (I10 - I00)*Arg1 + (I01 - I00)*Arg2 + I00);
 	}
-	float IntensityComponent(float* pEx, float* pEz, int PolCom, int Int_or_ReE)
+	GPU_PORTABLE float IntensityComponent(float* pEx, float* pEz, int PolCom, int Int_or_ReE)
 	{
 		//float ExRe = *pEx, ExIm = *(pEx + 1), EzRe = *pEz, EzIm = *(pEz + 1);
 		float ExRe = 0., ExIm = 0., EzRe = 0., EzIm = 0.; //OC111111
@@ -389,7 +392,7 @@ public:
 		}
 		//return (float)(ExRe*ExRe + ExIm*ExIm + EzRe*EzRe + EzIm*EzIm);
 	}
-	double FormalPhase(float Re, float Im)
+	GPU_PORTABLE double FormalPhase(float Re, float Im)
 	{
 		const double HalhPi = 1.5707963267949;
 		const double Pi = 3.1415926535898;
@@ -712,7 +715,7 @@ public:
 		return true;
 	}
 
-	static void CosAndSin(double x, float& Cos, float& Sin) //OC23062021
+	GPU_PORTABLE static void CosAndSin(double x, float& Cos, float& Sin) //OC23062021
 	{
 		const double TwoPI = 6.2831853071796;
 		const double ThreePIdTwo = 4.7123889803847;

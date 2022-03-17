@@ -55,7 +55,7 @@ bool UtiDev::GPUEnabled(gpuUsageArg_t *arg)
 	if (arg == NULL)
 		return false;
 	if (*arg > 0) {
-		if (cudaSetDevice(*arg - 1) != cudaSuccess) return false;
+		//if (cudaSetDevice(*arg - 1) != cudaSuccess) return false;
 		return GPUAvailable();
 	}
 #endif

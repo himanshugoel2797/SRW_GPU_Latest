@@ -29,6 +29,11 @@ except:
 print('SRWLIB Python Example # 19:')
 print('Simulating Coherent X-ray (Gaussian beam) Scattering from ensemble of 3D particles modifying their positions due to Brownian motion')
 
+if useCuPy:
+    gpu_id = 1
+else:
+    gpu_id = 0
+
 #***********Folder and Data File Names
 strDataFolderName = 'data_example_19' #Data sub-folder name
 strSampleSubFolderName = 'samples' #Sub-folder name for storing Sample data
@@ -268,7 +273,7 @@ opSmp_Det = SRWLOptD(distSmp_Det)
 #[10]: New Horizontal wavefront Center position after Shift
 #[11]: New Vertical wavefront Center position after Shift
 #           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
-ppSmp =     [0, 0, 1., 0, 0, 1., 55. * 1, 1., 55. * 1,  0, 0, 0]
+ppSmp =     [0, 0, 1., 0, 0, 1., 55. * 3, 1., 55. * 3,  0, 0, 0]
 ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 
@@ -316,7 +321,7 @@ for it in range(len(listObjBrownian)):
         print('   Propagating Wavefront Group #%d... '%(idx), end='')
         t = time.time()
 
-        srwl.PropagElecField(wfrP, opBL, None, 1)    
+        srwl.PropagElecField(wfrP, opBL, None, gpu_id)
         print('done in', round(time.time() - t, 3), 's')
         idx+=1
 
@@ -326,18 +331,21 @@ for it in range(len(listObjBrownian)):
         mesh1 = deepcopy(wfrP.mesh)
         if arI1 is None:
             arI1 = cp.zeros(mesh1.nx*mesh1.ny*wfrP.nWfr, dtype=np.float32)#array('f', [0]*mesh1.nx*mesh1.ny*wfrP.nWfr) #"flat" array to take 2D intensity data
-        srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0) #extracts intensity
-        stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr, _gpu=1) #"Projecting" intensity on detector (by interpolation)
+        srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0, None, None, gpu_id) #extracts intensity
+        stkDet = det.treat_int(arI1, _mesh = mesh1, _nwfr = wfrP.nWfr, _gpu=gpu_id) #"Projecting" intensity on detector (by interpolation)
         mesh1 = deepcopy(stkDet.mesh)
-        cmFrames.append(stkDet.arS.get())
+        if useCuPy:
+            cmFrames.append(stkDet.arS.get())
+        else:
+            cmFrames.append(stkDet.arS)
         
         del stkDet.arS
         del wfrP.arEx
         del wfrP.arEy
 
-        cupyMempool.free_all_blocks()
-        print(cupyMempool.used_bytes() / (1024 * 1024))
-        print(cupyMempool.total_bytes() / (1024 * 1024))
+        #cupyMempool.free_all_blocks()
+        #print(cupyMempool.used_bytes() / (1024 * 1024))
+        #print(cupyMempool.total_bytes() / (1024 * 1024))
         
         print('done in', round(time.time() - t, 3), 's')
 
@@ -351,7 +359,9 @@ for it in range(len(listObjBrownian)):
     meshS = opSmp.mesh
     plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
     plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
-    uti_plot2d(opPathDif.get(), plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
+    if useCuPy:
+        opPathDif = opPathDif.get()
+    uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
         
     #Scattered Radiation Intensity Distribution in Log Scale
     plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
