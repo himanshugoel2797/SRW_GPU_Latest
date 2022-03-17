@@ -335,10 +335,23 @@ template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //HalfNx range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //HalfNy range
 
-    if (ix < Nx && iy < Ny) {
+    if (ix < HalfNx && iy < HalfNy) 
+    {
         float sx0 = 1 - 2 * (ix % 2);
         float sy0 = 1 - 2 * (iy % 2);
-        float s = sx0 * sy0;
+        float s1 = sx0 * sy0;
+        
+        sx0 = 1 - 2 * ((HalfNx + ix) % 2);
+        sy0 = 1 - 2 * ((HalfNy + iy) % 2);
+        float s2 = sx0 * sy0;
+        
+        sx0 = 1 - 2 * ((HalfNx + ix) % 2);
+        sy0 = 1 - 2 * (iy % 2);
+        float s3 = sx0 * sy0;
+        
+        sx0 = 1 - 2 * (ix % 2);
+        sy0 = 1 - 2 * ((HalfNy + iy) % 2);
+        float s4 = sx0 * sy0;
 
         int idx = (ix + iy * Nx) * 2;
         for (long i = 0; i < howMany; i++){
@@ -346,30 +359,22 @@ template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T
             T* t1 = pAfterFFT + i * Nx2Ny2, *t2 = pAfterFFT + (HalfNyNx + HalfNx) * 2 + i * Nx2Ny2;
             T* t3 = pAfterFFT + HalfNx * 2 + i * Nx2Ny2, *t4 = pAfterFFT + HalfNyNx * 2 + i * Nx2Ny2;
             
-            T buf_r = t1[idx] * s;
-            T buf_im = t1[idx + 1] * s;
+            T buf_r = t1[idx] * s1;
+            T buf_im = t1[idx + 1] * s1;
 
-            if (ix < HalfNx && iy < HalfNy) 
-            {
-                t1[idx] = t2[idx];
-                t1[idx + 1] = t2[idx + 1];
+            t1[idx] = t2[idx] * s2;
+            t1[idx + 1] = t2[idx + 1] * s2;
 
-                t2[idx] = buf_r;
-                t2[idx + 1] = buf_im;
+            t2[idx] = buf_r;
+            t2[idx + 1] = buf_im;
 
-                buf_r = t3[idx];
-                buf_im = t3[idx + 1];
-                t3[idx] = t4[idx];
-                t3[idx + 1] = t4[idx + 1];
+            buf_r = t3[idx] * s3;
+            buf_im = t3[idx + 1] * s3;
+            t3[idx] = t4[idx] * s4;
+            t3[idx + 1] = t4[idx + 1] * s4;
 
-                t4[idx] = buf_r;
-                t4[idx + 1] = buf_im;
-            }
-            else
-            {
-                t1[idx] = buf_r;
-                t1[idx + 1] = buf_im;
-            }
+            t4[idx] = buf_r;
+            t4[idx + 1] = buf_im;
         }
     }
 }
