@@ -339,19 +339,13 @@ template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T
     {
         float sx0 = 1 - 2 * (ix % 2);
         float sy0 = 1 - 2 * (iy % 2);
+        float sx1 = 1 - 2 * ((HalfNx + ix) % 2);
+        float sy1 = 1 - 2 * ((HalfNy + iy) % 2);
+        
         float s1 = sx0 * sy0;
-        
-        sx0 = 1 - 2 * ((HalfNx + ix) % 2);
-        sy0 = 1 - 2 * ((HalfNy + iy) % 2);
-        float s2 = sx0 * sy0;
-        
-        sx0 = 1 - 2 * ((HalfNx + ix) % 2);
-        sy0 = 1 - 2 * (iy % 2);
-        float s3 = sx0 * sy0;
-        
-        sx0 = 1 - 2 * (ix % 2);
-        sy0 = 1 - 2 * ((HalfNy + iy) % 2);
-        float s4 = sx0 * sy0;
+        float s2 = sx1 * sy1;
+        float s3 = sx1 * sy0;
+        float s4 = sx0 * sy1;
 
         int idx = (ix + iy * Nx) * 2;
         for (long i = 0; i < howMany; i++){
