@@ -422,6 +422,9 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 		}
 	}
 
+	bool alreadyNormalized = false;
+	//double Mult = FFT2DInfo.xStep*FFT2DInfo.yStep;
+	double Mult = FFT2DInfo.xStep * FFT2DInfo.yStep * FFT2DInfo.ExtraMult; //OC20112017
 	if (FFT2DInfo.Dir > 0)
 	{
 		GPU_COND(pGpuUsage, {
@@ -503,21 +506,20 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 #endif
 		}
 
-		//pGpuUsage = 0;
-		//cudaDeviceSynchronize();
 		GPU_COND(pGpuUsage, {
 			if (DataToFFT != 0)
 			{
 				//RepairSignAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany);
 				//RotateDataAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany);
-				RepairSignAndRotateDataAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany);
+				RepairSignAndRotateDataAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany, Mult);
 			}
 			else if (dDataToFFT != 0)
 			{
 				//RepairSignAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany);
 				//RotateDataAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany);
-				RepairSignAndRotateDataAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany);
+				RepairSignAndRotateDataAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany, Mult);
 			}
+			alreadyNormalized = true;
 		})
 		else {
 			if (DataToFFT != 0)
@@ -622,21 +624,20 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 		}
 	}
 
-
-	//double Mult = FFT2DInfo.xStep*FFT2DInfo.yStep;
-	double Mult = FFT2DInfo.xStep * FFT2DInfo.yStep * FFT2DInfo.ExtraMult; //OC20112017
-	GPU_COND(pGpuUsage, {
-		if (DataToFFT != 0)
-			NormalizeDataAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany, Mult);
-		else if (dDataToFFT != 0)
-			NormalizeDataAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany, Mult);
-	})
-	else {
-		if (DataToFFT != 0) NormalizeDataAfter2DFFT(DataToFFT, Mult, FFT2DInfo.howMany);
+	if (!alreadyNormalized){
+		GPU_COND(pGpuUsage, {
+			if (DataToFFT != 0)
+				NormalizeDataAfter2DFFT_CUDA((float*)DataToFFT, Nx, Ny, FFT2DInfo.howMany, Mult);
+			else if (dDataToFFT != 0)
+				NormalizeDataAfter2DFFT_CUDA((double*)dDataToFFT, Nx, Ny, FFT2DInfo.howMany, Mult);
+		})
+		else {
+			if (DataToFFT != 0) NormalizeDataAfter2DFFT(DataToFFT, Mult, FFT2DInfo.howMany);
 
 #ifdef _FFTW3 //OC27022019
-		else if (dDataToFFT != 0) NormalizeDataAfter2DFFT(dDataToFFT, Mult, FFT2DInfo.howMany);
+			else if (dDataToFFT != 0) NormalizeDataAfter2DFFT(dDataToFFT, Mult, FFT2DInfo.howMany);
 #endif
+		}
 	}
 
 	//if(NeedsShiftAfterX) FillArrayShift('x', t0SignMult*x0_After, FFT2DInfo.xStepTr);
@@ -837,7 +838,9 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 	//srwlPrintTime("::Make1DFFT : before fft",&start);
 
 	int flags = FFTW_ESTIMATE; //OC30012019
-
+	bool alreadyNormalized = false;
+	//double Mult = FFT1DInfo.xStep;
+	double Mult = FFT1DInfo.xStep * FFT1DInfo.MultExtra;
 	if (FFT1DInfo.Dir > 0)
 	{
 		GPU_COND(pGpuUsage, {
@@ -932,16 +935,17 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 		GPU_COND(pGpuUsage, {
 			if (OutDataFFT != 0)
 			{
-				//RepairAndRotateDataAfter1DFFT_CUDA((float*)OutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
-				RepairSignAfter1DFFT_CUDA((float*)OutDataFFT, FFT1DInfo.HowMany, Nx);
-				RotateDataAfter1DFFT_CUDA((float*)OutDataFFT, FFT1DInfo.HowMany, Nx);
+				RepairAndRotateDataAfter1DFFT_CUDA((float*)OutDataFFT, FFT1DInfo.HowMany, Nx, Mult);
+				//RepairSignAfter1DFFT_CUDA((float*)OutDataFFT, FFT1DInfo.HowMany, Nx);
+				//RotateDataAfter1DFFT_CUDA((float*)OutDataFFT, FFT1DInfo.HowMany, Nx);
 			}
 			else if (dOutDataFFT != 0)
 			{
-				//RepairAndRotateDataAfter1DFFT_CUDA((double*)dOutDataFFT_GPU, FFT1DInfo.HowMany, Nx);
-				RepairSignAfter1DFFT_CUDA((double*)dOutDataFFT, FFT1DInfo.HowMany, Nx);
-				RotateDataAfter1DFFT_CUDA((double*)dOutDataFFT, FFT1DInfo.HowMany, Nx);
+				RepairAndRotateDataAfter1DFFT_CUDA((double*)dOutDataFFT, FFT1DInfo.HowMany, Nx, Mult);
+				//RepairSignAfter1DFFT_CUDA((double*)dOutDataFFT, FFT1DInfo.HowMany, Nx);
+				//RotateDataAfter1DFFT_CUDA((double*)dOutDataFFT, FFT1DInfo.HowMany, Nx);
 			}
+			alreadyNormalized = true;
 		})
 		else {
 			if (OutDataFFT != 0)
@@ -1071,21 +1075,22 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime("::Make1DFFT : fft  dir<0",&start);
 	}
-	//double Mult = FFT1DInfo.xStep;
-	double Mult = FFT1DInfo.xStep * FFT1DInfo.MultExtra;
 
-	GPU_COND(pGpuUsage, {
-		if (OutDataFFT != 0) {
-			NormalizeDataAfter1DFFT_CUDA((float*)OutDataFFT, FFT1DInfo.HowMany, Nx, Mult);
+	if (!alreadyNormalized)
+	{
+		GPU_COND(pGpuUsage, {
+			if (OutDataFFT != 0) {
+				NormalizeDataAfter1DFFT_CUDA((float*)OutDataFFT, FFT1DInfo.HowMany, Nx, Mult);
+			}
+			else if (dOutDataFFT != 0)
+				NormalizeDataAfter1DFFT_CUDA((double*)dOutDataFFT, FFT1DInfo.HowMany, Nx, Mult);
+		})
+		else {
+			if (OutDataFFT != 0) NormalizeDataAfter1DFFT(OutDataFFT, FFT1DInfo.HowMany, Mult);
+	#ifdef _FFTW3 //OC27022019
+			else if (dOutDataFFT != 0) NormalizeDataAfter1DFFT(dOutDataFFT, FFT1DInfo.HowMany, Mult);
+	#endif
 		}
-		else if (dOutDataFFT != 0)
-			NormalizeDataAfter1DFFT_CUDA((double*)dOutDataFFT, FFT1DInfo.HowMany, Nx, Mult);
-	})
-	else {
-		if (OutDataFFT != 0) NormalizeDataAfter1DFFT(OutDataFFT, FFT1DInfo.HowMany, Mult);
-#ifdef _FFTW3 //OC27022019
-		else if (dOutDataFFT != 0) NormalizeDataAfter1DFFT(dOutDataFFT, FFT1DInfo.HowMany, Mult);
-#endif
 	}
 
 

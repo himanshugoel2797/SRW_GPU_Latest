@@ -35,31 +35,32 @@ template <typename T> __global__ void RotateDataAfter1DFFT_Kernel(T* pAfterFFT, 
     }
 }
 
-template <typename T> __global__ void RepairAndRotateAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx2, long Nx) {
-    int ix_cmplx_num = blockIdx.x * blockDim.x + threadIdx.x;
-    int ix = ix_cmplx_num * 2; //Nx range
-    int k = threadIdx.y; //HowMany range
+template <typename T> __global__ void RepairAndRotateAfter1DFFT_Kernel(T* pAfterFFT, long HowMany, long Nx, float Mult) {
+    int ix = (blockIdx.x * blockDim.x + threadIdx.x); //HalfNx range
+    
+    long HalfNx = Nx / 2;
+    long Nx2 = Nx * 2;
+    if (ix < HalfNx) 
+    {
+        float sx0 = 1 - 2 * (ix % 2);
+        float sx1 = 1 - 2 * ((HalfNx + ix) % 2);
+        
+        float s1 = sx0 * Mult;
+        float s2 = sx1 * Mult;
 
-    T real_comp = pAfterFFT[ix + k * Nx2];
-    T imag_comp = pAfterFFT[ix + k * Nx2 + 1];
+        int idx = ix * 2;
+        for (long i = 0; i < HowMany; i++){
+            T* t1 = pAfterFFT + i * Nx2, *t2 = pAfterFFT + (HalfNx) * 2 + i * Nx2;
+            
+            T buf_r = t1[idx] * s1;
+            T buf_im = t1[idx + 1] * s1;
 
-    if (ix < Nx2 && ((ix_cmplx_num & 1) == 1)) {
-        real_comp = -real_comp;
-        imag_comp = -imag_comp;
-    }
+            t1[idx] = t2[idx] * s2;
+            t1[idx + 1] = t2[idx + 1] * s2;
 
-    if (ix < Nx) {
-        T t1_0 = real_comp;
-        T t1_1 = imag_comp;
-
-        pAfterFFT[ix + Nx2 * k] = pAfterFFT[ix + Nx + Nx2 * k];
-        pAfterFFT[ix + Nx2 * k + 1] = pAfterFFT[ix + Nx + Nx2 * k + 1];
-        pAfterFFT[ix + Nx + Nx2 * k] = t1_0;
-        pAfterFFT[ix + Nx + Nx2 * k + 1] = t1_1;
-    }
-    else {
-        pAfterFFT[ix + k * Nx2] = real_comp;
-        pAfterFFT[ix + k * Nx2 + 1] = imag_comp;
+            t2[idx] = buf_r;
+            t2[idx + 1] = buf_im;
+        }
     }
 }
 
@@ -145,7 +146,7 @@ void RotateDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx) {
 #endif
 }
 
-void RepairAndRotateDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx) {
+void RepairAndRotateDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx, float Mult) {
 
 #ifdef _DEBUG
 	cudaStreamSynchronize(0);
@@ -154,9 +155,9 @@ void RepairAndRotateDataAfter1DFFT_CUDA(float* pAfterFFT, long HowMany, long Nx)
 #endif
 
     const int bs = 256;
-    dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
+    dim3 blocks(Nx / (2 * bs) + (((Nx / 2) & (bs - 1)) != 0), 1);
     dim3 threads(bs, 1);
-    RepairAndRotateAfter1DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, HowMany, Nx * 2, Nx);
+    RepairAndRotateAfter1DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, HowMany, Nx, Mult);
 
 #ifdef _DEBUG
 	cudaStreamSynchronize(0);
@@ -230,11 +231,11 @@ void RotateDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx) {
 #endif
 }
 
-void RepairAndRotateDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx) {
+void RepairAndRotateDataAfter1DFFT_CUDA(double* pAfterFFT, long HowMany, long Nx, double Mult) {
     const int bs = 256;
-    dim3 blocks(Nx / bs + ((Nx & (bs - 1)) != 0), HowMany);
+    dim3 blocks(Nx / (2 * bs) + (((Nx / 2) & (bs - 1)) != 0), 1);
     dim3 threads(bs, 1);
-    RepairAndRotateAfter1DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, HowMany, Nx * 2, Nx);
+    RepairAndRotateAfter1DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, HowMany, Nx, Mult);
 
 #ifdef _DEBUG
 	cudaStreamSynchronize(0);
@@ -331,44 +332,49 @@ template <typename T> __global__ void RotateDataAfter2DFFT_Kernel(T* pAfterFFT, 
     }
 }
 
-template <typename T> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T* pAfterFFT, long HalfNx, long Nx, long HalfNy, long Ny, long Nx2Ny2, long howMany) {
+template <typename T, typename T2> __global__ void RepairSignAndRotateDataAfter2DFFT_Kernel(T* pAfterFFT, long HalfNx, long Nx, long HalfNy, long Ny, long Nx2Ny2, long howMany, T2 Mult) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x); //HalfNx range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //HalfNy range
 
-    if (ix < HalfNx && iy < HalfNy) 
+    if (ix < HalfNx) 
     {
-        float sx0 = 1 - 2 * (ix % 2);
-        float sy0 = 1 - 2 * (iy % 2);
-        float sx1 = 1 - 2 * ((HalfNx + ix) % 2);
-        float sy1 = 1 - 2 * ((HalfNy + iy) % 2);
+        float sx0 = 1.f - 2.f * (ix % 2);
+        float sy0 = 1.f - 2.f * (iy % 2);
+        float sx1 = 1.f - 2.f * ((HalfNx + ix) % 2);
+        float sy1 = 1.f - 2.f * ((HalfNy + iy) % 2);
         
-        float s1 = sx0 * sy0;
-        float s2 = sx1 * sy1;
-        float s3 = sx1 * sy0;
-        float s4 = sx0 * sy1;
+        float s1 = sx0 * sy0 * Mult;
+        float s2 = sx1 * sy1 * Mult;
+        float s3 = sx1 * sy0 * Mult;
+        float s4 = sx0 * sy1 * Mult;
 
-        int idx = (ix + iy * Nx) * 2;
+        int idx = (ix + iy * Nx);
         for (long i = 0; i < howMany; i++){
             long long HalfNyNx = ((long long)HalfNy) * ((long long)Nx);
-            T* t1 = pAfterFFT + i * Nx2Ny2, *t2 = pAfterFFT + (HalfNyNx + HalfNx) * 2 + i * Nx2Ny2;
-            T* t3 = pAfterFFT + HalfNx * 2 + i * Nx2Ny2, *t4 = pAfterFFT + HalfNyNx * 2 + i * Nx2Ny2;
-            
-            T buf_r = t1[idx] * s1;
-            T buf_im = t1[idx + 1] * s1;
+            T* t1 = pAfterFFT + i * Nx2Ny2, *t2 = pAfterFFT + (HalfNyNx + HalfNx) + i * Nx2Ny2;
+            T* t3 = pAfterFFT + HalfNx + i * Nx2Ny2, *t4 = pAfterFFT + HalfNyNx + i * Nx2Ny2;
 
-            t1[idx] = t2[idx] * s2;
-            t1[idx + 1] = t2[idx + 1] * s2;
+            T buf1 = t1[idx];
+            buf1.x *= s1;
+            buf1.y *= s1;
 
-            t2[idx] = buf_r;
-            t2[idx + 1] = buf_im;
+            T buf2 = t2[idx];
+            buf2.x *= s2;
+            buf2.y *= s2;
 
-            buf_r = t3[idx] * s3;
-            buf_im = t3[idx + 1] * s3;
-            t3[idx] = t4[idx] * s4;
-            t3[idx + 1] = t4[idx + 1] * s4;
+            t1[idx] = buf2;
+            t2[idx] = buf1;
 
-            t4[idx] = buf_r;
-            t4[idx + 1] = buf_im;
+            buf1 = t3[idx];
+            buf1.x *= s3;
+            buf1.y *= s3;
+
+            buf2 = t4[idx];
+            buf2.x *= s4;
+            buf2.y *= s4;
+
+            t3[idx] = buf2;
+            t4[idx] = buf1;
         }
     }
 }
@@ -384,11 +390,11 @@ template <typename T> __global__ void NormalizeDataAfter2DFFT_Kernel(T* pAfterFF
     }
 }
 
-template <typename T> __global__ void TreatShift2D_Kernel(T* pData, long HowMany, long Nx2, long Ny, T* tShiftX, T* tShiftY, bool NeedsShiftX, bool NeedsShiftY) {
+template <typename T, bool NeedsShiftX, bool NeedsShiftY> __global__ void TreatShift2D_Kernel(T* pData, long HowMany, long Nx2, long Ny, T* tShiftX, T* tShiftY) {
     int ix = (blockIdx.x * blockDim.x + threadIdx.x) * 2; //Nx range
     int iy = (blockIdx.y * blockDim.y + threadIdx.y); //Ny range
 
-    if (ix < Nx2 && iy < Ny) {
+    if (ix < Nx2) {
         T MultRe = 1;
         T MultIm = 0;
 
@@ -452,11 +458,11 @@ void RotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany)
     RotateDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny * 2, howMany);
 }
 
-void RepairSignAndRotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany) {
+void RepairSignAndRotateDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany, float Mult) {
     const int bs = 256;
-    dim3 blocks(Nx / (2 * bs) + ((Nx / 2 & (bs - 1)) != 0), Ny);
+    dim3 blocks(Nx / (2 * bs) + ((Nx / 2 & (bs - 1)) != 0), Ny/2);
     dim3 threads(bs, 1);
-    RepairSignAndRotateDataAfter2DFFT_Kernel<float> << <blocks, threads >> > (pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny * 2, howMany);
+    RepairSignAndRotateDataAfter2DFFT_Kernel<float2, float> << <blocks, threads >> > ((float2*)pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny, howMany, Mult);
 }
 
 void NormalizeDataAfter2DFFT_CUDA(float* pAfterFFT, long Nx, long Ny, long howMany, double Mult) {
@@ -470,7 +476,10 @@ void TreatShifts2D_CUDA(float* pData, long Nx, long Ny, long howMany, bool Needs
     const int bs = 256;
     dim3 blocks((Nx) / bs + (((Nx) & (bs - 1)) != 0), Ny);
     dim3 threads(bs, 1);
-    TreatShift2D_Kernel<float> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY, NeedsShiftX, NeedsShiftY);
+    
+    if (NeedsShiftX && NeedsShiftY) TreatShift2D_Kernel<float, true, true> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY);
+    else if (NeedsShiftX) TreatShift2D_Kernel<float, true, false> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY);
+    else if (NeedsShiftY) TreatShift2D_Kernel<float, false, true> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY);
 }
 
 void RepairSignAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany) {
@@ -487,11 +496,11 @@ void RotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany
     RotateDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny * 2, howMany);
 }
 
-void RepairSignAndRotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany) {
+void RepairSignAndRotateDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany, double Mult) {
     const int bs = 256;
-    dim3 blocks(Nx / (2 * bs) + ((Nx / 2 & (bs - 1)) != 0), Ny);
+    dim3 blocks(Nx / (2 * bs) + ((Nx / 2 & (bs - 1)) != 0), Ny/2);
     dim3 threads(bs, 1);
-    RepairSignAndRotateDataAfter2DFFT_Kernel<double> << <blocks, threads >> > (pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny * 2, howMany);
+    RepairSignAndRotateDataAfter2DFFT_Kernel<double2, double> << <blocks, threads >> > ((double2*)pAfterFFT, Nx / 2, Nx, Ny / 2, Ny, Nx * Ny, howMany, Mult);
 }
 
 void NormalizeDataAfter2DFFT_CUDA(double* pAfterFFT, long Nx, long Ny, long howMany, double Mult) {
@@ -505,7 +514,10 @@ void TreatShifts2D_CUDA(double* pData, long Nx, long Ny, long howMany, bool Need
     const int bs = 256;
     dim3 blocks((Nx) / bs + (((Nx) & (bs - 1)) != 0), Ny);
     dim3 threads(bs, 1);
-    TreatShift2D_Kernel<double> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY, NeedsShiftX, NeedsShiftY);
+
+    if (NeedsShiftX && NeedsShiftY) TreatShift2D_Kernel<double, true, true> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY);
+    else if (NeedsShiftX) TreatShift2D_Kernel<double, true, false> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY);
+    else if (NeedsShiftY) TreatShift2D_Kernel<double, false, true> << <blocks, threads >> > (pData, howMany, Nx * 2, Ny, m_ArrayShiftX, m_ArrayShiftY);
 }
 
 
