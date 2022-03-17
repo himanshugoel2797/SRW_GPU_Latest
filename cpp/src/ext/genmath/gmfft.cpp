@@ -431,9 +431,12 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			if (DataToFFT != 0)
 			{
 				if (pPrecreatedPlan2DFFT == 0) {
-					if (!(PlanNx == Nx && PlanNy == Ny && HowMany == FFT2DInfo.howMany)) {
+					if (Plan2DFFT_cu == NULL | !(PlanNx == Nx && PlanNy == Ny && HowMany == FFT2DInfo.howMany)) {
 						if (Plan2DFFT_cu != NULL)
+						{
 							cufftDestroy(Plan2DFFT_cu);
+							Plan2DFFT_cu = NULL;
+						}
 
 						PlanNx = Nx;
 						PlanNy = Ny;
@@ -453,9 +456,12 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			else if (dDataToFFT != 0)
 			{
 				if (pdPrecreatedPlan2DFFT == 0) {
-					if (!(dPlanNx == Nx && dPlanNy == Ny && dHowMany == FFT2DInfo.howMany)) {
+					if (dPlan2DFFT_cu == NULL | !(dPlanNx == Nx && dPlanNy == Ny && dHowMany == FFT2DInfo.howMany)) {
 						if (dPlan2DFFT_cu != NULL)
+						{
 							cufftDestroy(dPlan2DFFT_cu);
+							dPlan2DFFT_cu = NULL;
+						}
 
 						dPlanNx = Nx;
 						dPlanNy = Ny;
@@ -543,9 +549,11 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			if (DataToFFT != 0)
 			{
 				if (pPrecreatedPlan2DFFT == 0) {
-					if (!(PlanNx == Nx && PlanNy == Ny && HowMany == FFT2DInfo.howMany)) {
-						if (Plan2DFFT_cu != NULL)
+					if (Plan2DFFT_cu == NULL | !(PlanNx == Nx && PlanNy == Ny && HowMany == FFT2DInfo.howMany)) {
+						if (Plan2DFFT_cu != NULL){
 							cufftDestroy(Plan2DFFT_cu);
+							Plan2DFFT_cu = NULL;
+						}
 
 						PlanNx = Nx;
 						PlanNy = Ny;
@@ -566,9 +574,11 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 			else if (dDataToFFT != 0)
 			{
 				if (pdPrecreatedPlan2DFFT == 0) {
-					if (!(dPlanNx == Nx && dPlanNy == Ny && dHowMany == FFT2DInfo.howMany)) {
-						if (dPlan2DFFT_cu != NULL)
+					if (dPlan2DFFT_cu == NULL | !(dPlanNx == Nx && dPlanNy == Ny && dHowMany == FFT2DInfo.howMany)) {
+						if (dPlan2DFFT_cu != NULL){
 							cufftDestroy(dPlan2DFFT_cu);
+							dPlan2DFFT_cu = NULL;
+						}
 
 						dPlanNx = Nx;
 						dPlanNy = Ny;
@@ -680,6 +690,16 @@ int CGenMathFFT2D::Make2DFFT(CGenMathFFT2DInfo& FFT2DInfo, fftwnd_plan* pPrecrea
 	//OC27102018
 	//SY: adopted for OpenMP
 
+	GPU_COND(pGpuUsage, {
+		if (dPlan2DFFT_cu != NULL){
+			cufftDestroy(dPlan2DFFT_cu);
+			dPlan2DFFT_cu = NULL;
+		}
+		if (Plan2DFFT_cu != NULL){
+			cufftDestroy(Plan2DFFT_cu);
+			Plan2DFFT_cu = NULL;
+		}
+	})
 #ifdef _OFFLOAD_GPU
 #elif _FFTW3 //OC28012019
 	if (DataToFFT != 0)
@@ -730,12 +750,6 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 	{
 		x0_Before = (FFT1DInfo.xStartTr - xStartTr);
 		NeedsShiftBeforeX = (::fabs(x0_Before) > RelShiftTol * (::fabs(xStartTr)));
-	}
-
-	GPU_COND(pGpuUsage, {
-		printf("Using gpu\r\n");
-	})else{
-		printf("Not using gpu\r\n");
 	}
 
 	m_ArrayShiftX = 0;
@@ -850,7 +864,10 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 				if (PlanLen != Nx) {
 					PlanLen = Nx;
 					if (Plan1DFFT_cu != NULL)
+					{
 						cufftDestroy(Plan1DFFT_cu);
+						Plan1DFFT_cu = NULL;
+					}
 					cufftPlanMany(&Plan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_C2C, FFT1DInfo.HowMany);
 				}
 				if (Plan1DFFT_cu == 0) return ERROR_IN_FFT;
@@ -860,7 +877,10 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 			{
 				if (dPlanLen != Nx) {
 					if (dPlan1DFFT_cu != NULL)
+					{
 						cufftDestroy(dPlan1DFFT_cu);
+						dPlan1DFFT_cu = NULL;
+					}
 					dPlanLen = Nx;
 					cufftPlanMany(&dPlan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_Z2Z, FFT1DInfo.HowMany);
 				}
@@ -976,7 +996,10 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 					PlanLen = Nx;
 					HowMany = FFT1DInfo.HowMany;
 					if (Plan1DFFT_cu != NULL)
+					{
 						cufftDestroy(Plan1DFFT_cu);
+						Plan1DFFT_cu = NULL;
+					}
 					cufftPlanMany(&Plan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_C2C, FFT1DInfo.HowMany);
 				}
 				if (Plan1DFFT_cu == 0) return ERROR_IN_FFT;
@@ -991,7 +1014,10 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 					dPlanLen = Nx;
 					dHowMany = FFT1DInfo.HowMany;
 					if (dPlan1DFFT_cu != NULL)
+					{
 						cufftDestroy(dPlan1DFFT_cu);
+						dPlan1DFFT_cu = NULL;
+					}
 					cufftPlanMany(&dPlan1DFFT_cu, 1, arN, NULL, 1, Nx, NULL, 1, Nx, CUFFT_Z2Z, FFT1DInfo.HowMany);
 				}
 				if (dPlan1DFFT_cu == 0) return ERROR_IN_FFT;
@@ -1146,6 +1172,15 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 		fftw_destroy_plan(Plan1DFFT);
 
 #endif
+	}else{
+		if (dPlan1DFFT_cu != NULL){
+			cufftDestroy(dPlan1DFFT_cu);
+			dPlan1DFFT_cu = NULL;
+		}
+		if (Plan1DFFT_cu != NULL){
+			cufftDestroy(Plan1DFFT_cu);
+			Plan1DFFT_cu = NULL;
+		}
 	}
 
 	if (m_ArrayShiftX != 0)

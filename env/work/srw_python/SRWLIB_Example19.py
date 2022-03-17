@@ -163,7 +163,7 @@ opSmp_Det = SRWLOptD(distSmp_Det)
 #[10]: New Horizontal wavefront Center position after Shift
 #[11]: New Vertical wavefront Center position after Shift
 #           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
-ppSmp =     [0, 0, 1., 0, 0, 1., 55., 1., 55.,  0, 0, 0]
+ppSmp =     [0, 0, 1., 0, 0, 1., 165., 1., 165.,  0, 0, 0]
 ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 
@@ -179,7 +179,7 @@ for it in range(len(listObjBrownian)):
         shape_defs = listObjBrownian[it], #List of 3D Nano-Object params for the current step
         delta = matDelta, atten_len = matAttenLen, #3D Nano-Object Material params
         rx = rx, ry = ry, #Range of Horizontal and Vertical position [m] within which Nano-Objects constituing the Sample are defined
-        nx = 2000, ny = 2000, #Numbers of points vs Horizontal and Vertical position for the Transmission
+        nx = 4000, ny = 4000, #Numbers of points vs Horizontal and Vertical position for the Transmission
         xc = xc, yc = yc, #Horizontal and Vertical Center positions of the Sample
         extTr = 1) #Transmission outside the grid/mesh is zero (0), or the same as on boundary (1)
     print('done in', round(time.time() - t, 3), 's')

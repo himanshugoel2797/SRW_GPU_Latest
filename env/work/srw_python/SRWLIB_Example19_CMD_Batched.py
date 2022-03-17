@@ -343,11 +343,12 @@ for it in range(len(listObjBrownian)):
         del wfrP.arEx
         del wfrP.arEy
 
-        #cupyMempool.free_all_blocks()
-        #print(cupyMempool.used_bytes() / (1024 * 1024))
-        #print(cupyMempool.total_bytes() / (1024 * 1024))
-        
         print('done in', round(time.time() - t, 3), 's')
+        if useCuPy:
+            cupyMempool.free_all_blocks()
+            print('used bytes (MiB): ', cupyMempool.used_bytes() / (1024 * 1024))
+            print('total bytes (MiB): ', cupyMempool.total_bytes() / (1024 * 1024))
+        
 
     #Plotting the Results (requires 3rd party graphics package)
     print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
