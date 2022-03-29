@@ -181,7 +181,7 @@ srwl.CalcIntFromElecField(arI0, wfr, 6, 0, 3, mesh0.eStart, 0, 0) #extracts inte
 #***********Wavefront Propagation
 print('   Propagating wavefront ... ', end='')
 t = time.time()
-srwl.PropagElecField(wfr, opBL, None, 1)
+srwl.PropagElecField(wfr, opBL, None, 0)
 print('done in', round(time.time() - t), 's')
 
 print('   Extracting, projecting propagated wavefront intensity on detector and saving it to file ... ', end='')

@@ -162,7 +162,7 @@ def uti_plot2d(ar2d, x_range=None, y_range=None, labels=('Horizontal Position [m
         strTitle = '' if(len(labels) < 3) else labels[2]
         labels = (labels[0] + ' [' + units[0]+ ']', labels[1] + ' [' + units[1] + ']', strTitle)
 
-    _backend.uti_plot2d(ar2d, x_range, y_range, labels)
+    return _backend.uti_plot2d(ar2d, x_range, y_range, labels)
     #if(show): uti_plot_show() #OC16082021 (commented-out back)
 
 def uti_plot2d1d(ar2d, x_range, y_range, x=0, y=0, labels=('Horizontal Position', 'Vertical Position', 'Intensity'), units=None, graphs_joined=True, _diagonals=False): #OC23082021
@@ -224,7 +224,7 @@ def uti_plot2d1d(ar2d, x_range, y_range, x=0, y=0, labels=('Horizontal Position'
 
     labels = [label2D, label1X, label1Y]
 
-    _backend.uti_plot2d1d(ar2d, x_range, y_range, x, y, labels, graphs_joined, _diagonals)
+    return _backend.uti_plot2d1d(ar2d, x_range, y_range, x, y, labels, graphs_joined, _diagonals)
     #if(show): uti_plot_show() #OC16082021 (commented-out back)
 
 #def uti_plot_img(_img, _x_range=None, _y_range=None, ): #OC29052020

@@ -419,3 +419,5 @@ cpp/gcc/libsrw.a
 env/work/srw_python/__srwl_logs__/
 /env/work/srw_python/cufft64_10.dll
 /cpp/vc/srwlpy.pyd
+env/work/srw_python/data_example_19/**
+env/work/srw_python/data_example_17/**
