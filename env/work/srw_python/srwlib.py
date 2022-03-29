@@ -9381,12 +9381,12 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                     #END DEBUG
                     if(not (doPropCM and (iMode == 0))): #OC19112020
                     #if(not (doPropCM and (i == 0))): #OC13112020
-                        srwl.CalcIntFromElecField(workStokes.arS, wfr, 6, 0, depTypeInt, phEnInt, 0., 0.)
+                        srwl.CalcIntFromElecField(workStokes.arS, wfr, 6, 0, depTypeInt, phEnInt, 0., 0., None, None, _gpu)
                     
                 elif((_char == 1) or (_char == 11)): #OC16042020
                     #meshWorkStokes = workStokes.mesh #DEBUG
                     #print('workStokes: ne=', meshWorkStokes.ne, 'nx=', meshWorkStokes.nx, 'ny=', meshWorkStokes.ny, 'len(arS)=', len(workStokes.arS))
-                    srwl.CalcIntFromElecField(workStokes.arS, wfr, -5, 0, depTypeInt, phEnInt, 0., 0.) #All Stokes
+                    srwl.CalcIntFromElecField(workStokes.arS, wfr, -5, 0, depTypeInt, phEnInt, 0., 0., None, None, _gpu) #All Stokes
 
                 elif((_char == 6) or (_char == 61) or (_char == 7)): #OC20062021
                 #elif(_char == 6): #OC03022021
@@ -9413,7 +9413,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                         if((_n_mpi > 1) and (itStartEnd is not None)):
                             arMethPar[18] = itStartEnd[0]
                             arMethPar[19] = itStartEnd[1]
-                        srwl.CalcIntFromElecField(resStokes.arS, wfr, -1, 8, depTypeInt, phEnInt, 0., 0., arMethPar) #OC03032021: this call is supposed to update / extract one main Stokes component
+                        srwl.CalcIntFromElecField(resStokes.arS, wfr, -1, 8, depTypeInt, phEnInt, 0., 0., arMethPar, None, _gpu) #OC03032021: this call is supposed to update / extract one main Stokes component
                         #srwl.CalcIntFromElecField(resStokes.arS, wfr, -1, 8, depTypeInt, phEnInt, 0., 0., [intSumType, i]) #OC03032021: this call is supposed to update / extract one main Stokes component
                         #srwl.CalcIntFromElecField(resStokes.arS, wfr, 6, 8, depTypeInt, phEnInt, 0., 0., [intSumType, i]) #One main Stokes component
 
@@ -9456,7 +9456,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                     meshWorkA = deepcopy(wfr.mesh)
                     workStokesA = SRWLStokes(1, 'f', meshWorkA.eStart, meshWorkA.eFin, meshWorkA.ne, meshWorkA.xStart, meshWorkA.xFin, meshWorkA.nx, meshWorkA.yStart, meshWorkA.yFin, meshWorkA.ny, _n_comp = numComp) #OC18072021
                     #workStokesA = SRWLStokes(1, 'f', meshWorkA.eStart, meshWorkA.eFin, meshWorkA.ne, meshWorkA.xStart, meshWorkA.xFin, meshWorkA.nx, meshWorkA.yStart, meshWorkA.yFin, meshWorkA.ny)
-                    srwl.CalcIntFromElecField(workStokesA.arS, wfr, 6, 0, depTypeInt, phEnInt, 0., 0.)
+                    srwl.CalcIntFromElecField(workStokesA.arS, wfr, 6, 0, depTypeInt, phEnInt, 0., 0., None, None, _gpu)
 
                     #DEBUG
                     #srwl_uti_save_intens_ascii(workStokesA.arS, workStokesA.mesh, copy(_file_path) + '.debug', 1)
@@ -9479,7 +9479,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                     #END DEBUG
 
                     #srwl.CalcIntFromElecField(workStokes.arS, wfr, 6, 1, depTypeME_Approx, phEnME_Approx, _x0, _y0)
-                    srwl.CalcIntFromElecField(workStokes.arS, wfr, 6, 1, depTypeInt, phEnInt, _x0, _y0) #OC30052017
+                    srwl.CalcIntFromElecField(workStokes.arS, wfr, 6, 1, depTypeInt, phEnInt, _x0, _y0, None, None, _gpu) #OC30052017
 
                     #DEBUG
                     #arTest = array('f', [0]*wfr.mesh.nx*wfr.mesh.ny)
@@ -10244,7 +10244,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                     arMethPar[18] = itStartEnd[0]
                     arMethPar[19] = itStartEnd[1]
 
-                srwl.CalcIntFromElecField(resStokes.arS, wfr, -1, 8, depTypeInt, phEnInt, 0., 0., arMethPar) #OC03032021
+                srwl.CalcIntFromElecField(resStokes.arS, wfr, -1, 8, depTypeInt, phEnInt, 0., 0., arMethPar, None, _gpu) #OC03032021
                 #srwl.CalcIntFromElecField(resStokes.arS, wfr, 6, 8, depTypeInt, phEnInt, 0., 0., [intSumType, i]) #One main Stokes component
 
                 #DEBUG
