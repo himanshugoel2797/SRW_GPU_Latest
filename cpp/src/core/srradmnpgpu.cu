@@ -172,7 +172,7 @@ void srTRadGenManip::MutualIntensityComponentCUDA(float *mo, float *v1, float *v
 	}
 }
 
-template <bool allStokesReq, bool intOverEnIsRequired>
+template <bool allStokesReq, bool intOverEnIsRequired, int PolCom>
 __global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract, srTSRWRadStructAccessData RadAccessData, srTRadGenManip *obj, double* arAuxInt, long long ie0, long long ie1, double InvStepRelArg, int Int_or_ReE)
 {
 	int ix = (blockIdx.x * blockDim.x + threadIdx.x); //nx range
@@ -181,7 +181,7 @@ __global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract
     
 	if (ix < RadAccessData.nx && iz < RadAccessData.nz && iwfr < RadAccessData.nWfr) 
     {
-		int PolCom = RadExtract.PolarizCompon;
+		//int PolCom = RadExtract.PolarizCompon;
 			
 		//bool allStokesReq = (PolCom == -5); //OC18042020
 
@@ -227,18 +227,31 @@ __global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract
 		long ie;
 
 		long offset = iwfr * PerWfr + iz * PerZ + ix * PerX;
+		long offsetDiv2 = offset >> 1;
 
 		float* pEx_StartForX = pEx0 + offset;
 		float* pEz_StartForX = pEz0 + offset;
-		if (pI != 0) pI += offset / 2;
-		if (pI1 != 0) pI1 += offset / 2;
-		if (pI2 != 0) pI2 += offset / 2;
-		if (pI3 != 0) pI3 += offset / 2;
+		if (pI != 0)
+		{
+			pI += offsetDiv2;
+			if (allStokesReq)
+			{
+				pI1 += offsetDiv2;
+				pI2 += offsetDiv2;
+				pI3 += offsetDiv2;
+			}
+		} 
 
-		if (pId != 0) pId += offset / 2;
-		if (pI1d != 0) pI1d += offset / 2;
-		if (pI2d != 0) pI2d += offset / 2;
-		if (pI3d != 0) pI3d += offset / 2;
+		if (pId != 0)
+		{
+			pId += offsetDiv2;
+			if (allStokesReq)
+			{
+				pI1d += offsetDiv2;
+				pI2d += offsetDiv2;
+				pI3d += offsetDiv2;
+			}
+		} 
 		
 		//long ixPerX = 0;
 
@@ -331,6 +344,25 @@ __global__ void ExtractSingleElecIntensity2DvsXZ_Kernel(srTRadExtract RadExtract
 	}
 }
 
+template <bool allStokesReq, bool intOverEnIsRequired>
+static inline void KernelLauncher(dim3 &blocks, dim3 &threads, srTRadExtract RadExtract, srTSRWRadStructAccessData RadAccessData, srTRadGenManip *local_copy, double* arAuxInt, long long ie0, long long ie1, double InvStepRelArg, int Int_or_ReE)
+{
+	switch(RadExtract.PolarizCompon)
+	{
+		case 5: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, 5><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case 4: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, 4><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case 3: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, 3><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case 2: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, 2><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case 1: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, 1><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case 0: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, 0><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case -1: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, -1><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case -2: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, -2><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case -3: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, -3><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		case -4: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, -4><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+		default: ExtractSingleElecIntensity2DvsXZ_Kernel<allStokesReq, intOverEnIsRequired, -5><<<blocks, threads>>>(RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE); break;
+	}
+}
+
 int srTRadGenManip::ExtractSingleElecIntensity2DvsXZParallel(srTRadExtract& RadExtract, double* arAuxInt, long long ie0, long long ie1, double InvStepRelArg)
 {
 	srTSRWRadStructAccessData& RadAccessData = *((srTSRWRadStructAccessData*)(hRadAccessData.ptr()));
@@ -351,14 +383,14 @@ int srTRadGenManip::ExtractSingleElecIntensity2DvsXZParallel(srTRadExtract& RadE
 
 	if (allStokesReq)
 		if (intOverEnIsRequired)
-    		ExtractSingleElecIntensity2DvsXZ_Kernel<true, true> << <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
+    		KernelLauncher<true, true> (blocks, threads, RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
 		else
-    		ExtractSingleElecIntensity2DvsXZ_Kernel<true, false> << <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
+    		KernelLauncher<true, false> (blocks, threads, RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
 	else
 		if (intOverEnIsRequired)
-    		ExtractSingleElecIntensity2DvsXZ_Kernel<false, true> << <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
+    		KernelLauncher<false, true> (blocks, threads, RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
 		else
-    		ExtractSingleElecIntensity2DvsXZ_Kernel<false, false> << <blocks, threads >> > (RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
+    		KernelLauncher<false, false> (blocks, threads, RadExtract, RadAccessData, local_copy, arAuxInt, ie0, ie1, InvStepRelArg, Int_or_ReE);
 	cudaFreeAsync(local_copy, 0);
 
 #ifdef _DEBUG

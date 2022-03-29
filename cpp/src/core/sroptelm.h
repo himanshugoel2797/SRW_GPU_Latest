@@ -313,6 +313,15 @@ public:
 	GPU_PORTABLE inline static void InterpolF_LowOrder(srTInterpolAux02*, double, double, float*, int); //OC02022020
 	//inline void InterpolFI_LowOrder(srTInterpolAux02*, double, double, float*, int);
 	GPU_PORTABLE inline static void InterpolFI_LowOrder(srTInterpolAux02*, double, double, float*, int); //OC02022020
+	
+	GPU_PORTABLE inline static void InterpolF(srTInterpolAux02*, float, float, float*, int); //OC02022020
+	//inline void InterpolFI(srTInterpolAux02*, float, float, float*, int);
+	GPU_PORTABLE inline static void InterpolFI(srTInterpolAux02*, float, float, float*, int); //OC02022020
+	//inline void InterpolF_LowOrder(srTInterpolAux02*, float, float, float*, int);
+	GPU_PORTABLE inline static void InterpolF_LowOrder(srTInterpolAux02*, float, float, float*, int); //OC02022020
+	//inline void InterpolFI_LowOrder(srTInterpolAux02*, float, float, float*, int);
+	GPU_PORTABLE inline static void InterpolFI_LowOrder(srTInterpolAux02*, float, float, float*, int); //OC02022020
+
 	inline double InterpLin(double r, double f1, double f2) { return f1 + r*(f2 - f1);}
 	//inline void ImproveReAndIm(float*, float*);
 	GPU_PORTABLE inline static void ImproveReAndIm(float*, float*); //OC02022020
@@ -564,6 +573,21 @@ inline void srTGenOptElem::InterpolF(srTInterpolAux02* A, double x, double z, fl
 
 //*************************************************************************
 
+inline void srTGenOptElem::InterpolF(srTInterpolAux02* A, float x, float z, float* F, int Offset)
+{
+	float xE2 = x*x, xz = x*z, zE2 = z*z;
+	float xE3 = xE2*x, xE2z = xE2*z, xzE2 = x*zE2, zE3 = zE2*z, xE2zE2 = xE2*zE2;
+	float xE3z = xE3*z, xE3zE2 = xE3*zE2, xE3zE3 = xE3*zE3, xE2zE3 = xE2*zE3, xzE3 = x*zE3;
+	srTInterpolAux02* tA = A + Offset;
+	for(int i=0; i<4-Offset; i++)
+	{
+		F[i + Offset] = (float)(tA->Ax3z3*xE3zE3 + tA->Ax3z2*xE3zE2 + tA->Ax3z1*xE3z + tA->Ax3z0*xE3 + tA->Ax2z3*xE2zE3 + tA->Ax2z2*xE2zE2 + tA->Ax2z1*xE2z + tA->Ax2z0*xE2 + tA->Ax1z3*xzE3 + tA->Ax1z2*xzE2 + tA->Ax1z1*xz + tA->Ax1z0*x + tA->Ax0z3*zE3 + tA->Ax0z2*zE2 + tA->Ax0z1*z + tA->Ax0z0);
+		tA++;
+	}
+}
+
+//*************************************************************************
+
 inline void srTGenOptElem::InterpolF1D(srTInterpolAux02_1D* A, double x, float* F, int Offset)
 {
 	double xE2 = x*x;
@@ -585,6 +609,18 @@ inline void srTGenOptElem::InterpolFI(srTInterpolAux02* A, double x, double z, f
 	double xE3z = xE3*z, xE3zE2 = xE3*zE2, xE3zE3 = xE3*zE3, xE2zE3 = xE2*zE3, xzE3 = x*zE3;
 	srTInterpolAux02* tA = A + Offset;
 	double Buf = tA->Ax3z3*xE3zE3 + tA->Ax3z2*xE3zE2 + tA->Ax3z1*xE3z + tA->Ax3z0*xE3 + tA->Ax2z3*xE2zE3 + tA->Ax2z2*xE2zE2 + tA->Ax2z1*xE2z + tA->Ax2z0*xE2 + tA->Ax1z3*xzE3 + tA->Ax1z2*xzE2 + tA->Ax1z1*xz + tA->Ax1z0*x + tA->Ax0z3*zE3 + tA->Ax0z2*zE2 + tA->Ax0z1*z + tA->Ax0z0;
+	*(F + Offset) = (float)((Buf > 0.)? Buf : 0.);
+}
+
+//*************************************************************************
+
+inline void srTGenOptElem::InterpolFI(srTInterpolAux02* A, float x, float z, float* F, int Offset)
+{
+	float xE2 = x*x, xz = x*z, zE2 = z*z;
+	float xE3 = xE2*x, xE2z = xE2*z, xzE2 = x*zE2, zE3 = zE2*z, xE2zE2 = xE2*zE2;
+	float xE3z = xE3*z, xE3zE2 = xE3*zE2, xE3zE3 = xE3*zE3, xE2zE3 = xE2*zE3, xzE3 = x*zE3;
+	srTInterpolAux02* tA = A + Offset;
+	float Buf = tA->Ax3z3*xE3zE3 + tA->Ax3z2*xE3zE2 + tA->Ax3z1*xE3z + tA->Ax3z0*xE3 + tA->Ax2z3*xE2zE3 + tA->Ax2z2*xE2zE2 + tA->Ax2z1*xE2z + tA->Ax2z0*xE2 + tA->Ax1z3*xzE3 + tA->Ax1z2*xzE2 + tA->Ax1z1*xz + tA->Ax1z0*x + tA->Ax0z3*zE3 + tA->Ax0z2*zE2 + tA->Ax0z1*z + tA->Ax0z0;
 	*(F + Offset) = (float)((Buf > 0.)? Buf : 0.);
 }
 
@@ -614,6 +650,19 @@ inline void srTGenOptElem::InterpolF_LowOrder(srTInterpolAux02* A, double x, dou
 
 //*************************************************************************
 
+inline void srTGenOptElem::InterpolF_LowOrder(srTInterpolAux02* A, float x, float z, float* F, int Offset)
+{
+	float xz = x*z;
+	srTInterpolAux02* tA = A + Offset;
+	for(int i=0; i<4-Offset; i++)
+	{
+		F[i + Offset] = (float)(tA->Ax1z1*xz + tA->Ax1z0*x + tA->Ax0z1*z + tA->Ax0z0);
+		tA++;
+	}
+}
+
+//*************************************************************************
+
 inline void srTGenOptElem::InterpolF_LowOrder1D(srTInterpolAux02_1D* A, double x, float* F, int Offset)
 {
 	srTInterpolAux02_1D* tA = A + Offset;
@@ -631,6 +680,16 @@ inline void srTGenOptElem::InterpolFI_LowOrder(srTInterpolAux02* A, double x, do
 	double xz = x*z;
 	srTInterpolAux02* tA = A + Offset;
 	double Buf = tA->Ax1z1*xz + tA->Ax1z0*x + tA->Ax0z1*z + tA->Ax0z0;
+	*(F + Offset) = (float)((Buf > 0.)? Buf : 0.);
+}
+
+//*************************************************************************
+
+inline void srTGenOptElem::InterpolFI_LowOrder(srTInterpolAux02* A, float x, float z, float* F, int Offset)
+{
+	float xz = x*z;
+	srTInterpolAux02* tA = A + Offset;
+	float Buf = tA->Ax1z1*xz + tA->Ax1z0*x + tA->Ax0z1*z + tA->Ax0z0;
 	*(F + Offset) = (float)((Buf > 0.)? Buf : 0.);
 }
 

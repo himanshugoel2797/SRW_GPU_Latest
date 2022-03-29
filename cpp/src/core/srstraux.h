@@ -1583,9 +1583,9 @@ struct srTRadExtract {
 
 struct srTInterpolAux01 {
 
-	double cAx0z1, cAx0z2, cAx0z3, cAx1z0, cAx1z1, cAx1z2, cAx1z3;
-	double cAx2z0, cAx2z1, cAx2z2, cAx2z3, cAx3z0, cAx3z1, cAx3z2, cAx3z3;
-	double cLAx1z0, cLAx0z1, cLAx1z1;
+	float cAx0z1, cAx0z2, cAx0z3, cAx1z0, cAx1z1, cAx1z2, cAx1z3;
+	float cAx2z0, cAx2z1, cAx2z2, cAx2z3, cAx3z0, cAx3z1, cAx3z2, cAx3z3;
+	float cLAx1z0, cLAx0z1, cLAx1z1;
 
 	GPU_PORTABLE srTInterpolAux01()
 	{
@@ -1632,8 +1632,8 @@ struct srTInterpolAux01_1D {
 
 struct srTInterpolAux02 {
 
-	double Ax0z0, Ax0z1, Ax0z2, Ax0z3, Ax1z0, Ax1z1, Ax1z2, Ax1z3;
-	double Ax2z0, Ax2z1, Ax2z2, Ax2z3, Ax3z0, Ax3z1, Ax3z2, Ax3z3;
+	float Ax0z0, Ax0z1, Ax0z2, Ax0z3, Ax1z0, Ax1z1, Ax1z2, Ax1z3;
+	float Ax2z0, Ax2z1, Ax2z2, Ax2z3, Ax3z0, Ax3z1, Ax3z2, Ax3z3;
 };
 
 //*************************************************************************

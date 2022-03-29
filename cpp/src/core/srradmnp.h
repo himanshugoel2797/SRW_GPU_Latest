@@ -309,7 +309,7 @@ public:
 		else if(PolCom==4) { *PolVect = OneReN; *(PolVect+1) = OneImN;}
 		else if(PolCom==5) { *PolVect = OneReN; *(PolVect+1) = -OneImN;}
 	}
-	GPU_PORTABLE float IntensityComponentSimpleInterpol(float* pEx_St, float* pEx_Fi, float* pEz_St, float* pEz_Fi, double InvStepRelArg, int PolCom, int Int_or_ReE)
+	GPU_PORTABLE inline float IntensityComponentSimpleInterpol(float* pEx_St, float* pEx_Fi, float* pEz_St, float* pEz_Fi, double InvStepRelArg, int PolCom, int Int_or_ReE)
 	{
 		float I_St = IntensityComponent(pEx_St, pEz_St, PolCom, Int_or_ReE);
 		if(Int_or_ReE == 2) return I_St;
@@ -325,10 +325,10 @@ public:
 		float I10 = IntensityComponent(*(ExPtrs + 1), *(EzPtrs + 1), PolCom, Int_or_ReE);
 		float I01 = IntensityComponent(*(ExPtrs + 2), *(EzPtrs + 2), PolCom, Int_or_ReE);
 		float I11 = IntensityComponent(*(ExPtrs + 3), *(EzPtrs + 3), PolCom, Int_or_ReE);
-		double Arg1Arg2 = Arg1*Arg2;
+		float Arg1Arg2 = Arg1*Arg2;
 		return (float)((I00 - I01 - I10 + I11)*Arg1Arg2 + (I10 - I00)*Arg1 + (I01 - I00)*Arg2 + I00);
 	}
-	GPU_PORTABLE float IntensityComponent(float* pEx, float* pEz, int PolCom, int Int_or_ReE)
+	GPU_PORTABLE inline float IntensityComponent(float* pEx, float* pEz, int PolCom, int Int_or_ReE)
 	{
 		//float ExRe = *pEx, ExIm = *(pEx + 1), EzRe = *pEz, EzIm = *(pEz + 1);
 		float ExRe = 0., ExIm = 0., EzRe = 0., EzIm = 0.; //OC111111
@@ -347,27 +347,27 @@ public:
 			{
 				float ExRe_p_EzRe = ExRe + EzRe, ExIm_p_EzIm = ExIm + EzIm;
 				//return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5*(ExRe_p_EzRe*ExRe_p_EzRe + ExIm_p_EzIm*ExIm_p_EzIm) : ((Int_or_ReE == 2)? FormalPhase(ExRe_p_EzRe, ExIm_p_EzIm) : 0.70710678*ExRe_p_EzRe)));
-				return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5*(ExRe_p_EzRe*ExRe_p_EzRe + ExIm_p_EzIm*ExIm_p_EzIm) : ((Int_or_ReE == 2)? FormalPhase(ExRe_p_EzRe, ExIm_p_EzIm) : 0.70710678*((Int_or_ReE == 3)? ExRe_p_EzRe : ExIm_p_EzIm)))); //OC031208
+				return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5f*(ExRe_p_EzRe*ExRe_p_EzRe + ExIm_p_EzIm*ExIm_p_EzIm) : ((Int_or_ReE == 2)? FormalPhase(ExRe_p_EzRe, ExIm_p_EzIm) : 0.70710678f*((Int_or_ReE == 3)? ExRe_p_EzRe : ExIm_p_EzIm)))); //OC031208
 			}
 			case 3: // Linear 135 deg.
 			{
 				float ExRe_mi_EzRe = ExRe - EzRe, ExIm_mi_EzIm = ExIm - EzIm;
 				//return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5*(ExRe_mi_EzRe*ExRe_mi_EzRe + ExIm_mi_EzIm*ExIm_mi_EzIm) : ((Int_or_ReE == 2)? FormalPhase(ExRe_mi_EzRe, ExIm_mi_EzIm) : 0.70710678*ExRe_mi_EzRe)));
-				return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5*(ExRe_mi_EzRe*ExRe_mi_EzRe + ExIm_mi_EzIm*ExIm_mi_EzIm) : ((Int_or_ReE == 2)? FormalPhase(ExRe_mi_EzRe, ExIm_mi_EzIm) : 0.70710678*((Int_or_ReE == 3)? ExRe_mi_EzRe : ExIm_mi_EzIm)))); //OC031208
+				return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5f*(ExRe_mi_EzRe*ExRe_mi_EzRe + ExIm_mi_EzIm*ExIm_mi_EzIm) : ((Int_or_ReE == 2)? FormalPhase(ExRe_mi_EzRe, ExIm_mi_EzIm) : 0.70710678f*((Int_or_ReE == 3)? ExRe_mi_EzRe : ExIm_mi_EzIm)))); //OC031208
 			}
 			case 5: // Circ. Left //OC08092019: corrected to be in compliance with definitions for right-hand frame (x,z,s) and with corresponding definition and calculation of Stokes params
 			//case 4: // Circ. Right
 			{
 				float ExRe_mi_EzIm = ExRe - EzIm, ExIm_p_EzRe = ExIm + EzRe;
 				//return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5*(ExRe_mi_EzIm*ExRe_mi_EzIm + ExIm_p_EzRe*ExIm_p_EzRe) : ((Int_or_ReE == 2)? FormalPhase(ExRe_mi_EzIm, ExIm_p_EzRe) : 0.70710678*ExRe_mi_EzIm)));
-				return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5*(ExRe_mi_EzIm*ExRe_mi_EzIm + ExIm_p_EzRe*ExIm_p_EzRe) : ((Int_or_ReE == 2)? FormalPhase(ExRe_mi_EzIm, ExIm_p_EzRe) : 0.70710678*((Int_or_ReE == 3)? ExRe_mi_EzIm : ExIm_p_EzRe)))); //OC031208
+				return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5f*(ExRe_mi_EzIm*ExRe_mi_EzIm + ExIm_p_EzRe*ExIm_p_EzRe) : ((Int_or_ReE == 2)? FormalPhase(ExRe_mi_EzIm, ExIm_p_EzRe) : 0.70710678f*((Int_or_ReE == 3)? ExRe_mi_EzIm : ExIm_p_EzRe)))); //OC031208
 			}
 			case 4: // Circ. Right //OC08092019: corrected to be in compliance with definitions for right-hand frame (x,z,s) and with corresponding definition and calculation of Stokes params
 			//case 5: // Circ. Left
 			{
 				float ExRe_p_EzIm = ExRe + EzIm, ExIm_mi_EzRe = ExIm - EzRe;
 				//return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5*(ExRe_p_EzIm*ExRe_p_EzIm + ExIm_mi_EzRe*ExIm_mi_EzRe) : ((Int_or_ReE == 2)? FormalPhase(ExRe_p_EzIm, ExIm_mi_EzRe) : 0.70710678*ExRe_p_EzIm)));
-				return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5*(ExRe_p_EzIm*ExRe_p_EzIm + ExIm_mi_EzRe*ExIm_mi_EzRe) : ((Int_or_ReE == 2)? FormalPhase(ExRe_p_EzIm, ExIm_mi_EzRe) : 0.70710678*((Int_or_ReE == 3)? ExRe_p_EzIm : ExIm_mi_EzRe)))); //OC031208
+				return (float)((((Int_or_ReE == 0) || (Int_or_ReE == 1))? 0.5f*(ExRe_p_EzIm*ExRe_p_EzIm + ExIm_mi_EzRe*ExIm_mi_EzRe) : ((Int_or_ReE == 2)? FormalPhase(ExRe_p_EzIm, ExIm_mi_EzRe) : 0.70710678f*((Int_or_ReE == 3)? ExRe_p_EzIm : ExIm_mi_EzRe)))); //OC031208
 			}
 			case -1: // s0
 			{
@@ -392,21 +392,21 @@ public:
 		}
 		//return (float)(ExRe*ExRe + ExIm*ExIm + EzRe*EzRe + EzIm*EzIm);
 	}
-	GPU_PORTABLE double FormalPhase(float Re, float Im)
+	GPU_PORTABLE inline float FormalPhase(float Re, float Im)
 	{
-		const double HalhPi = 1.5707963267949;
-		const double Pi = 3.1415926535898;
+		const float HalhPi = 1.5707963267949;
+		const float Pi = 3.1415926535898;
 		if(Re != 0.) 
 		{
 			if(Im <= 0.)
 			{
-				if(Re < 0.) return atan(double(Im/Re)) - Pi;
-				else return atan(double(Im/Re));
+				if(Re < 0.) return atan((Im/Re)) - Pi;
+				else return atan((Im/Re));
 			}
 			else
 			{
-				if(Re < 0.) return atan(double(Im/Re)) + Pi;
-				else return atan(double(Im/Re));
+				if(Re < 0.) return atan((Im/Re)) + Pi;
+				else return atan((Im/Re));
 			}
 		}
 		else

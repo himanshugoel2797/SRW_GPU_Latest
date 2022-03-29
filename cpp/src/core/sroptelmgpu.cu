@@ -253,7 +253,11 @@ void MakeWfrEdgeCorrection_CUDA(srTSRWRadStructAccessData& RadAccessData, float*
 #endif
 }
 
-template<bool TreatPolCompX, bool TreatPolCompZ> __global__ void RadResizeCore_Kernel(srTSRWRadStructAccessData OldRadAccessData, srTSRWRadStructAccessData NewRadAccessData, int iwfr)
+template<bool TreatPolCompX, bool TreatPolCompZ, typename TFloat, typename TLongLong> __global__ void RadResizeCore_Kernel(srTSRWRadStructAccessData OldRadAccessData, srTSRWRadStructAccessData NewRadAccessData, int iwfr
+, float OldxStep, float OldzStep, float OldxStart, float OldzStart,
+float NewxStep, float NewzStep, float NewxStart, float NewzStart,
+float NewzWfrMin, float NewzWfrMax, float NewxWfrMin, float NewxWfrMax
+)
 {
 	int ixStart = int(NewRadAccessData.AuxLong1);
 	int ixEnd = int(NewRadAccessData.AuxLong2);
@@ -267,9 +271,9 @@ template<bool TreatPolCompX, bool TreatPolCompZ> __global__ void RadResizeCore_K
 	if (ix > ixEnd) return;
 	if (iz > izEnd) return;
 
-	const double DistAbsTol = 1.E-10;
-	double xStepInvOld = 1./OldRadAccessData.xStep;
-	double zStepInvOld = 1./OldRadAccessData.zStep;
+	const TFloat DistAbsTol = 1.E-10f;
+	TFloat xStepInvOld = 1.f/OldxStep;
+	TFloat zStepInvOld = 1.f/OldzStep;
 	int nx_mi_1Old = OldRadAccessData.nx - 1;
 	int nz_mi_1Old = OldRadAccessData.nz - 1;
 	int nx_mi_2Old = nx_mi_1Old - 1;
@@ -283,15 +287,15 @@ template<bool TreatPolCompX, bool TreatPolCompZ> __global__ void RadResizeCore_K
 
 	//long PerX_New = NewRadAccessData.ne << 1;
 	//long PerZ_New = PerX_New*NewRadAccessData.nx;
-	long long PerX_New = NewRadAccessData.ne << 1;
-	long long PerZ_New = PerX_New*NewRadAccessData.nx;
-	long long PerWfr_New = PerZ_New*NewRadAccessData.nz;
+	TLongLong PerX_New = NewRadAccessData.ne << 1;
+	TLongLong PerZ_New = PerX_New*NewRadAccessData.nx;
+	TLongLong PerWfr_New = PerZ_New*NewRadAccessData.nz;
 
 	//long PerX_Old = PerX_New;
 	//long PerZ_Old = PerX_Old*OldRadAccessData.nx;
-	long long PerX_Old = PerX_New;
-	long long PerZ_Old = PerX_Old*OldRadAccessData.nx;
-	long long PerWfr_Old = PerZ_Old*OldRadAccessData.nz;
+	TLongLong PerX_Old = PerX_New;
+	TLongLong PerZ_Old = PerX_Old*OldRadAccessData.nx;
+	TLongLong PerWfr_Old = PerZ_Old*OldRadAccessData.nz;
 
 	float *pEX0_New = 0, *pEZ0_New = 0;
 	pEX0_New = NewRadAccessData.pBaseRadX + iwfr * PerWfr_New;
@@ -306,44 +310,44 @@ template<bool TreatPolCompX, bool TreatPolCompZ> __global__ void RadResizeCore_K
 	//SY: do we need this (always returns 0, updates some clock)
 	//if(result = srYield.Check()) return result;
 
-	double zAbs = NewRadAccessData.zStart + iz * NewRadAccessData.zStep;
+	TFloat zAbs = NewzStart + iz * NewzStep;
 
 	char FieldShouldBeZeroedDueToZ = 0;
 	if (NewRadAccessData.WfrEdgeCorrShouldBeDone)
 	{
-		if ((zAbs < NewRadAccessData.zWfrMin - DistAbsTol) || (zAbs > NewRadAccessData.zWfrMax + DistAbsTol)) FieldShouldBeZeroedDueToZ = 1;
+		if ((zAbs < NewzWfrMin - DistAbsTol) || (zAbs > NewzWfrMax + DistAbsTol)) FieldShouldBeZeroedDueToZ = 1;
 	}
 
-	int izcOld = int((zAbs - OldRadAccessData.zStart) * zStepInvOld + 1.E-06);
+	int izcOld = int((zAbs - OldzStart) * zStepInvOld + 1.E-06f);
 
-	double zRel = zAbs - (OldRadAccessData.zStart + izcOld * OldRadAccessData.zStep);
+	TFloat zRel = zAbs - (OldzStart + izcOld * OldzStep);
 
-	if (izcOld == nz_mi_1Old) { izStOld = izcOld - 3; zRel += 2. * OldRadAccessData.zStep; }
-	else if (izcOld == nz_mi_2Old) { izStOld = izcOld - 2; zRel += OldRadAccessData.zStep; }
-	else if (izcOld == 0) { izStOld = izcOld; zRel -= OldRadAccessData.zStep; }
+	if (izcOld == nz_mi_1Old) { izStOld = izcOld - 3; zRel += 2. * OldzStep; }
+	else if (izcOld == nz_mi_2Old) { izStOld = izcOld - 2; zRel += OldzStep; }
+	else if (izcOld == 0) { izStOld = izcOld; zRel -= OldzStep; }
 	else izStOld = izcOld - 1;
 
 	zRel *= zStepInvOld;
 
 	int izcOld_mi_izStOld = izcOld - izStOld;
 	//long izPerZ_New = iz*PerZ_New;
-	long long izPerZ_New = iz * PerZ_New;
+	TLongLong izPerZ_New = iz * PerZ_New;
 
-	double xAbs = NewRadAccessData.xStart + ix * NewRadAccessData.xStep;
+	TFloat xAbs = NewxStart + ix * NewxStep;
 
 	char FieldShouldBeZeroedDueToX = 0;
 	if (NewRadAccessData.WfrEdgeCorrShouldBeDone)
 	{
-		if ((xAbs < NewRadAccessData.xWfrMin - DistAbsTol) || (xAbs > NewRadAccessData.xWfrMax + DistAbsTol)) FieldShouldBeZeroedDueToX = 1;
+		if ((xAbs < NewxWfrMin - DistAbsTol) || (xAbs > NewxWfrMax + DistAbsTol)) FieldShouldBeZeroedDueToX = 1;
 	}
 	char FieldShouldBeZeroed = (FieldShouldBeZeroedDueToX || FieldShouldBeZeroedDueToZ);
 
-	int ixcOld = int((xAbs - OldRadAccessData.xStart) * xStepInvOld + 1.E-06);
-	double xRel = xAbs - (OldRadAccessData.xStart + ixcOld * OldRadAccessData.xStep);
+	int ixcOld = int((xAbs - OldxStart) * xStepInvOld + 1.E-06f);
+	TFloat xRel = xAbs - (OldxStart + ixcOld * OldxStep);
 
-	if (ixcOld == nx_mi_1Old) { ixStOld = ixcOld - 3; xRel += 2. * OldRadAccessData.xStep; }
-	else if (ixcOld == nx_mi_2Old) { ixStOld = ixcOld - 2; xRel += OldRadAccessData.xStep; }
-	else if (ixcOld == 0) { ixStOld = ixcOld; xRel -= OldRadAccessData.xStep; }
+	if (ixcOld == nx_mi_1Old) { ixStOld = ixcOld - 3; xRel += 2. * OldxStep; }
+	else if (ixcOld == nx_mi_2Old) { ixStOld = ixcOld - 2; xRel += OldxStep; }
+	else if (ixcOld == 0) { ixStOld = ixcOld; xRel -= OldxStep; }
 	else ixStOld = ixcOld - 1;
 
 	xRel *= xStepInvOld;
@@ -364,20 +368,20 @@ template<bool TreatPolCompX, bool TreatPolCompZ> __global__ void RadResizeCore_K
 		char UseLowOrderInterp_PolCompX = 0, UseLowOrderInterp_PolCompZ = 0;
 
 		//long Two_ie = ie << 1;
-		long long Two_ie = ie << 1;
+		TLongLong Two_ie = ie << 1;
 
 		float* pEX_StartForX_New = 0, * pEZ_StartForX_New = 0;
 		pEX_StartForX_New = pEX0_New + izPerZ_New;
 		pEZ_StartForX_New = pEZ0_New + izPerZ_New;
 
 		//long ixPerX_New_p_Two_ie = ix*PerX_New + Two_ie;
-		long long ixPerX_New_p_Two_ie = ix * PerX_New + Two_ie;
+		TLongLong ixPerX_New_p_Two_ie = ix * PerX_New + Two_ie;
 		float* pEX_New = 0, * pEZ_New = 0;
 		pEX_New = pEX_StartForX_New + ixPerX_New_p_Two_ie;
 		pEZ_New = pEZ_StartForX_New + ixPerX_New_p_Two_ie;
 
 		//long TotOffsetOld = izStOld*PerZ_Old + ixStOld*PerX_Old + Two_ie;
-		long long TotOffsetOld = izStOld * PerZ_Old + ixStOld * PerX_Old + Two_ie;
+		TLongLong TotOffsetOld = izStOld * PerZ_Old + ixStOld * PerX_Old + Two_ie;
 
 		if (TreatPolCompX)
 		{
@@ -412,7 +416,7 @@ template<bool TreatPolCompX, bool TreatPolCompZ> __global__ void RadResizeCore_K
 
 			if (FieldShouldBeZeroed)
 			{
-				*BufF = 0.; *(BufF + 1) = 0.;
+				*BufF = 0.f; *(BufF + 1) = 0.f;
 			}
 
 			*pEX_New = *BufF;
@@ -451,7 +455,7 @@ template<bool TreatPolCompX, bool TreatPolCompZ> __global__ void RadResizeCore_K
 
 			if (FieldShouldBeZeroed)
 			{
-				*(BufF + 2) = 0.; *(BufF + 3) = 0.;
+				*(BufF + 2) = 0.f; *(BufF + 3) = 0.f;
 			}
 
 			*pEZ_New = *(BufF + 2);
@@ -470,15 +474,15 @@ int srTGenOptElem::RadResizeCoreParallel(srTSRWRadStructAccessData& OldRadAccess
 	int nWfr = NewRadAccessData.nWfr;
 	int ne = NewRadAccessData.ne;
 
-	const int bs = 32;
+	const int bs = 256;
 	dim3 blocks(nx / bs + ((nx & (bs - 1)) != 0), nz, ne);
 	dim3 threads(bs, 1);
 	
 	for (int iWfr = 0; iWfr < nWfr; iWfr++)
 	{
-		if (TreatPolCompX && TreatPolCompZ) RadResizeCore_Kernel<true, true> << <blocks, threads >> > (OldRadAccessData, NewRadAccessData, iWfr);
-		else if (TreatPolCompX) RadResizeCore_Kernel<true, false> << <blocks, threads >> > (OldRadAccessData, NewRadAccessData, iWfr);
-		else if (TreatPolCompZ) RadResizeCore_Kernel<false, true> << <blocks, threads >> > (OldRadAccessData, NewRadAccessData, iWfr);
+		if (TreatPolCompX && TreatPolCompZ) RadResizeCore_Kernel<true, true, float, int> << <blocks, threads >> > (OldRadAccessData, NewRadAccessData, iWfr, OldRadAccessData.xStep, OldRadAccessData.zStep, OldRadAccessData.xStart, OldRadAccessData.zStart, NewRadAccessData.xStep, NewRadAccessData.zStep, NewRadAccessData.xStart, NewRadAccessData.zStart, NewRadAccessData.zWfrMin, NewRadAccessData.zWfrMax, NewRadAccessData.xWfrMin, NewRadAccessData.xWfrMax);
+		else if (TreatPolCompX) RadResizeCore_Kernel<true, false, float, int> << <blocks, threads >> > (OldRadAccessData, NewRadAccessData, iWfr, OldRadAccessData.xStep, OldRadAccessData.zStep, OldRadAccessData.xStart, OldRadAccessData.zStart, NewRadAccessData.xStep, NewRadAccessData.zStep, NewRadAccessData.xStart, NewRadAccessData.zStart, NewRadAccessData.zWfrMin, NewRadAccessData.zWfrMax, NewRadAccessData.xWfrMin, NewRadAccessData.xWfrMax);
+		else if (TreatPolCompZ) RadResizeCore_Kernel<false, true, float, int> << <blocks, threads >> > (OldRadAccessData, NewRadAccessData, iWfr, OldRadAccessData.xStep, OldRadAccessData.zStep, OldRadAccessData.xStart, OldRadAccessData.zStart, NewRadAccessData.xStep, NewRadAccessData.zStep, NewRadAccessData.xStart, NewRadAccessData.zStart, NewRadAccessData.zWfrMin, NewRadAccessData.zWfrMax, NewRadAccessData.xWfrMin, NewRadAccessData.xWfrMax);
 	}
 
 #ifdef _DEBUG

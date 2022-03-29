@@ -149,133 +149,124 @@ if(npIsAvail): arDetFrames = np.zeros((len(listObjBrownian), nxDet, nyDet))
 distSmp_Det = 10.
 opSmp_Det = SRWLOptD(distSmp_Det)
 
-bchmk_cnt = 15
-bchmks = []
-for bchmk_idx in range(bchmk_cnt):
-    #Wavefront Propagation Parameters:
-    #[0]: Auto-Resize (1) or not (0) Before propagation
-    #[1]: Auto-Resize (1) or not (0) After propagation
-    #[2]: Relative Precision for propagation with Auto-Resizing (1. is nominal)
-    #[3]: Allow (1) or not (0) for semi-analytical treatment of the quadratic (leading) phase terms at the propagation
-    #[4]: Do any Resizing on Fourier side, using FFT, (1) or not (0)
-    #[5]: Horizontal Range modification factor at Resizing (1. means no modification)
-    #[6]: Horizontal Resolution modification factor at Resizing
-    #[7]: Vertical Range modification factor at Resizing
-    #[8]: Vertical Resolution modification factor at Resizing
-    #[9]: Type of wavefront Shift before Resizing
-    #[10]: New Horizontal wavefront Center position after Shift
-    #[11]: New Vertical wavefront Center position after Shift
-    #           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
-    ppSmp =     [0, 0, 1., 0, 0, 1., 16. * bchmk_idx, 1., 16. * bchmk_idx,  0, 0, 0]
-    ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
-    ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
+#Wavefront Propagation Parameters:
+#[0]: Auto-Resize (1) or not (0) Before propagation
+#[1]: Auto-Resize (1) or not (0) After propagation
+#[2]: Relative Precision for propagation with Auto-Resizing (1. is nominal)
+#[3]: Allow (1) or not (0) for semi-analytical treatment of the quadratic (leading) phase terms at the propagation
+#[4]: Do any Resizing on Fourier side, using FFT, (1) or not (0)
+#[5]: Horizontal Range modification factor at Resizing (1. means no modification)
+#[6]: Horizontal Resolution modification factor at Resizing
+#[7]: Vertical Range modification factor at Resizing
+#[8]: Vertical Resolution modification factor at Resizing
+#[9]: Type of wavefront Shift before Resizing
+#[10]: New Horizontal wavefront Center position after Shift
+#[11]: New Vertical wavefront Center position after Shift
+#           [0][1][2] [3][4] [5] [6] [7]  [8]  [9][10][11] 
+ppSmp =     [0, 0, 1., 0, 0, 1., 165., 1., 165.,  0, 0, 0]
+ppSmp_Det = [0, 0, 1., 3, 0, 1., 1.,  1.,  1.,  0, 0, 0]
+ppFin =     [0, 0, 1., 0, 0, 1., 1.,  1.,  1.,  0, 0, 0]
 
-    bchmk_start = time.time()
-    #***********Wavefront Propagation / Scattering calculation for different instances of Sample created by Brownnian motion
-    for it in range(len(listObjBrownian)):
+#***********Wavefront Propagation / Scattering calculation for different instances of Sample created by Brownnian motion
+for it in range(len(listObjBrownian)):
 
-        if(it == 0): print('   Performing Simulaitons for the Initial Nano-Particle Distribution ***********')
-        else: print('   Performing Simulaitons for Brownian Motion Step:', it, '***********')
+    if(it == 0): print('   Performing Simulaitons for the Initial Nano-Particle Distribution ***********')
+    else: print('   Performing Simulaitons for Brownian Motion Step:', it, '***********')
 
-        print('   Setting up Transmission optical element from input Sample data ... ', end='')
-        t = time.time()
-        opSmp = srwl_opt_setup_transm_from_obj3d( #Defining Sample (Transmission object)
-            shape_defs = listObjBrownian[it], #List of 3D Nano-Object params for the current step
-            delta = matDelta, atten_len = matAttenLen, #3D Nano-Object Material params
-            rx = rx, ry = ry, #Range of Horizontal and Vertical position [m] within which Nano-Objects constituing the Sample are defined
-            nx = 4000, ny = 4000, #Numbers of points vs Horizontal and Vertical position for the Transmission
-            xc = xc, yc = yc, #Horizontal and Vertical Center positions of the Sample
-            extTr = 1) #Transmission outside the grid/mesh is zero (0), or the same as on boundary (1)
-        print('done in', round(time.time() - t, 3), 's')
+    print('   Setting up Transmission optical element from input Sample data ... ', end='')
+    t = time.time()
+    opSmp = srwl_opt_setup_transm_from_obj3d( #Defining Sample (Transmission object)
+        shape_defs = listObjBrownian[it], #List of 3D Nano-Object params for the current step
+        delta = matDelta, atten_len = matAttenLen, #3D Nano-Object Material params
+        rx = rx, ry = ry, #Range of Horizontal and Vertical position [m] within which Nano-Objects constituing the Sample are defined
+        nx = 4000, ny = 4000, #Numbers of points vs Horizontal and Vertical position for the Transmission
+        xc = xc, yc = yc, #Horizontal and Vertical Center positions of the Sample
+        extTr = 1) #Transmission outside the grid/mesh is zero (0), or the same as on boundary (1)
+    print('done in', round(time.time() - t, 3), 's')
 
-        print('   Extracting Optical Path Difference data from Sample Transmission optical element ... ', end='')
-        t = time.time()
-        opPathDif = opSmp.get_data(_typ = 3, _dep = 3)
+    print('   Extracting Optical Path Difference data from Sample Transmission optical element ... ', end='')
+    t = time.time()
+    opPathDif = opSmp.get_data(_typ = 3, _dep = 3)
 
-        print('done in', round(time.time() - t, 3), 's')
+    print('done in', round(time.time() - t, 3), 's')
 
-        print('   Saving Optical Path Difference data from Sample Transmission optical element ... ', end='')
-        t = time.time()
-        #srwl_uti_save_intens_ascii(
-        #    opPathDif, opSmp.mesh, os.path.join(os.getcwd(), strDataFolderName, strSampOptPathDifOutFileName%(it)), 0,
-        #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Optical Path Difference'], _arUnits=['eV', 'm', 'm', 'm'])
-        print('done in', round(time.time() - t, 3), 's')
+    print('   Saving Optical Path Difference data from Sample Transmission optical element ... ', end='')
+    t = time.time()
+    #srwl_uti_save_intens_ascii(
+    #    opPathDif, opSmp.mesh, os.path.join(os.getcwd(), strDataFolderName, strSampOptPathDifOutFileName%(it)), 0,
+    #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Optical Path Difference'], _arUnits=['eV', 'm', 'm', 'm'])
+    print('done in', round(time.time() - t, 3), 's')
 
-        #Defining "Beamline" to Propagate the Wavefront through
-        opBL = SRWLOptC([opSmp, opSmp_Det], 
-                        [ppSmp, ppSmp_Det, ppFin])
+    #Defining "Beamline" to Propagate the Wavefront through
+    opBL = SRWLOptC([opSmp, opSmp_Det], 
+                    [ppSmp, ppSmp_Det, ppFin])
 
-        #Duplicating Initial Wavefront to perform its Propagaton
-        wfrP = deepcopy(wfr)
+    #Duplicating Initial Wavefront to perform its Propagaton
+    wfrP = deepcopy(wfr)
 
-        print('   Propagating Wavefront ... ', end='')
-        t = time.time()
-        srwl.PropagElecField(wfrP, opBL, None, gpu_id)
-        print('done in', round(time.time() - t, 3), 's')
+    print('   Propagating Wavefront ... ', end='')
+    t = time.time()
+    srwl.PropagElecField(wfrP, opBL, None, gpu_id)
+    print('done in', round(time.time() - t, 3), 's')
 
-        print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
-        t = time.time()
-        mesh1 = deepcopy(wfrP.mesh)
-        arI1 = cp.zeros(mesh1.nx*mesh1.ny, dtype=cp.float32) if useCuPy else array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
-        srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0, None, None, gpu_id) #extracts intensity
+    print('   Extracting, Projecting the Propagated Wavefront Intensity on Detector and Saving it to file ... ', end='')
+    t = time.time()
+    mesh1 = deepcopy(wfrP.mesh)
+    arI1 = cp.zeros(mesh1.nx*mesh1.ny, dtype=cp.float32) if useCuPy else array('f', [0]*mesh1.nx*mesh1.ny) #"flat" array to take 2D intensity data
+    srwl.CalcIntFromElecField(arI1, wfrP, 6, 0, 3, mesh1.eStart, 0, 0, None, None, gpu_id) #extracts intensity
 
-        stkDet = det.treat_int(arI1, _mesh = mesh1, _gpu=gpu_id) #"Projecting" intensity on detector (by interpolation)
-        mesh1 = stkDet.mesh
-        arI1 = stkDet.arS
-        #srwl_uti_save_intens_ascii(
-        #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
-        #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
+    stkDet = det.treat_int(arI1, _mesh = mesh1, _gpu=gpu_id) #"Projecting" intensity on detector (by interpolation)
+    mesh1 = stkDet.mesh
+    arI1 = stkDet.arS
+    #srwl_uti_save_intens_ascii(
+    #    arI1, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileName%(it)), 0,
+    #    ['Photon Energy', 'Horizontal Position', 'Vertical Position', 'Spectral Fluence'], _arUnits=['eV', 'm', 'm', 'ph/s/.1%bw/mm^2'])
 
-        #if(arDetFrames is not None): 
-        #    if useCuPy:
-        #        arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
-        #    else:
-        #        arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose()
-        print('done in', round(time.time() - t, 3), 's')
+    #if(arDetFrames is not None): 
+    #    if useCuPy:
+    #        arDetFrames[it] = np.reshape(arI1.get(), (mesh1.ny, mesh1.nx)).transpose()
+    #    else:
+    #        arDetFrames[it] = np.reshape(arI1, (mesh1.ny, mesh1.nx)).transpose()
+    print('done in', round(time.time() - t, 3), 's')
 
-        #Plotting the Results (requires 3rd party graphics package)
-        print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
+    #Plotting the Results (requires 3rd party graphics package)
+    print('   Plotting the results (i.e. creating plots without showing them yet) ... ', end='')
 
-        #Sample Optical Path Diff.
-        meshS = opSmp.mesh
-        plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
-        plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
-        #if useCuPy:
-        #    opPathDif = opPathDif.get()
-        #uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
-            
-        #Scattered Radiation Intensity Distribution in Log Scale
-        plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
-        plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
-        if useCuPy:
-            arLogI1 = np.array(copy(arI1).get())
-        else:
-            arLogI1 = np.array(arI1)
-        nTot = mesh1.ne*mesh1.nx*mesh1.ny
+    #Sample Optical Path Diff.
+    meshS = opSmp.mesh
+    plotMeshSx = [meshS.xStart, meshS.xFin, meshS.nx]
+    plotMeshSy = [meshS.yStart, meshS.yFin, meshS.ny]
+    #if useCuPy:
+    #    opPathDif = opPathDif.get()
+    #uti_plot2d(opPathDif, plotMeshSx, plotMeshSy, ['Horizontal Position', 'Vertical Position', 'Optical Path Diff. in Sample (Time = %.3fs)' % (it*timeStep)], ['m', 'm', 'm'])
+        
+    #Scattered Radiation Intensity Distribution in Log Scale
+    plotMesh1x = [mesh1.xStart, mesh1.xFin, mesh1.nx]
+    plotMesh1y = [mesh1.yStart, mesh1.yFin, mesh1.ny]
+    if useCuPy:
+        arLogI1 = np.array(copy(arI1).get())
+    else:
+        arLogI1 = np.array(arI1)
+    nTot = mesh1.ne*mesh1.nx*mesh1.ny
 
-        if useCuPy:
-            arLogI1 = np.clip(arI1.get(), 0, None, arLogI1)
-        else:
-            arLogI1 = np.clip(arI1, 0, None, arLogI1)
-        arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0)
-        #for i in range(nTot):
-        #    curI = arI1[i]
-        #    if(curI <= 0.): arLogI1[i] = 0 #?
-        #    else: arLogI1[i] = log(curI, 10)
+    if useCuPy:
+        arLogI1 = np.clip(arI1.get(), 0, None, arLogI1)
+    else:
+        arLogI1 = np.clip(arI1, 0, None, arLogI1)
+    arLogI1 = np.where(arLogI1 != 0, np.log10(arLogI1, out=arLogI1), 0)
+    #for i in range(nTot):
+    #    curI = arI1[i]
+    #    if(curI <= 0.): arLogI1[i] = 0 #?
+    #    else: arLogI1[i] = log(curI, 10)
 
-        #uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
+    #uti_plot2d1d(arLogI1, plotMesh1x, plotMesh1y, 0, 0, ['Horizontal Position', 'Vertical Position', 'Log of Intensity at Detector (Time = %.3f s)' % (it*timeStep)], ['m', 'm', ''])
 
-        print('done')
-    
-    bchmk_stop = time.time()
-    bchmks.append((ppSmp[6], bchmk_stop - bchmk_start))
-    #if(arDetFrames is not None): #Saving simulated Detector data file
-    #    print('   Saving all Detector data to another file (that can be used in subsequent processing) ... ', end='')
-    #    srwl_uti_save_intens_hdf5_exp(arDetFrames, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileNameDet), 
-    #        _exp_type = 'XPCS', _dt = timeStep, _dist_smp = distSmp_Det, _bm_size_x = GsnBm.sigX*2.35, _bm_size_y = GsnBm.sigY*2.35)
-    #    print('done')
+    print('done')
 
-for bchmk in bchmks:
-    pp, t = bchmk
-    print(pp, ',', bchmk)
+#if(arDetFrames is not None): #Saving simulated Detector data file
+#    print('   Saving all Detector data to another file (that can be used in subsequent processing) ... ', end='')
+#    srwl_uti_save_intens_hdf5_exp(arDetFrames, mesh1, os.path.join(os.getcwd(), strDataFolderName, strIntPropOutFileNameDet), 
+#        _exp_type = 'XPCS', _dt = timeStep, _dist_smp = distSmp_Det, _bm_size_x = GsnBm.sigX*2.35, _bm_size_y = GsnBm.sigY*2.35)
+#    print('done')
+
 uti_plot_show() #Show all plots created
