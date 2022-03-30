@@ -398,17 +398,13 @@ float NewzWfrMin, float NewzWfrMax, float NewxWfrMin, float NewxWfrMax
 					srTGenOptElem::SetupInterpolAux02(AuxF + i, &InterpolAux01, InterpolAux02 + i);
 				}
 				srTGenOptElem::SetupInterpolAux02(AuxFI, &InterpolAux01, InterpolAux02I);
-			}
-
-			if (UseLowOrderInterp_PolCompX)
-			{
-				srTGenOptElem::InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 0);
-				srTGenOptElem::InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 0);
+				srTGenOptElem::InterpolF(InterpolAux02, xRel, zRel, BufF, 0);
+				srTGenOptElem::InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 0);
 			}
 			else
 			{
-				srTGenOptElem::InterpolF(InterpolAux02, xRel, zRel, BufF, 0);
-				srTGenOptElem::InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 0);
+				srTGenOptElem::InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 0);
+				srTGenOptElem::InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 0);
 			}
 
 			(*BufFI) *= AuxFI->fNorm;
@@ -422,6 +418,7 @@ float NewzWfrMin, float NewzWfrMax, float NewxWfrMin, float NewxWfrMax
 			*pEX_New = *BufF;
 			*(pEX_New + 1) = *(BufF + 1);
 		}
+		
 		if (TreatPolCompZ)
 		{
 			float* pEzSt_Old = pEZ0_Old + TotOffsetOld;
@@ -437,17 +434,13 @@ float NewzWfrMin, float NewzWfrMax, float NewxWfrMin, float NewxWfrMax
 					srTGenOptElem::SetupInterpolAux02(AuxF + 2 + i, &InterpolAux01, InterpolAux02 + 2 + i);
 				}
 				srTGenOptElem::SetupInterpolAux02(AuxFI + 1, &InterpolAux01, InterpolAux02I + 1);
-			}
-			
-			if (UseLowOrderInterp_PolCompZ)
-			{
-				srTGenOptElem::InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 2);
-				srTGenOptElem::InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 1);
+				srTGenOptElem::InterpolF(InterpolAux02, xRel, zRel, BufF, 2);
+				srTGenOptElem::InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 1);
 			}
 			else
 			{
-				srTGenOptElem::InterpolF(InterpolAux02, xRel, zRel, BufF, 2);
-				srTGenOptElem::InterpolFI(InterpolAux02I, xRel, zRel, BufFI, 1);
+				srTGenOptElem::InterpolF_LowOrder(InterpolAux02, xRel, zRel, BufF, 2);
+				srTGenOptElem::InterpolFI_LowOrder(InterpolAux02I, xRel, zRel, BufFI, 1);
 			}
 
 			(*(BufFI + 1)) *= (AuxFI + 1)->fNorm;

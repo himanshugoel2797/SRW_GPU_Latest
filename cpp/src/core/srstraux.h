@@ -1655,21 +1655,21 @@ struct srTInterpolAuxF {
 	float fAvg, fNorm;
 	GPU_PORTABLE void SetUpAvg()
 	{
-		fAvg = (float)(0.0625*(f00 + f10 + f20 + f30 + f01 + f11 + f21 + f31 + f02 + f12 + f22 + f32 + f03 + f13 + f23 + f33));
+		fAvg = (float)(0.0625f*(f00 + f10 + f20 + f30 + f01 + f11 + f21 + f31 + f02 + f12 + f22 + f32 + f03 + f13 + f23 + f33));
 	}
 	GPU_PORTABLE void NormalizeByAvg()
 	{
-		const float CritNorm = 1.;
+		const float CritNorm = 1.f;
 		if(::fabs(fAvg) > CritNorm)
 		{
-			float a = (float)(1./fAvg);
+			float a = (float)(1.f/fAvg);
 			f00 *= a; f10 *= a; f20 *= a; f30 *= a;
 			f01 *= a; f11 *= a; f21 *= a; f31 *= a;
 			f02 *= a; f12 *= a; f22 *= a; f32 *= a;
 			f03 *= a; f13 *= a; f23 *= a; f33 *= a;
 			fNorm = fAvg;
 		}
-		else fNorm = 1.;
+		else fNorm = 1.f;
 	}
 };
 
