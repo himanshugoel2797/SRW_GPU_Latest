@@ -18,6 +18,7 @@ conda create -n srw-test python-3.9 pip numpy scipy scikit-learn matplotlib h5py
 conda active srw-test
 pip install cupy-cuda114
 git clone https://github.com/himanshugoel2797/SRW_GPU_Latest.git
+git checkout paper_only
 # Uncomment PYPATH=/usr and set PYFLAGS for python3.6m in cpp/gcc/Makefile
 cd SRW_GPU_Latest
 . setup.sh
