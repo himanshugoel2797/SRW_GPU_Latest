@@ -711,7 +711,7 @@
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\src\lib;$(CUDA_PATH)\include;C:\Python38\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;SRWLIB_CLIENT;SRWLCLIENTPYTHON_EXPORTS;_CRT_SECURE_NO_WARNINGS;NON_UNIX_STDIO;_OFFLOAD_GPU;_USE_CUDA;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <MinimalRebuild>true</MinimalRebuild>
+      <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>

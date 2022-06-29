@@ -32,6 +32,7 @@ try:
         cp.cuda.set_allocator(cupyMempool.malloc)
         useCuPy = True
 except:
+    print ('Failed to import CuPy, disabling GPU.\n')
     pass
 
 #try:

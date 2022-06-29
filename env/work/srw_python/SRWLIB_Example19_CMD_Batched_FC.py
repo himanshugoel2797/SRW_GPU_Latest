@@ -4,16 +4,18 @@
 # Authors: H. Goel (SBU/ECE), O.C. (BNL/NSLS-II)
 # v 0.02
 #############################################################################
-
 from __future__ import print_function
+import os
+import time
+
+os.environ['SRW_ENABLEGPU'] = "1"
+
 from tabnanny import check #Python 2.7 compatibility
 from srwlib import *
 from srwl_uti_smp import *
 import srwl_uti_smp_rnd_obj3d
 import matplotlib.pyplot as plt
 from uti_plot import * #required for plotting
-import os
-import time
 
 if useCuPy:
     import cupy as cp
