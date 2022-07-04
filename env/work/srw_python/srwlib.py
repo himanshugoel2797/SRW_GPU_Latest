@@ -28,7 +28,11 @@ try:
     if 'SRW_ENABLEGPU' in os.environ:
         import cupy as cp
         import cupy.cuda.memory
-        cupyMempool = cupy.cuda.MemoryPool(cupy.cuda.memory.malloc_managed)
+        import platform
+        if platform.system() == 'Linux':
+            cupyMempool = cupy.cuda.MemoryPool(cupy.cuda.memory.malloc_managed)
+        else:
+            cupyMempool = cupy.get_default_pinned_memory_pool()
         cp.cuda.set_allocator(cupyMempool.malloc)
         useCuPy = True
 except:
