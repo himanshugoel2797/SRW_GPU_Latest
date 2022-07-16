@@ -2,7 +2,9 @@
 # SRWLib for Python v 0.20
 #############################################################################
 
-from __future__ import absolute_import, division, print_function #Py 2.*/3.* compatibility
+from __future__ import absolute_import, division, print_function
+
+import numpy as np #Py 2.*/3.* compatibility
 import srwlpy as srwl
 from array import *
 from math import *
@@ -8700,20 +8702,21 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                 #if(0.2*abs(RyAvg) < abs(wfr.dRy)): RyAvg = 0
                 arMesh.extend((RxAvg, RyAvg, wfr.xc, wfr.yc))
 
+            comMPI.Bcast([arMesh, MPI.FLOAT], root=rankMaster)
             #print('DEBUG MESSAGE: Master is about to broadcast mesh of Propagated central wavefront')
-            for iRank in range(nProc - 1):
-                dst = iRank + 1 + rankMaster #OC02032021
-                #dst = iRank + 1
-                #print("msg %d: sending data from %d to %d" % (iRank, rank, dst)) #an he
-                comMPI.Send([arMesh, MPI.FLOAT], dest=dst)
+            # for iRank in range(nProc - 1):
+            #     dst = iRank + 1 + rankMaster #OC02032021
+            #     #dst = iRank + 1
+            #     #print("msg %d: sending data from %d to %d" % (iRank, rank, dst)) #an he
+            #     comMPI.Send([arMesh, MPI.FLOAT], dest=dst)
 
-                #DEBUG
-                #print('Mesh data sent from Master to Worker #', dst)
-                #END DEBUG
+            #     #DEBUG
+            #     #print('Mesh data sent from Master to Worker #', dst)
+            #     #END DEBUG
 
-                #OC30052017
-                #if(_char == 4): #Cuts of Mutual Intensity vs X & Y
-                #    comMPI.Send([arMesh2, MPI.FLOAT], dest=dst)
+            #     #OC30052017
+            #     #if(_char == 4): #Cuts of Mutual Intensity vs X & Y
+            #     #    comMPI.Send([arMesh2, MPI.FLOAT], dest=dst)
 
             #DEBUG
             #print('Mesh of Propagated central wavefront broadcasted')
@@ -8826,8 +8829,8 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
 
             #_stat = MPI.Status() #an he
             #comMPI.Recv([arMesh, MPI.FLOAT], source=0)
-            comMPI.Recv([arMesh, MPI.FLOAT], source=MPI.ANY_SOURCE)
-            #comMPI.Bcast([arMesh, MPI.FLOAT], root=0)
+            #comMPI.Recv([arMesh, MPI.FLOAT], source=MPI.ANY_SOURCE)
+            comMPI.Bcast([arMesh, MPI.FLOAT], root=rankMaster)
             #print("received mesh %d -> %d" % (_stat.Get_source(), rank))
             
             meshRes.eStart = arMesh[0]
@@ -9760,7 +9763,9 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                         
                     #comMPI.Send([arAuxResSt, MPI.FLOAT], dest=0)
                     #comMPI.Send([resStkToSend, MPI.FLOAT], dest=0) #OC26122018
-                    comMPI.Send([resStkToSend, MPI.FLOAT], dest=rankMaster) #OC03032021
+                    #comMPI.Send([resStkToSend, MPI.FLOAT], dest=rankMaster) #OC03032021
+                    comMPI.Reduce(resStkToSend, None, op=MPI.SUM, root=rankMaster)
+                    print ('Reducing\n', flush=True)
 
                     #if(resStokes2 is not None): comMPI.Send([resStokes2.arS, MPI.FLOAT], dest=0) #OC30052017
 
@@ -10105,8 +10110,9 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                               _xStart=meshRes.xStart, _xFin=meshRes.xFin, _nx=meshRes.nx, 
                               _yStart=meshRes.yStart, _yFin=meshRes.yFin, _ny=meshRes.ny)
 
-        for i in range(nRecv): #loop over messages from workers
-
+        i = 0
+        while i < nRecv: #loop over messages from workers
+            _points_rcvd = 1
             #DEBUG
             #srwl_uti_save_text("Preparing to receiving # " + str(i), _file_path + ".br.dbg")
             #END DEBUG
@@ -10137,35 +10143,51 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
             if((_char != 6) and (_char != 61) and (_char != 7)): #OC20062021
             #if(_char != 6): #OC18022021
                 #OC24122018
-                comMPI.Recv([workStkToRcv, MPI.FLOAT], source=MPI.ANY_SOURCE) #receive 
+                comMPI.Reduce(MPI.IN_PLACE, workStkToRcv, MPI.SUM, root=rankMaster) #receive 
+                _points_rcvd = nProc - 1
 
                 lenArSt1 = len(workStokes.arS)
                 lenArSt = lenArSt1
 
+                divisor = 1
+                if not doPropCM:
+                    divisor = i + (nProc - 1)
+
                 if((workStokes2 is not None) and (workStokes3 is None)):
-                    for i1 in range(lenArSt): workStokes.arS[i1] = arAuxWorkSt[i1]
-                    #workStokes.arS[0:lenArSt] = arAuxWorkSt
+                    #for i1 in range(lenArSt): workStokes.arS[i1] = arAuxWorkSt[i1]
+                    workStokes.arS[0:lenArSt] = arAuxWorkSt
+                    resStokes.arS = np.array(workStokes.arS[0:lenArSt]) / divisor
                     lenArSt2 = len(workStokes2.arS)
-                    for i2 in range(lenArSt2): workStokes2.arS[i2] = arAuxWorkSt[i2 + lenArSt]
+                    #for i2 in range(lenArSt2): workStokes2.arS[i2] = arAuxWorkSt[i2 + lenArSt]
+                    workStokes2.arS[0:lenArSt2] = arAuxWorkSt[lenArSt:lenArSt + lenArSt2]
+                    resStokes2.arS = np.array(workStokes2.arS[0:lenArSt2]) / divisor
                     lenArSt += lenArSt2
 
                 elif((workStokes2 is not None) and (workStokes3 is not None)):
-                    for i1 in range(lenArSt): workStokes.arS[i1] = arAuxWorkSt[i1]
-                    #workStokes.arS[0:lenArSt] = arAuxWorkSt
+                    #for i1 in range(lenArSt): workStokes.arS[i1] = arAuxWorkSt[i1]
+                    workStokes.arS[0:lenArSt] = arAuxWorkSt
+                    resStokes.arS = np.array(workStokes.arS[0:lenArSt]) / divisor
                     lenArSt2 = len(workStokes2.arS)
-                    for i2 in range(lenArSt2): workStokes2.arS[i2] = arAuxWorkSt[i2 + lenArSt]
+                    #for i2 in range(lenArSt2): workStokes2.arS[i2] = arAuxWorkSt[i2 + lenArSt]
+                    workStokes2.arS[0:lenArSt2] = arAuxWorkSt[lenArSt:lenArSt + lenArSt2]
+                    resStokes2.arS = np.array(workStokes2.arS[0:lenArSt2]) / divisor
                     lenArSt += lenArSt2
                     lenArSt3 = len(workStokes3.arS)
-                    for i3 in range(lenArSt3): workStokes3.arS[i3] = arAuxWorkSt[i3 + lenArSt]
+                    #for i3 in range(lenArSt3): workStokes3.arS[i3] = arAuxWorkSt[i3 + lenArSt]
+                    workStokes3.arS[0:lenArSt3] = arAuxWorkSt[lenArSt + lenArSt2:lenArSt + lenArSt2 + lenArSt3]
+                    resStokes3.arS = np.array(workStokes3.arS[0:lenArSt3]) / divisor
                     lenArSt += lenArSt3
 
                 if(workStokesA is not None): #OC24122018
-                    #workStokes.arS[0:lenArSt] = arAuxWorkSt
                     if(workStokes2 is None): #OC26122018
-                        for j in range(lenArSt): workStokes.arS[j] = arAuxWorkSt[j] #OC26122018
+                        workStokes.arS[0:lenArSt] = arAuxWorkSt
+                        resStokes.arS = np.array(workStokes.arS[0:lenArSt]) / divisor
+                        #for j in range(lenArSt): workStokes.arS[j] = arAuxWorkSt[j] #OC26122018
                 
                     lenArStA = len(workStokesA.arS)
-                    for ia in range(lenArStA): workStokesA.arS[ia] = arAuxWorkSt[ia + lenArSt]
+                    #for ia in range(lenArStA): workStokesA.arS[ia] = arAuxWorkSt[ia + lenArSt]
+                    workStokesA.arS[0:lenArStA] = arAuxWorkSt[lenArSt:lenArSt + lenArStA]   
+                    resStokesA.arS = np.array(workStokesA.arS[0:lenArStA]) / divisor
                     lenArSt += lenArStA
 
                 #DEBUG
@@ -10200,19 +10222,19 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                 #resStokes.avg_update_same_mesh(workStokes, i + 1, 1, multFinAvg) #in the future treat all Stokes components / Polarization, not just s0!
                 #resStokes.avg_update_same_mesh(workStokes, i, 1, multFinAvg) #OC15012017 #in the future treat all Stokes components / Polarization, not just s0!
                 #resStokes.avg_update_same_mesh(workStokes, i, numComp, multFinAvg) #OC15012017 #in the future treat all Stokes components / Polarization, not just s0!
-                resStokes.avg_update_same_mesh(workStokes, i, numComp, multFinAvg, _sum=doPropCM) #OC20112020
+                # resStokes.avg_update_same_mesh(workStokes, i, numComp, multFinAvg, _sum=doPropCM) #OC20112020
 
-                if((resStokes2 is not None) and (workStokes2 is not None)):
-                    resStokes2.avg_update_same_mesh(workStokes2, i, numComp, multFinAvg, _sum=doPropCM) #OC20112020
-                    #resStokes2.avg_update_same_mesh(workStokes2, i, numComp, multFinAvg) #OC30052017 #in the future treat all Stokes components / Polarization, not just s0!
+                # if((resStokes2 is not None) and (workStokes2 is not None)):
+                #     resStokes2.avg_update_same_mesh(workStokes2, i, numComp, multFinAvg, _sum=doPropCM) #OC20112020
+                #     #resStokes2.avg_update_same_mesh(workStokes2, i, numComp, multFinAvg) #OC30052017 #in the future treat all Stokes components / Polarization, not just s0!
 
-                if((resStokes3 is not None) and (workStokes3 is not None)):
-                    resStokes3.avg_update_same_mesh(workStokes3, i, numComp, multFinAvg, _sum=doPropCM) #OC20112020
-                    #resStokes3.avg_update_same_mesh(workStokes3, i, numComp, multFinAvg) #OC03052018 #in the future treat all Stokes components / Polarization, not just s0!
+                # if((resStokes3 is not None) and (workStokes3 is not None)):
+                #     resStokes3.avg_update_same_mesh(workStokes3, i, numComp, multFinAvg, _sum=doPropCM) #OC20112020
+                #     #resStokes3.avg_update_same_mesh(workStokes3, i, numComp, multFinAvg) #OC03052018 #in the future treat all Stokes components / Polarization, not just s0!
 
-                if((resStokesA is not None) and (workStokesA is not None)): #OC24122018
-                    resStokesA.avg_update_same_mesh(workStokesA, i, numComp, multFinAvg, _sum=doPropCM) #OC20112020
-                    #resStokesA.avg_update_same_mesh(workStokesA, i, numComp, multFinAvg) #in the future treat all Stokes components / Polarization, not just s0!
+                # if((resStokesA is not None) and (workStokesA is not None)): #OC24122018
+                #     resStokesA.avg_update_same_mesh(workStokesA, i, numComp, multFinAvg, _sum=doPropCM) #OC20112020
+                #     #resStokesA.avg_update_same_mesh(workStokesA, i, numComp, multFinAvg) #in the future treat all Stokes components / Polarization, not just s0!
 
                 #print('completed (lasted', round(time.time() - t0, 6), 's)') #DEBUG
                 #DEBUG
@@ -10257,8 +10279,8 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                 #sys.stdout.flush()
                 #END DEBUG
 
-            iSave += 1
-            if(iSave == _n_save_per):
+            iSave += _points_rcvd
+            if(iSave >= _n_save_per):
                 #Saving results from time to time in the process of calculation
 
                 #print('srwl_uti_save_intens_ascii ... ', end='') #DEBUG
@@ -10270,7 +10292,7 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
 
                 #OC15102018 (moved this log-writing to the place where other files are saved):
                 #MR20160907 #Save .log and .json files:
-                particle_number = (i + 1) * _n_part_avg_proc
+                particle_number = (i + _points_rcvd) * _n_part_avg_proc
                 if i == (nRecv - 1): particle_number = total_num_of_particles #OC21012021 (previous particle_numbers may be inaccurate)
                 srwl_uti_save_stat_wfr_emit_prop_multi_e(particle_number, total_num_of_particles, filename=log_path)
 
@@ -10374,6 +10396,8 @@ def srwl_wfr_emit_prop_multi_e(_e_beam, _mag, _mesh, _sr_meth, _sr_rel_prec, _n_
                 #print('completed (lasted', round(time.time() - t0, 6), 's)') #DEBUG
                 
                 iSave = 0
+
+            i += _points_rcvd
     #DEBUG
     #srwl_uti_save_text("Exiting srwl_wfr_emit_prop_multi_e", _file_path + "." + str(rank) + "e.dbg")
     #END DEBUG
