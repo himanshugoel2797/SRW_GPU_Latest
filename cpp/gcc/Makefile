@@ -14,8 +14,8 @@ MODE ?= 0
 #CXX = g++
 CC  = cc
 CXX = c++
-NVCC = nvcc
-NVCXX = nvc++
+NVCC = cc
+NVCXX = c++
 
 SRW_SRC_DEF= -D_GNU_SOURCE -D__USE_XOPEN2K8 -DFFTW_ENABLE_FLOAT -D_GM_WITHOUT_BASE -DSRWLIB_STATIC -DNO_TIMER -DANSI_DECLARATORS -DTRILIBRARY -DLINUX
 SRW_INCLUDES= -I$(SRW_SRC_GEN_DIR) -I$(SRW_SRC_LIB_DIR) -I$(SH_SRC_PARSE_DIR) -I$(SH_SRC_GEN_MATH_DIR)
@@ -29,6 +29,8 @@ SRW_FLAGS += -std=c++11
 LDFLAGS += -L$(NVCOMPILERS)/$(NVARCH)/$(NVVERSION)/cuda/lib64 -lcudart_static -lcudadevrt -lcufft -lrt
 NVCFLAGS = -O3 -arch=sm_80 -dlto -rdc=true
 CUDA_OBJ= gmfftgpu0.o srradmnpgpu.o srradstrgpu.o sroptelmgpu.o #srradintgpu.o
+NVCC = nvcc
+NVCXX = nvc++
 else
 ifeq ($(MODE), omp)
 SRW_SRC_DEF+= -D_WITH_OMP
@@ -60,6 +62,7 @@ CMN_OBJ= sroptgtrgpu.o sroptdrfgpu.o
 PRG=	libsrw.a
 
 ifeq ($(MODE),cuda)
+$(error Mode is CUDA)
 lib:	$(OBJ) $(CMN_OBJ) $(CUDA_OBJ)
 	$(NVCC) $(NVCFLAGS) -Xcompiler="$(SRW_FLAGS)" -dlink -o srwl_link.o *.o $(LDFLAGS)
 	ar -cvq $(PRG) *.o
@@ -117,13 +120,13 @@ lib:	$(OBJ) $(CMN_OBJ)
 	$(CC) $(CFLAGS) -c $<
 	
 %.o: $(SRW_SRC_LIB_DIR)/%.cu
-	$(NVCC) -x=c++ -Xcompiler="$(CFLAGS)" -c $<
+	$(NVCC) -x c++ $(CFLAGS) -c $<
 	
 %.o: $(SH_SRC_GEN_MATH_DIR)/%.cu
-	$(NVCC) -x=c++ -Xcompiler="$(CFLAGS)" -c $<
+	$(NVCC) -x c++ $(CFLAGS) -c $<
 
 %.o: $(SRW_SRC_GEN_DIR)/%.cu
-	$(NVCC) -x=c++ -Xcompiler="$(CFLAGS)" -c $<
+	$(NVCC) -x c++ $(CFLAGS) -c $<
 endif
 
 
