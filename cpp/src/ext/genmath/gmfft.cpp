@@ -1150,7 +1150,17 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 		if (result) return result;
 	}
 
-	if (!GPU_ENABLED(pGpuUsage))
+	GPU_COND(pGpuUsage, {
+		if (dPlan1DFFT_cu != NULL){
+			cufftDestroy(dPlan1DFFT_cu);
+			dPlan1DFFT_cu = NULL;
+		}
+		if (Plan1DFFT_cu != NULL){
+			cufftDestroy(Plan1DFFT_cu);
+			Plan1DFFT_cu = NULL;
+		}
+	})
+	else
 	{
 		//Added by S.Yakubov (for profiling?) at parallelizing SRW via OpenMP:
 		//srwlPrintTime("::Make1DFFT : ProcessSharpEdges",&start);
@@ -1172,17 +1182,8 @@ int CGenMathFFT1D::Make1DFFT(CGenMathFFT1DInfo& FFT1DInfo, gpuUsageArg_t *pGpuUs
 		fftw_destroy_plan(Plan1DFFT);
 
 #endif
-	}else{
-		if (dPlan1DFFT_cu != NULL){
-			cufftDestroy(dPlan1DFFT_cu);
-			dPlan1DFFT_cu = NULL;
-		}
-		if (Plan1DFFT_cu != NULL){
-			cufftDestroy(Plan1DFFT_cu);
-			Plan1DFFT_cu = NULL;
-		}
 	}
-
+	
 	if (m_ArrayShiftX != 0)
 	{
 		FREE_ARRAY(m_ArrayShiftX);

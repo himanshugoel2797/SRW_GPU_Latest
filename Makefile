@@ -22,7 +22,8 @@ fftw3_file = $(fftw3_version).tar.gz
 log_fftw = /dev/null
 examples_dir = $(env_dir)/work/srw_python
 #example10_data_dir = $(examples_dir)/data_example_10
-export MODE ?= cuda
+export MODE ?= 0
+#cuda
 
 nofftw: core pylib
 
